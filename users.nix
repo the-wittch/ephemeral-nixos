@@ -22,6 +22,11 @@ in
   programs.zsh = {
     enable = true;
     enableCompletion = true;
+    # no new-user wizard before there is a ~/.zshrc (chezmoi writes it later).
+    # zsh looks for this function right after /etc/zshenv.
+    shellInit = ''
+      zsh-newuser-install() { :; }
+    '';
   };
   users.defaultUserShell = pkgs.zsh;
 
