@@ -13,7 +13,7 @@ in
   fileSystems."/persist".neededForBoot = true;
   fileSystems."/var/log".neededForBoot = true;
 
-  # base system state. modules that add a service persist its state next to it.
+  # base system state. feature modules persist their own
   environment.persistence."/persist" = {
     hideMounts = true;
     directories = [
@@ -48,16 +48,13 @@ in
     files = [
       "/etc/machine-id"
       "/var/lib/systemd/random-seed"
-      # host key for encrypted service credentials (libvirt uses one)
+      # systemd-creds host key (libvirt)
       "/var/lib/systemd/credential.secret"
     ];
   };
 
-  # impermanence links a persisted file that doesn't exist on /persist yet,
-  # and binds it once it does. it does that in the initrd, where
-  # systemd-creds can't run, so the key is made here, early in stage 2.
-  # on the first boot it also swaps the link for a bind mount; after that
-  # impermanence binds it like the other files.
+  # impermanence binds files from the initrd, where systemd-creds can't run.
+  # make the key here, and on first boot swap impermanence's link for a mount.
   systemd.services.credential-secret-setup = {
     description = "Create the systemd credential key on /persist";
     wantedBy = [ "sysinit.target" ];
@@ -81,8 +78,7 @@ in
         install -d -m 0755 "$(dirname "$key")"
         SYSTEMD_CREDENTIAL_SECRET=$key systemd-creds setup
       fi
-      # systemd opens the key with O_NOFOLLOW, so the first-boot link has to
-      # become the bind mount impermanence would only make on the next boot
+      # systemd won't follow a symlink to the key
       if [[ -L $dest ]]; then
         rm "$dest"
         touch "$dest"
@@ -91,9 +87,7 @@ in
     '';
   };
 
-  # impermanence copies the modes of /persist's directories onto the fresh
-  # root when it recreates their parents, so a 0700 /persist/etc would leave
-  # nobody but root able to read /etc
+  # impermanence copies these modes onto the fresh root. 0700 locks users out of /etc
   system.activationScripts.persistParentModes = {
     text = ''
       for d in /persist /persist/etc /persist/var /persist/var/lib /persist/home; do

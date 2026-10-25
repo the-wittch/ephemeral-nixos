@@ -1,6 +1,5 @@
-# Machine files next to the flake are JSON, so scripts can edit them with jq
-# and nothing generated is ever evaluated as code. A .nix file of the same
-# name still loads, with a warning that says how to convert it.
+# machine files are json, edited with jq. a .nix of the same name still
+# loads, with a warning.
 { lib }:
 
 base: default:

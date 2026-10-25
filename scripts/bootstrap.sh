@@ -107,7 +107,6 @@ export FLAKE_ATTR="${FLAKE_ATTR:-nixos}"
 if [[ -t 0 ]]; then
   exec "$FLAKE_ROOT/scripts/install.sh"
 fi
-# stdin is the curl pipe that bash is still reading this script from, so only
-# install.sh gets the terminal
+# bash reads this script from stdin, so only install.sh gets the tty
 { : </dev/tty; } 2>/dev/null || die "no terminal for the prompts (run from a console)"
 exec "$FLAKE_ROOT/scripts/install.sh" </dev/tty

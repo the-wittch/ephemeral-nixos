@@ -1,8 +1,7 @@
 { pkgs, ... }:
 
 let
-  # pinned because the file carries Flathub's signing key. a hash mismatch
-  # means Flathub changed it; check flathub.org before taking the new hash.
+  # pinned: it holds flathub's signing key
   flathubRepo = pkgs.fetchurl {
     url = "https://dl.flathub.org/repo/flathub.flatpakrepo";
     hash = "sha256-M3HdJQ5h2eFjNjAHP+/aFTzUQm9y9K+gwzc64uj+oDo=";
@@ -12,8 +11,7 @@ in
   services.flatpak.enable = true;
   environment.persistence."/persist".directories = [ "/var/lib/flatpak" ];
 
-  # the repo file comes from the store, so this needs no network and works
-  # on an offline first boot
+  # repo file is in the store, so no network needed
   systemd.services.flatpak-flathub = {
     description = "Add Flathub Flatpak remote";
     wantedBy = [ "multi-user.target" ];

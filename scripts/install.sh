@@ -128,7 +128,7 @@ if lsblk -d -o TRAN -n "$DISK" 2>/dev/null | grep -qi virtio \
 EOF
 fi
 
-# values reach nix through the environment, so nothing needs escaping
+# via env, so nothing needs escaping
 # shellcheck disable=SC2016 # the ${...} below is nix interpolation
 S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
   S_SWAP=$SWAP_SIZE S_TZ=$TIMEZONE S_DESKTOP=$INSTALL_DESKTOP \
@@ -163,7 +163,7 @@ case $FLAKE_INPUTS in
     ;;
 esac
 
-# disko tool from flake.lock, same rev the config evaluates against
+# disko from flake.lock
 info "disko format+mount (LUKS passphrase next)"
 info "first run downloads nixpkgs/disko — can sit on 0/N for several minutes"
 nix run -L --inputs-from "path:${STAGE}" disko -- \

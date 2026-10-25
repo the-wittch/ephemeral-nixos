@@ -123,6 +123,7 @@ Rebuilds are the same either way — still `path:.#nixos` so gitignored files ar
 | `settings.example.json` | template → `settings.json` |
 | `unfree.nix` | unfree allowlist (`ephemeral.unfreePackages`) |
 | `lib/read-data.nix` | loads `settings.json` (or a legacy `settings.nix`) |
+| `wallpaper.nix`, `assets/wallpaper.svg` | default wallpaper and login background |
 | `scripts/tui.sh` | gum installer |
 | `scripts/bootstrap.sh` | curl / no-gum installer |
 | `scripts/install.sh` | actual disko + nixos-install |
@@ -179,3 +180,9 @@ sudo nixos-install --no-root-passwd --flake path:/mnt/persist/etc/nixos#nixos
 ```
 
 [Disko](https://github.com/nix-community/disko) · [impermanence](https://github.com/nix-community/impermanence)
+
+## Wallpaper
+
+`assets/wallpaper.svg` is rendered to a 4K PNG at build time and installed at `/run/current-system/sw/share/backgrounds/ephemeral/wallpaper.png`. It's the default on GNOME (desktop, lock screen, and the GDM login screen) and on the Plasma login screen; on Plasma's desktop or niri, pick that file in the wallpaper settings. A wallpaper you choose yourself always wins.
+
+The snowflake is the [NixOS logo](https://github.com/NixOS/nixos-artwork) by Tim Cuthbertson, used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and recoloured.

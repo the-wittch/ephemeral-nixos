@@ -13,6 +13,7 @@
     ./unfree.nix
     ./hardening.nix
     ./flathub.nix
+    ./wallpaper.nix
   ];
 
   networking.hostName = settings.hostname;

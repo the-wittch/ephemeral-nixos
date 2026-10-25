@@ -22,8 +22,7 @@ in
   programs.zsh = {
     enable = true;
     enableCompletion = true;
-    # no new-user wizard before there is a ~/.zshrc (chezmoi writes it later).
-    # zsh looks for this function right after /etc/zshenv.
+    # no new-user wizard before chezmoi writes ~/.zshrc
     shellInit = ''
       zsh-newuser-install() { :; }
     '';
@@ -84,8 +83,7 @@ in
       Group = group;
       WorkingDirectory = home;
       Environment = "HOME=${home}";
-      # clones over the network and writes dotfiles into home, nothing else.
-      # chezmoi scripts that need sudo won't work here; run them by hand.
+      # network and home only. chezmoi scripts can't sudo here
       ProtectSystem = "strict";
       ReadWritePaths = [ home ];
       PrivateTmp = true;
