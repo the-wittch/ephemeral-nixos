@@ -1,4 +1,4 @@
-# Ephemeral NixOS
+# Ephemeral Nix
 
 [![CI](https://github.com/the-wittch/ephemeral-nixos/actions/workflows/ci.yml/badge.svg)](https://github.com/the-wittch/ephemeral-nixos/actions/workflows/ci.yml)
 
