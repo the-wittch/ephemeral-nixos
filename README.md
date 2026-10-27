@@ -22,8 +22,8 @@ Boot the NixOS graphical ISO in UEFI mode and connect to the network.
 Take the tag and commit from the latest [release](https://github.com/the-wittch/ephemeral-nixos/releases), or from [`RELEASE`](./RELEASE) on that tag, and check the clone against them:
 
 ```bash
-TAG=v1.5.1
-REV=b9699fdd4fb503fec24525763d019a50f8ef354f
+TAG=v2.0.0
+REV=d422ad35cb81287c35450b1ee1e1f2551b276690
 git clone --branch "$TAG" --depth 1 https://github.com/the-wittch/ephemeral-nixos.git ~/nix
 cd ~/nix
 [[ $(git rev-parse HEAD) == "$REV" ]] || echo "hash mismatch, stop here"
@@ -33,8 +33,8 @@ sudo ./scripts/tui.sh
 Or let the bootstrap script clone and check it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v1.5.1/scripts/bootstrap-tui.sh -o /tmp/bootstrap-tui.sh
-sudo env TAG=v1.5.1 EXPECTED_REV=b9699fdd4fb503fec24525763d019a50f8ef354f bash /tmp/bootstrap-tui.sh
+curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v2.0.0/scripts/bootstrap-tui.sh -o /tmp/bootstrap-tui.sh
+sudo env TAG=v2.0.0 EXPECTED_REV=d422ad35cb81287c35450b1ee1e1f2551b276690 bash /tmp/bootstrap-tui.sh
 ```
 
 ### From main

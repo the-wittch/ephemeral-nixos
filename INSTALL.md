@@ -5,8 +5,8 @@ The short version of the [README](./README.md). The tag and commit for the curre
 From a release, with menus:
 
 ```bash
-TAG=v1.5.1
-REV=b9699fdd4fb503fec24525763d019a50f8ef354f
+TAG=v2.0.0
+REV=d422ad35cb81287c35450b1ee1e1f2551b276690
 git clone --branch "$TAG" --depth 1 https://github.com/the-wittch/ephemeral-nixos.git ~/nix
 cd ~/nix
 [[ $(git rev-parse HEAD) == "$REV" ]] || echo "hash mismatch, stop here"
@@ -24,7 +24,7 @@ sudo ./scripts/tui.sh
 Without menus, onto a whole disk:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v1.5.1/scripts/bootstrap.sh | sudo env TAG=v1.5.1 EXPECTED_REV=b9699fdd4fb503fec24525763d019a50f8ef354f SWAP_SIZE=4G bash -s -- /dev/vda
+curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v2.0.0/scripts/bootstrap.sh | sudo env TAG=v2.0.0 EXPECTED_REV=d422ad35cb81287c35450b1ee1e1f2551b276690 SWAP_SIZE=4G bash -s -- /dev/vda
 ```
 
 Rebuilding later:
