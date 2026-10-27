@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-# Preferred installer entry (gum TUI). For a plain/no-gum path use bootstrap.sh.
-#
-#   curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/main/scripts/bootstrap-tui.sh \
-#     -o /tmp/bootstrap-tui.sh && sudo bash /tmp/bootstrap-tui.sh
-#
-# Needs a real TTY (download+run or clone). Don't pipe into sudo bash.
+# needs a tty, so don't pipe it into bash
 
 set -euo pipefail
 
@@ -18,7 +13,6 @@ BRANCH="${TAG:-${BRANCH:-main}}"
 EXPECTED_REV="${EXPECTED_REV:-}"
 
 # shellcheck source=common.sh
-# common.sh may be missing when this file is curl'd alone; clone brings it.
 _SRC=${BASH_SOURCE[0]:-}
 if [[ -n $_SRC && -f $_SRC && $_SRC != /dev/fd/* && -f $(dirname "$_SRC")/common.sh ]]; then
   # shellcheck source=common.sh
@@ -81,7 +75,6 @@ elif [[ $BRANCH != main ]]; then
   info "warning: $BRANCH is not verified (set EXPECTED_REV)"
 fi
 
-# Optional: pre-set DISK / INSTALL_* via env; tui prompts for anything missing
 DISK="${DISK:-${1:-}}"
 if [[ -n $DISK ]]; then
   [[ -b $DISK ]] || die "not a block device: $DISK (omit arg to pick in the TUI)"

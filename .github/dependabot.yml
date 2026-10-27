@@ -1,6 +1,5 @@
 version: 2
 updates:
-  # bumps the pinned action SHAs and the version comment next to them
   - package-ecosystem: github-actions
     directory: /
     schedule:

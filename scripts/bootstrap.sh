@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Plain installer (no gum). TUI path: bootstrap-tui.sh / tui.sh
-# curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/main/scripts/bootstrap.sh \
-#   | sudo env SWAP_SIZE=4G bash -s -- /dev/vda
 
 set -euo pipefail
 
@@ -14,7 +11,6 @@ fi
 die() { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 
-# Prefer shared validators when running from a real checkout
 if [[ -n $SCRIPT_DIR && -f $SCRIPT_DIR/common.sh ]]; then
   # shellcheck source=common.sh
   source "$SCRIPT_DIR/common.sh"
@@ -23,7 +19,6 @@ fi
 DEFAULT_REPO_URL="https://github.com/the-wittch/ephemeral-nixos.git"
 
 REPO_URL="${REPO_URL:-$DEFAULT_REPO_URL}"
-# TAG wins over BRANCH (both work with git clone --branch; tags are preferred for pins)
 BRANCH="${TAG:-${BRANCH:-main}}"
 EXPECTED_REV="${EXPECTED_REV:-}"
 

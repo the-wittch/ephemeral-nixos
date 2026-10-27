@@ -1,5 +1,3 @@
-# machine files are json, edited with jq. a .nix of the same name still
-# loads, with a warning.
 { lib }:
 
 base: default:

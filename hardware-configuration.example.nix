@@ -1,5 +1,3 @@
-# cp hardware-configuration.example.nix hardware-configuration.nix
-
 {
   config,
   lib,
