@@ -1,11 +1,8 @@
-# Local / private machine identity (use settings.example.json as the template)
 settings.json
 settings.nix
 
-# Machine-specific detected hardware (Disko owns filesystems)
 hardware-configuration.nix
 
-# Secrets / password material (hashes live on /persist, never in git)
 passwords/
 *.key
 *.pem
@@ -14,16 +11,13 @@ id_ed25519
 *.age
 secrets.nix
 
-# Nix build results
 .result
 result
 result-*
 
-# Editor / tooling
 .direnv/
 *.swp
 *~
 
-# Local maintainer runbooks (not for the public repo)
 RELEASING.md
 RESTORE.md

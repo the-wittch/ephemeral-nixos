@@ -3,50 +3,21 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
+    import-tree.url = "github:vic/import-tree";
     impermanence = {
       url = "github:nix-community/impermanence";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.inputs.nixpkgs.follows = "nixpkgs";
     };
-    disko.url = "github:nix-community/disko";
-    disko.inputs.nixpkgs.follows = "nixpkgs";
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs =
-    {
-      nixpkgs,
-      impermanence,
-      disko,
-      ...
-    }:
-    let
-      inherit (nixpkgs) lib;
-      settings = import ./lib/load-settings.nix {
-        inherit lib;
-        flakeRoot = ./.;
-      };
-
-      mkSystem = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = { inherit settings; };
-        modules = [
-          disko.nixosModules.disko
-          ./disko.nix
-          ./configuration.nix
-          ./desktop.nix
-          ./hardware-configuration.nix
-          impermanence.nixosModules.impermanence
-        ];
-      };
-    in
-    {
-      formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixfmt-tree;
-
-      nixosConfigurations = {
-        nixos = mkSystem;
-      }
-      // lib.optionalAttrs (settings.hostname != "nixos") {
-        ${settings.hostname} = mkSystem;
-      };
-    };
+  outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 }

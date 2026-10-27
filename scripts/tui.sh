@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Gum front-end for install.sh. Falls back to plain install.sh if gum is unavailable.
-# sudo ./scripts/tui.sh
 
 set -euo pipefail
 

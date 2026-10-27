@@ -1,0 +1,3 @@
+{
+  ephemeral.hosts.nixos.root = ../..;
+}

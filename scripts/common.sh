@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# shared by install.sh / tui.sh / bootstrap.sh — source only, do not execute
 
 die() { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
@@ -48,7 +47,6 @@ validate_chezmoi_rev() {
 validate_disk() {
   local d=$1
   [[ -b $d ]] || die "not a block device: $d"
-  # reject partitions: …pN, sda1 — allow nvme0n1 / mmcblk0 whole disks
   if [[ $d =~ p[0-9]+$ ]]; then
     die "looks like a partition: $d (use the whole disk, e.g. /dev/nvme0n1)"
   fi
@@ -57,8 +55,6 @@ validate_disk() {
   fi
 }
 
-# lock = use flake.lock as-is (create if missing)
-# update = nix flake update (newest inputs)
 validate_flake_inputs() {
   case $1 in
     lock | update) ;;

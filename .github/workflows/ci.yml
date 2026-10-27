@@ -1,7 +1,6 @@
 name: ci
 
 on:
-  # other branches get CI through their pull request, not twice
   push:
     branches: [main]
     tags: ["v*"]
@@ -33,5 +32,4 @@ jobs:
           cp hardware-configuration.example.nix hardware-configuration.nix
 
       - name: nix flake check
-        # path:. so gitignored settings.json and hardware are visible; --no-build = eval only (not a full Plasma closure)
         run: nix flake check path:. --no-write-lock-file --no-build

@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# sudo DISK=/dev/vda ./scripts/install.sh
-# optional: INSTALL_* SWAP_SIZE TIMEZONE CHEZMOI_REPO FLAKE_INPUTS=lock|update CONFIRM=YES
 
 set -euo pipefail
 
@@ -81,7 +79,7 @@ fi
 
 STAGE=""
 cleanup() {
-  # Always leave STAGE before deleting — a deleted cwd breaks getcwd / nix.
+  # leave STAGE first; a deleted cwd breaks nix
   if [[ -n ${STAGE:-} && -d ${STAGE:-} ]]; then
     cd / || true
     rm -rf "$STAGE"
@@ -92,7 +90,6 @@ trap cleanup EXIT
 STAGE=$(mktemp -d /tmp/nixos-flake-stage.XXXXXX)
 info "staging flake at $STAGE"
 
-# Copy sources only — skip build products / VCS / local machine files
 tar -C "$FLAKE_ROOT" \
   --exclude='.git' \
   --exclude='result' \
@@ -107,31 +104,10 @@ cd "$STAGE"
 
 cp -f hardware-configuration.example.nix hardware-configuration.nix
 
-if lsblk -d -o TRAN -n "$DISK" 2>/dev/null | grep -qi virtio \
-  || [[ $DISK == /dev/vd* ]]; then
-  info "virtio disk — writing guest hardware-configuration.nix"
-  cat > hardware-configuration.nix << 'EOF'
-{ config, lib, modulesPath, ... }:
-{
-  imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
-  boot.initrd.availableKernelModules = [
-    "virtio_pci" "virtio_scsi" "virtio_blk" "virtio_net"
-    "xhci_pci" "usb_storage" "sd_mod" "sr_mod"
-  ];
-  boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ ];
-  boot.extraModulePackages = [ ];
-  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
-  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
-  hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
-}
-EOF
-fi
-
-# via env, so nothing needs escaping
+# values go in through the environment, so nothing needs escaping
 # shellcheck disable=SC2016 # the ${...} below is nix interpolation
 S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
-  S_SWAP=$SWAP_SIZE S_TZ=$TIMEZONE S_DESKTOP=$INSTALL_DESKTOP \
+  S_SWAP=$SWAP_SIZE S_TZ=$TIMEZONE S_DESKTOP=$INSTALL_DESKTOP S_CHEZMOI=$CHEZMOI_REPO \
   nix eval --impure --raw --expr '
     let
       e = builtins.getEnv;
@@ -142,6 +118,7 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
         [ "swapSize" (e "S_SWAP") ]
         [ "timeZone" (e "S_TZ") ]
         [ "desktop" (e "S_DESKTOP") ]
+        [ "useChezmoi" (e "S_CHEZMOI" != "") ]
       ];
       line = f: "  ${builtins.toJSON (builtins.elemAt f 0)}: ${builtins.toJSON (builtins.elemAt f 1)}";
     in
@@ -163,7 +140,6 @@ case $FLAKE_INPUTS in
     ;;
 esac
 
-# disko from flake.lock
 info "disko format+mount (LUKS passphrase next)"
 info "first run downloads nixpkgs/disko — can sit on 0/N for several minutes"
 nix run -L --inputs-from "path:${STAGE}" disko -- \
@@ -175,10 +151,18 @@ findmnt /mnt/persist >/dev/null 2>&1 || die "/mnt/persist is not mounted after d
 findmnt /mnt/boot >/dev/null 2>&1 || die "/mnt/boot is not mounted after disko"
 btrfs subvolume list /mnt | grep -q 'root-blank' || die "root-blank missing after disko"
 
+if command -v nixos-generate-config >/dev/null; then
+  info "detecting hardware"
+  nixos-generate-config --no-filesystems --root /mnt --show-hardware-config >"$STAGE/hardware-configuration.nix" \
+    || die "nixos-generate-config failed"
+else
+  info "warning: no nixos-generate-config; using the generic hardware-configuration.nix"
+fi
+
 mkdir -p /mnt/persist/passwords /mnt/persist/etc/ssh /mnt/persist/etc/nixos
 chmod 700 /mnt/persist/passwords
 chmod 755 /mnt/persist/etc/ssh
-# activation chowns this. it has to exist on /persist before the bind mount.
+# has to exist before the bind mount; activation chowns it
 install -d -m 0700 "/mnt/persist/home/${INSTALL_USERNAME}"
 if [[ -n $CHEZMOI_REPO ]]; then
   (
@@ -196,7 +180,6 @@ else
 fi
 [[ -n $HASH ]] || die "empty password hash (mkpasswd failed or cancelled)"
 
-# Restrictive umask so the hash is never world-readable, even briefly
 (
   umask 077
   printf '%s\n' "$HASH" > "/mnt/persist/passwords/${INSTALL_USERNAME}"
@@ -204,12 +187,10 @@ fi
 chmod 600 "/mnt/persist/passwords/${INSTALL_USERNAME}"
 sync
 
-# Copy staged flake onto the target (already without .git)
 tar -C "$STAGE" -cf - . | tar -C /mnt/persist/etc/nixos -xf -
 [[ -f /mnt/persist/etc/nixos/settings.json ]] || die "settings.json missing after copy"
 [[ -f /mnt/persist/etc/nixos/flake.nix ]] || die "flake.nix missing after copy"
 
-# Leave deleted directories before nixos-install (getcwd safety)
 cd /
 cleanup
 trap - EXIT
