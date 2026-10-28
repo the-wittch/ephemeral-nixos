@@ -1,10 +1,19 @@
 {
   flake.modules.nixos.base =
     { config, lib, ... }:
+    let
+      settings = config.ephemeral.settings;
+    in
     {
-      networking.hostName = config.ephemeral.settings.hostname;
-      time.timeZone = config.ephemeral.settings.timeZone;
-      i18n.defaultLocale = "en_US.UTF-8";
+      networking.hostName = settings.hostname;
+      time.timeZone = settings.timeZone;
+      i18n.defaultLocale = settings.locale;
+
+      services.xserver.xkb = {
+        layout = settings.keyboardLayout;
+        variant = settings.keyboardVariant;
+      };
+      console.useXkbConfig = true;
 
       nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 

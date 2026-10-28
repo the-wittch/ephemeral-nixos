@@ -3,57 +3,106 @@
     { lib, ... }:
     let
       inherit (lib) mkOption types;
-      str =
-        description:
-        mkOption {
-          inherit description;
-          type = types.nonEmptyStr;
-        };
-      flag =
-        description:
-        mkOption {
-          inherit description;
-          type = types.bool;
-          default = false;
-        };
+      defaults = import ./_defaults.nix;
+      flag = description: {
+        type = types.bool;
+        inherit description;
+      };
     in
     {
       options.ephemeral = {
-        settings = {
-          hostname = str "Hostname.";
-          username = mkOption {
-            type = types.strMatching "[a-z_][a-z0-9_-]{0,31}";
-            description = "The one login user.";
-          };
-          diskDevice = str "Whole disk the system is installed on.";
-          swapSize = str "Swap file size, e.g. 16G.";
-          timeZone = str "Time zone, e.g. Europe/Berlin.";
-          desktop = mkOption {
-            type = types.enum [
-              "plasma"
-              "gnome"
-              "niri"
-            ];
-            description = "Desktop environment.";
-          };
-          useControlD = flag "DNS over TLS to Control D; the id is in /persist/etc/controld-resolver.";
-          useChezmoi = flag "chezmoi from /persist/etc/chezmoi-repo writes the dotfiles instead of Home Manager.";
-          useFlakePassCli = flag "Build modules/packages/_pass-cli.nix instead of nixpkgs proton-pass-cli.";
-          usePassSettings = flag "Merge settings.from-pass.json.";
-          passSettingsVault = mkOption {
-            type = types.str;
-            default = "Personal";
-            description = "Proton Pass vault for settings-from-pass.";
-          };
-          passSettingsItem = mkOption {
-            type = types.str;
-            default = "nixos-settings";
-            description = "Proton Pass item for settings-from-pass.";
-          };
+        settings =
+          lib.mapAttrs
+            (
+              name: spec:
+              mkOption (spec // lib.optionalAttrs (name != "username") { default = defaults.${name}; })
+            )
+            {
+              hostname = {
+                type = types.nonEmptyStr;
+                description = "Hostname.";
+              };
+              username = {
+                type = types.strMatching "[a-z_][a-z0-9_-]{0,31}";
+                description = "The one login user.";
+              };
+              timeZone = {
+                type = types.nonEmptyStr;
+                description = "Time zone, e.g. Europe/Berlin.";
+              };
+              locale = {
+                type = types.strMatching "[A-Za-z_]+\\.UTF-8";
+                description = "System language, e.g. de_DE.UTF-8.";
+              };
+              keyboardLayout = {
+                type = types.strMatching "[a-z]{2,3}(,[a-z]{2,3})*";
+                description = "XKB layout, also used for the console and the LUKS prompt, e.g. de or us,de.";
+              };
+              keyboardVariant = {
+                type = types.strMatching "[a-z0-9_-]*(,[a-z0-9_-]*)*";
+                description = "XKB variant, e.g. nodeadkeys. Empty for the default.";
+              };
+              diskDevice = {
+                type = types.nonEmptyStr;
+                description = "Whole disk the system is installed on.";
+              };
+              swapSize = {
+                type = types.nonEmptyStr;
+                description = "Swap file size, e.g. 16G.";
+              };
+              desktop = {
+                type = types.enum [
+                  "plasma"
+                  "gnome"
+                  "niri"
+                ];
+                description = "Desktop environment.";
+              };
+              nvidia = {
+                type = types.enum [
+                  "none"
+                  "open"
+                  "legacy"
+                ];
+                description = "NVIDIA driver: open for RTX 20 / GTX 16 and newer, legacy (580) for GTX 900 and 10 series.";
+              };
+              extras = flag "Extra apps and tools: Steam, VS Code, Brave, VLC, atuin, fzf, bat, comma and more.";
+              laptop = flag "Laptop extras: thermald on Intel, battery reporting, sensors.";
+              fingerprint = flag "Fingerprint login and sudo through fprintd.";
+              useChezmoi = flag "chezmoi from /persist/etc/chezmoi-repo writes the dotfiles instead of Home Manager.";
+              useControlD = flag "DNS over TLS to Control D; the id is in /persist/etc/controld-resolver.";
+              useTailscale = flag "Tailscale VPN.";
+              useFlakePassCli = flag "Build modules/packages/_pass-cli.nix instead of nixpkgs proton-pass-cli.";
+              usePassSettings = flag "Merge settings.from-pass.json.";
+              passSettingsVault = {
+                type = types.str;
+                description = "Proton Pass vault for settings-from-pass.";
+              };
+              passSettingsItem = {
+                type = types.str;
+                description = "Proton Pass item for settings-from-pass.";
+              };
+            };
+
+        pickedApps = mkOption {
+          type = types.listOf types.str;
+          default = [ ];
+          description = "Apps from apps.json, picked with ephemeral-apps.";
         };
 
         smbShares = mkOption {
-          type = types.listOf (types.attrsOf types.str);
+          type = types.listOf (
+            types.submodule {
+              options = {
+                server = mkOption { type = types.strMatching "[A-Za-z0-9._:-]+"; };
+                share = mkOption { type = types.strMatching "[A-Za-z0-9._$ -]+"; };
+                mountPoint = mkOption {
+                  type = types.strMatching "/(mnt|media|home/[a-z_][a-z0-9_-]*)/[A-Za-z0-9._/-]+";
+                };
+                credentials = mkOption { type = types.strMatching "/persist/etc/smb/[A-Za-z0-9_-]+\\.creds"; };
+              };
+            }
+          );
           default = [ ];
           description = "CIFS mounts written by smb-setup to smb-shares.json.";
         };

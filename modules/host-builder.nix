@@ -13,6 +13,12 @@ let
     name: host:
     let
       settings = loadSettings host.root;
+      appsFile = host.root + "/apps.json";
+      picked = if builtins.pathExists appsFile then lib.importJSON appsFile else [ ];
+      known =
+        lib.throwIfNot (builtins.isList picked && lib.all builtins.isString picked)
+          "apps.json has to be a list of app names"
+          (builtins.filter (id: config.ephemeral.apps ? ${id}) picked);
       hardware = host.root + "/hardware-configuration.nix";
       system = inputs.nixpkgs.lib.nixosSystem {
         modules = [
@@ -22,6 +28,7 @@ let
           {
             ephemeral.settings = settings;
             ephemeral.smbShares = readData (host.root + "/smb-shares") [ ];
+            ephemeral.pickedApps = picked;
           }
           (
             if builtins.pathExists hardware then
@@ -34,7 +41,19 @@ let
               }
           )
         ]
-        ++ lib.optional settings.useControlD config.flake.modules.nixos.controld
+        ++ map (name: config.flake.modules.nixos.${name}) (
+          lib.attrNames (
+            lib.filterAttrs (_: on: on) {
+              controld = settings.useControlD;
+              nvidia = settings.nvidia != "none";
+              extras = settings.extras;
+              laptop = settings.laptop;
+              fingerprint = settings.fingerprint;
+              tailscale = settings.useTailscale;
+            }
+          )
+        )
+        ++ map (id: config.ephemeral.apps.${id}.nixos) known
         ++ host.modules;
       };
     in

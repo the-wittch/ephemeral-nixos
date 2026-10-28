@@ -8,6 +8,7 @@ passwords/
 *.pem
 id_rsa
 id_ed25519
+id_ecdsa
 *.age
 secrets.nix
 

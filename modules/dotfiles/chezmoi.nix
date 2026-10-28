@@ -20,9 +20,6 @@
         neovim
         starship
         zoxide
-        yazi
-        btop
-        fastfetch
       ];
 
       system.activationScripts.chezmoiRepo = {
