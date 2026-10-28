@@ -57,6 +57,59 @@ if [[ -z ${INSTALL_DESKTOP:-} ]]; then
 fi
 
 validate_desktop "$INSTALL_DESKTOP"
+
+if [[ -z ${NVIDIA_DRIVER:-} ]]; then
+  if gpu=$(nvidia_gpu); then
+    echo
+    info "found: $gpu"
+    echo "  1) open    — RTX 20 / GTX 16 series and newer"
+    echo "  2) legacy  — GTX 900 / GTX 10 series"
+    echo "  3) none    — keep the open-source nouveau driver"
+    echo
+    read -r -p "Install NVIDIA drivers? [1]: " nv_choice
+    case ${nv_choice:-1} in
+      1 | open) NVIDIA_DRIVER=open ;;
+      2 | legacy) NVIDIA_DRIVER=legacy ;;
+      3 | none) NVIDIA_DRIVER=none ;;
+      *) die "invalid choice: ${nv_choice}" ;;
+    esac
+  else
+    NVIDIA_DRIVER=none
+  fi
+fi
+validate_nvidia "$NVIDIA_DRIVER"
+
+if [[ -z ${KEYBOARD_LAYOUT:-} ]]; then
+  read -r -p "Keyboard layout [us]: " KEYBOARD_LAYOUT
+  KEYBOARD_LAYOUT=${KEYBOARD_LAYOUT:-us}
+  read -r -p "Keyboard variant (empty for the default): " KEYBOARD_VARIANT
+fi
+KEYBOARD_VARIANT=${KEYBOARD_VARIANT:-}
+validate_keyboard "$KEYBOARD_LAYOUT" "$KEYBOARD_VARIANT"
+warn_luks_layout "$KEYBOARD_LAYOUT"
+if [[ -z ${LOCALE:-} ]]; then
+  read -r -p "Language [en_US.UTF-8]: " LOCALE
+  LOCALE=${LOCALE:-en_US.UTF-8}
+fi
+validate_locale "$LOCALE"
+
+if [[ -z ${EXTRAS:-} ]]; then
+  read -r -p "Install extra apps and tools (Steam, VS Code, Brave, VLC, atuin, comma and more)? [y/N]: " ex
+  EXTRAS=false
+  [[ ${ex:-n} =~ ^[Yy] ]] && EXTRAS=true
+fi
+[[ $EXTRAS == true || $EXTRAS == false ]] || die "EXTRAS must be true or false"
+
+LAPTOP=false
+has_battery && LAPTOP=true
+if [[ -z ${FINGERPRINT:-} ]]; then
+  FINGERPRINT=false
+  if reader=$(fingerprint_reader); then
+    read -r -p "Fingerprint reader found: $reader. Use it for login and sudo? [Y/n]: " fp
+    [[ ${fp:-y} =~ ^[Yy] ]] && FINGERPRINT=true
+  fi
+fi
+[[ $FINGERPRINT == true || $FINGERPRINT == false ]] || die "FINGERPRINT must be true or false"
 validate_hostname "$INSTALL_HOSTNAME"
 validate_username "$INSTALL_USERNAME"
 validate_swap "$SWAP_SIZE"
@@ -68,7 +121,7 @@ if [[ -n $CHEZMOI_REPO ]]; then
 fi
 validate_flake_inputs "$FLAKE_INPUTS"
 validate_flake_attr "$FLAKE_ATTR"
-info "desktop=$INSTALL_DESKTOP inputs=$FLAKE_INPUTS"
+info "desktop=$INSTALL_DESKTOP nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT inputs=$FLAKE_INPUTS"
 
 info "will erase $DISK"
 lsblk "$DISK" | sed 's/^/    /'
@@ -107,7 +160,8 @@ cp -f hardware-configuration.example.nix hardware-configuration.nix
 # values go in through the environment, so nothing needs escaping
 # shellcheck disable=SC2016 # the ${...} below is nix interpolation
 S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
-  S_SWAP=$SWAP_SIZE S_TZ=$TIMEZONE S_DESKTOP=$INSTALL_DESKTOP S_CHEZMOI=$CHEZMOI_REPO \
+  S_SWAP=$SWAP_SIZE S_TZ=$TIMEZONE S_DESKTOP=$INSTALL_DESKTOP S_NVIDIA=$NVIDIA_DRIVER S_CHEZMOI=$CHEZMOI_REPO \
+  S_KB=$KEYBOARD_LAYOUT S_KBV=$KEYBOARD_VARIANT S_LOCALE=$LOCALE S_LAPTOP=$LAPTOP S_FP=$FINGERPRINT S_EXTRAS=$EXTRAS \
   nix eval --impure --raw --expr '
     let
       e = builtins.getEnv;
@@ -118,6 +172,13 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
         [ "swapSize" (e "S_SWAP") ]
         [ "timeZone" (e "S_TZ") ]
         [ "desktop" (e "S_DESKTOP") ]
+        [ "nvidia" (e "S_NVIDIA") ]
+        [ "keyboardLayout" (e "S_KB") ]
+        [ "keyboardVariant" (e "S_KBV") ]
+        [ "locale" (e "S_LOCALE") ]
+        [ "extras" (e "S_EXTRAS" == "true") ]
+        [ "laptop" (e "S_LAPTOP" == "true") ]
+        [ "fingerprint" (e "S_FP" == "true") ]
         [ "useChezmoi" (e "S_CHEZMOI" != "") ]
       ];
       line = f: "  ${builtins.toJSON (builtins.elemAt f 0)}: ${builtins.toJSON (builtins.elemAt f 1)}";

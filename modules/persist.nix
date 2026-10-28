@@ -93,7 +93,7 @@
           for d in /persist /persist/etc /persist/var /persist/var/lib /persist/home; do
             if [ -d "$d" ]; then
               chmod 0755 "$d"
-              chown root:root "$d"
+              chown 0:0 "$d"
             fi
           done
         '';

@@ -3,20 +3,7 @@
 let
   readData = import ./_read-data.nix { inherit lib; };
 
-  defaults = {
-    hostname = "nixos";
-    username = "nixuser";
-    diskDevice = "/dev/nvme0n1";
-    swapSize = "16G";
-    timeZone = "UTC";
-    desktop = "plasma";
-    useControlD = false;
-    useChezmoi = false;
-    useFlakePassCli = false;
-    usePassSettings = false;
-    passSettingsVault = "Personal";
-    passSettingsItem = "nixos-settings";
-  };
+  defaults = import ./_defaults.nix;
 
   # a missing file must not become username nixuser
   fromSettings = readData (flakeRoot + "/settings") (throw ''
@@ -48,16 +35,6 @@ let
         "settings.allowUnfree is no longer used. Unfree packages are listed in ephemeral.unfreePackages."
         merged;
 in
-assert merged'.hostname != "";
-assert merged'.username != "";
-assert merged'.diskDevice != "";
-assert merged'.swapSize != "";
-assert merged'.timeZone != "";
-assert builtins.elem merged'.desktop [
-  "plasma"
-  "gnome"
-  "niri"
-];
 removeAttrs merged' [
   "controldResolver"
   "chezmoiRepo"

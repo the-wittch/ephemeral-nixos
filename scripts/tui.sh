@@ -74,6 +74,43 @@ if [[ -z ${INSTALL_DESKTOP:-} ]]; then
 fi
 validate_desktop "$INSTALL_DESKTOP"
 
+if [[ -z ${NVIDIA_DRIVER:-} ]]; then
+  if gpu=$(nvidia_gpu); then
+    nv=$(run_gum choose --header "Found $gpu. Install NVIDIA drivers?" \
+      "open    — RTX 20 / GTX 16 series and newer" \
+      "legacy  — GTX 900 / GTX 10 series" \
+      "none    — keep the open-source nouveau driver") || die "aborted"
+    NVIDIA_DRIVER=$(awk '{print $1}' <<<"$nv")
+  else
+    NVIDIA_DRIVER=none
+  fi
+fi
+validate_nvidia "$NVIDIA_DRIVER"
+
+if [[ -z ${KEYBOARD_LAYOUT:-} ]]; then
+  KEYBOARD_LAYOUT=$(run_gum input --header "Keyboard layout" --value "us" --placeholder "us, de, fr, us,de")
+  KEYBOARD_VARIANT=$(run_gum input --header "Keyboard variant (empty for the default)" --value "${KEYBOARD_VARIANT:-}" --placeholder "nodeadkeys")
+fi
+KEYBOARD_VARIANT=${KEYBOARD_VARIANT:-}
+validate_keyboard "$KEYBOARD_LAYOUT" "$KEYBOARD_VARIANT"
+warn_luks_layout "$KEYBOARD_LAYOUT"
+if [[ -z ${LOCALE:-} ]]; then
+  LOCALE=$(run_gum input --header "Language" --value "en_US.UTF-8" --placeholder "de_DE.UTF-8")
+fi
+validate_locale "$LOCALE"
+
+if [[ -z ${EXTRAS:-} ]]; then
+  EXTRAS=false
+  run_gum confirm --default=false "Install extra apps and tools? Steam, VS Code, Brave, VLC, atuin, comma and more." && EXTRAS=true
+fi
+
+if [[ -z ${FINGERPRINT:-} ]]; then
+  FINGERPRINT=false
+  if reader=$(fingerprint_reader); then
+    run_gum confirm "Fingerprint reader found: $reader. Use it for login and sudo?" && FINGERPRINT=true
+  fi
+fi
+
 INSTALL_HOSTNAME=$(run_gum input --header "Hostname" --value "${INSTALL_HOSTNAME:-nixos}" --placeholder "nixos")
 INSTALL_USERNAME=$(run_gum input --header "Username" --value "${INSTALL_USERNAME:-nixuser}" --placeholder "nixuser")
 SWAP_SIZE=$(run_gum input --header "Swap size" --value "${SWAP_SIZE:-4G}" --placeholder "4G")
@@ -104,8 +141,9 @@ validate_flake_inputs "$FLAKE_INPUTS"
 
 run_gum style --border rounded --padding "0 2" --border-foreground 196 \
   "WILL ERASE: $DISK" \
-  "desktop=$INSTALL_DESKTOP  host=$INSTALL_HOSTNAME  user=$INSTALL_USERNAME" \
-  "swap=$SWAP_SIZE  tz=$TIMEZONE  inputs=$FLAKE_INPUTS"
+  "desktop=$INSTALL_DESKTOP  nvidia=$NVIDIA_DRIVER  host=$INSTALL_HOSTNAME  user=$INSTALL_USERNAME" \
+  "swap=$SWAP_SIZE  tz=$TIMEZONE  inputs=$FLAKE_INPUTS" \
+  "keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+ ($KEYBOARD_VARIANT)}  locale=$LOCALE  extras=$EXTRAS  fingerprint=$FINGERPRINT"
 
 run_gum confirm "Erase $DISK and install?" || die "aborted"
 
@@ -113,6 +151,12 @@ export DISK
 export INSTALL_HOSTNAME
 export INSTALL_USERNAME
 export INSTALL_DESKTOP
+export NVIDIA_DRIVER
+export KEYBOARD_LAYOUT
+export KEYBOARD_VARIANT
+export LOCALE
+export FINGERPRINT
+export EXTRAS
 export SWAP_SIZE
 export TIMEZONE
 export CHEZMOI_REPO

@@ -1,18 +1,27 @@
 {
   flake.modules.nixos.pc =
-    { pkgs, ... }:
-    let
-      # pinned: it holds flathub's signing key
-      flathubRepo = pkgs.fetchurl {
-        url = "https://dl.flathub.org/repo/flathub.flatpakrepo";
-        hash = "sha256-M3HdJQ5h2eFjNjAHP+/aFTzUQm9y9K+gwzc64uj+oDo=";
-      };
-    in
     {
-      services.flatpak.enable = true;
-      environment.persistence."/persist".directories = [ "/var/lib/flatpak" ];
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    {
+      options.ephemeral.flathubRepo = lib.mkOption {
+        type = lib.types.package;
+        readOnly = true;
+        description = "The pinned flathub.flatpakrepo file.";
+        # pinned: it holds flathub's signing key
+        default = pkgs.fetchurl {
+          url = "https://dl.flathub.org/repo/flathub.flatpakrepo";
+          hash = "sha256-M3HdJQ5h2eFjNjAHP+/aFTzUQm9y9K+gwzc64uj+oDo=";
+        };
+      };
 
-      systemd.services.flatpak-flathub = {
+      config.services.flatpak.enable = true;
+      config.environment.persistence."/persist".directories = [ "/var/lib/flatpak" ];
+
+      config.systemd.services.flatpak-flathub = {
         description = "Add Flathub Flatpak remote";
         wantedBy = [ "multi-user.target" ];
         path = [ pkgs.flatpak ];
@@ -41,7 +50,7 @@
           SystemCallArchitectures = "native";
         };
         script = ''
-          flatpak remote-add --system --if-not-exists flathub ${flathubRepo}
+          flatpak remote-add --system --if-not-exists flathub ${config.ephemeral.flathubRepo}
         '';
       };
     };

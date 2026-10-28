@@ -28,6 +28,77 @@ validate_desktop() {
   esac
 }
 
+validate_nvidia() {
+  case $1 in
+    none | open | legacy) ;;
+    *) die "NVIDIA_DRIVER must be none, open, or legacy (got: $1)" ;;
+  esac
+}
+
+# device names go into prompts; drop escape sequences
+printable() {
+  tr -cd '[:print:]\n'
+}
+
+# vendor 10de, pci class 03 (display)
+nvidia_gpu() {
+  local d
+  for d in /sys/bus/pci/devices/*; do
+    [[ -r $d/vendor && -r $d/class ]] || continue
+    if [[ $(<"$d/vendor") == 0x10de && $(<"$d/class") == 0x03* ]]; then
+      if command -v lspci >/dev/null; then
+        lspci -s "${d##*/}" | cut -d' ' -f2- | sed 's/^[^:]*: //' | printable
+      else
+        echo "NVIDIA GPU"
+      fi
+      return 0
+    fi
+  done
+  return 1
+}
+
+validate_keyboard() {
+  [[ $1 =~ ^[a-z]{2,3}(,[a-z]{2,3})*$ ]] || die "invalid keyboard layout: $1 (e.g. us, de, us,de)"
+  [[ $2 =~ ^[a-z0-9_-]*(,[a-z0-9_-]*)*$ ]] || die "invalid keyboard variant: $2 (e.g. nodeadkeys)"
+}
+
+validate_locale() {
+  [[ $1 =~ ^[A-Za-z_]+\.UTF-8$ ]] || die "invalid locale: $1 (e.g. en_US.UTF-8)"
+}
+
+warn_luks_layout() {
+  [[ $1 == us ]] && return 0
+  echo
+  echo "  Heads up: you type the LUKS passphrase in a moment with this live system's"
+  echo "  keyboard layout, but at boot with '$1'. Switch the live session to '$1' first,"
+  echo "  or use a passphrase that types the same on both layouts."
+  echo
+}
+
+has_battery() {
+  local b
+  for b in /sys/class/power_supply/BAT*; do
+    [[ -e $b ]] && return 0
+  done
+  return 1
+}
+
+# usb vendors that make fingerprint readers: goodix, synaptics, validity, elan, egis, focaltech, authentec, upek, fpc
+fingerprint_reader() {
+  local d v
+  for d in /sys/bus/usb/devices/*; do
+    [[ -r $d/idVendor ]] || continue
+    v=$(<"$d/idVendor")
+    case $v in
+      27c6 | 06cb | 138a | 04f3 | 1c7a | 2808 | 08ff | 147e | 10a5)
+        printf '%s %s (%s)\n' "$(cat "$d/manufacturer" 2>/dev/null)" "$(cat "$d/product" 2>/dev/null)" "$v" | printable
+        return 0
+        ;;
+    esac
+  done
+  return 1
+}
+
 validate_chezmoi() {
   local url=$1
   [[ -z $url ]] && return 0

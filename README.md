@@ -53,7 +53,7 @@ curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/main/scr
 
 Use `sudo env VAR=...`. Plain `sudo VAR=...` usually drops the variables.
 
-The installer asks for the disk, desktop, hostname, user and swap size, then a LUKS passphrase and a login password. It detects your hardware once the disk is mounted. When it's done, remove the ISO and reboot.
+The installer asks for the disk, desktop, hostname, user, swap size, keyboard layout and language, then a LUKS passphrase and a login password. With a non-US layout, switch the live session to that layout before typing the passphrase, since that's the layout you'll type it in at boot. It asks whether to add the extras (Steam, VS Code, Brave and more shell tools; off keeps the system lean), turns on the laptop extras when it finds a battery, and asks about fingerprint login when it finds a reader. If it finds an NVIDIA card, it shows its name and asks whether to install the drivers: `open` for RTX 20 / GTX 16 series and newer, `legacy` for GTX 900 / 10 series, or `none`. The driver is compiled during the install, which adds a few minutes. It detects the rest of your hardware once the disk is mounted. When it's done, remove the ISO and reboot.
 
 **VMs:** UEFI with Secure Boot off and a VirtIO disk (`/dev/vda`). 64 GB of disk and 8 GB of RAM is plenty. The boot splash can look odd on virtual GPUs; unlocking still works.
 
@@ -70,9 +70,11 @@ To see the wipe working: `sudo touch /ephemeral-test`, put a file in `~`, and re
 
 ### Next step
 
-This installer sets up a small first-boot system. [ephemeral-nixos-config](https://github.com/the-wittch/ephemeral-nixos-config) is the full config to switch to afterwards: Home Manager dotfiles, a Catppuccin theme, snapshots of `/persist`, Control D, SMB mounts and more. It reads the same `settings.json`, and its README has the steps for keeping your own changes in a private repo.
+This installer sets up a small first-boot system. [ephemeral-nixos-config](https://github.com/the-wittch/ephemeral-nixos-config) is the full config to switch to afterwards: Home Manager dotfiles, a Catppuccin theme, snapshots of `/persist`, Control D, SMB mounts and more. It reads the same `settings.json`, and its README has the steps for keeping your own changes in a private repo. After switching, `ephemeral-apps` lets you tick the apps you want, with no files to edit.
 
 ### settings.json
+
+The installer writes your answers, for example:
 
 ```json
 {
@@ -80,12 +82,20 @@ This installer sets up a small first-boot system. [ephemeral-nixos-config](https
   "username": "nixuser",
   "diskDevice": "/dev/nvme0n1",
   "swapSize": "16G",
-  "timeZone": "UTC",
-  "desktop": "plasma"
+  "timeZone": "Europe/Berlin",
+  "desktop": "gnome",
+  "nvidia": "none",
+  "keyboardLayout": "de",
+  "keyboardVariant": "",
+  "locale": "de_DE.UTF-8",
+  "extras": false,
+  "laptop": true,
+  "fingerprint": false,
+  "useChezmoi": false
 }
 ```
 
-`diskDevice` is the whole disk, not a partition. `desktop` is `plasma`, `gnome` or `niri`. Installs older than v1.3 have a `settings.nix` instead; it still loads, and the rebuild prints the command that converts it.
+[`settings.example.json`](settings.example.json) lists every setting with its default; the [config template's README](https://github.com/the-wittch/ephemeral-nixos-config#settingsjson) explains each one. `diskDevice` is the whole disk, not a partition. `desktop` is `plasma`, `gnome` or `niri`. `nvidia` is `none`, `open` or `legacy`. Installs older than v1.3 have a `settings.nix` instead; it still loads, and the rebuild prints the command that converts it.
 
 ### chezmoi
 
@@ -117,6 +127,10 @@ Most of these files are shared byte for byte with [ephemeral-nixos-config](https
 | `modules/users.nix` | the user and sudo |
 | `modules/dotfiles/` | zsh, and chezmoi when it's on |
 | `modules/desktop/` | Plasma, GNOME, niri |
+| `modules/nvidia.nix` | NVIDIA drivers, when `nvidia` isn't `none` |
+| `modules/laptop.nix`, `modules/fingerprint.nix`, `modules/tailscale.nix` | added when their setting is on |
+| `modules/avatar.nix` | the snowflake as the default user picture |
+| `modules/extras.nix`, `modules/apps/catalog.nix` | empty here; the config template fills them in |
 | `modules/apps.nix` | first-boot packages |
 | `modules/hardening.nix` | kernel sysctls and blocked modules |
 | `modules/unfree.nix` | the unfree allowlist |
@@ -137,7 +151,7 @@ Most of these files are shared byte for byte with [ephemeral-nixos-config](https
 - Hibernation is off. Suspend works.
 - `/boot` isn't encrypted. The boot menu editor is disabled.
 - SSH is off. `services.openssh.enable = true` turns it on with port 22 still firewalled; the host key is kept in `/persist/etc/ssh`.
-- `flake.lock` pins nixpkgs, disko and impermanence. The menu installer asks whether to keep the pins or update them; the plain one keeps them unless `FLAKE_INPUTS=update` is set.
+- `flake.lock` pins every input (nixpkgs, disko, impermanence and flake-parts). The menu installer asks whether to keep the pins or update them; the plain one keeps them unless `FLAKE_INPUTS=update` is set.
 
 ## Troubleshooting
 
@@ -173,5 +187,7 @@ The subvolume list should include `root-blank`. Use your own username in place o
 ## Wallpaper
 
 `assets/wallpaper.svg` is rendered to a 4K PNG at build time and installed at `/run/current-system/sw/share/backgrounds/ephemeral/wallpaper.png`. It's the default on GNOME (desktop, lock screen and login screen) and on the Plasma login screen. On the Plasma desktop or niri, pick that file in the wallpaper settings. A wallpaper you choose always wins.
+
+The snowflake is also the default user picture, until you pick your own.
 
 The snowflake is the "NixOS Logo" by [Simon Frankau](https://github.com/simon-frankau), [Tim Cuthbertson](https://github.com/timbertson) and [Daniel Baker](https://github.com/djacu) (maintained by the [NixOS Marketing Team](https://nixos.org/community/teams/marketing/)), from [NixOS/branding](https://github.com/NixOS/branding), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It has been recoloured.
