@@ -100,9 +100,6 @@ export FINGERPRINT="${FINGERPRINT:-}"
 export EXTRAS="${EXTRAS:-}"
 export SWAP_SIZE="${SWAP_SIZE:-4G}"
 export TIMEZONE="${TIMEZONE:-UTC}"
-export CHEZMOI_REPO="${CHEZMOI_REPO:-}"
-export CHEZMOI_REV="${CHEZMOI_REV:-}"
-export FLAKE_INPUTS="${FLAKE_INPUTS:-lock}"
 export FLAKE_ATTR="${FLAKE_ATTR:-nixos}"
 
 if [[ -t 0 ]]; then

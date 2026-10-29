@@ -1,24 +1,26 @@
-settings.json
-settings.nix
-
-hardware-configuration.nix
+/settings.json
+/settings.nix
+/settings.from-pass.json
+/settings.from-pass.nix
+/hardware-configuration.nix
+/smb-shares.json
+/smb-shares.nix
 
 passwords/
 *.key
 *.pem
+*.age
+*.creds
 id_rsa
 id_ed25519
 id_ecdsa
-*.age
 secrets.nix
+.env
+.env.*
 
-.result
 result
 result-*
-
 .direnv/
 *.swp
 *~
-
-RELEASING.md
-RESTORE.md
+.DS_Store

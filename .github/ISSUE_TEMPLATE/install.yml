@@ -1,0 +1,32 @@
+name: Install problem
+description: The installer failed or the machine doesn't boot after installing
+labels: [bug]
+body:
+  - type: input
+    id: release
+    attributes:
+      label: Installer release
+      description: The tag you installed from, or main.
+    validations:
+      required: true
+  - type: dropdown
+    id: target
+    attributes:
+      label: Installing on
+      options: [Real hardware, VM]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The step it failed at and the last 30 or so lines of output.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware
+      description: Output of `lspci -nn | grep -iE 'vga|3d|display|nvme|sata'` from the installer ISO.
+      render: text

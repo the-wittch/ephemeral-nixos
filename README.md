@@ -68,9 +68,15 @@ sudo nixos-rebuild switch --flake path:.#nixos
 
 To see the wipe working: `sudo touch /ephemeral-test`, put a file in `~`, and reboot. The first is gone, the second is still there.
 
-### Next step
+A read-only copy of the config as installed is kept in `/persist/etc/nixos-install`. However far `/persist/etc/nixos` moves on, this gets the fresh-install system back (your files stay):
 
-This installer sets up a small first-boot system. [ephemeral-nixos-config](https://github.com/the-wittch/ephemeral-nixos-config) is the full config to switch to afterwards: Home Manager dotfiles, a Catppuccin theme, snapshots of `/persist`, Control D, SMB mounts and more. It reads the same `settings.json`, and its README has the steps for keeping your own changes in a private repo. After switching, `ephemeral-apps` lets you tick the apps you want, with no files to edit.
+```bash
+sudo nixos-rebuild switch --flake path:/persist/etc/nixos-install#nixos
+```
+
+### Next step: the full config
+
+The installer sets up the `minimal` profile of [ephemeral-nixos-config](https://github.com/the-wittch/ephemeral-nixos-config): a working desktop and nothing more. Its `full` profile adds Home Manager dotfiles, a Catppuccin theme, snapshots of `/persist`, OpenSnitch, Control D, SMB mounts, `ephemeral-apps` for picking apps, and more. Opting in is one setting; its README's [Setup](https://github.com/the-wittch/ephemeral-nixos-config#setup) section has the steps, including trying it in a VM first.
 
 ### settings.json
 
@@ -91,15 +97,11 @@ The installer writes your answers, for example:
   "extras": false,
   "laptop": true,
   "fingerprint": false,
-  "useChezmoi": false
+  "profile": "minimal"
 }
 ```
 
-[`settings.example.json`](settings.example.json) lists every setting with its default; the [config template's README](https://github.com/the-wittch/ephemeral-nixos-config#settingsjson) explains each one. `diskDevice` is the whole disk, not a partition. `desktop` is `plasma`, `gnome` or `niri`. `nvidia` is `none`, `open` or `legacy`. Installs older than v1.3 have a `settings.nix` instead; it still loads, and the rebuild prints the command that converts it.
-
-### chezmoi
-
-Set `CHEZMOI_REPO` and `CHEZMOI_REV` (the full 40-character commit) and the installer writes `<repo> <commit>` to `/persist/etc/chezmoi-repo` and `"useChezmoi": true` to `settings.json`. On first boot your dotfiles are cloned and applied. Without them, the config template manages dotfiles with Home Manager.
+The config's [`settings.example.json`](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/settings.example.json) lists every setting with its default; the [config template's README](https://github.com/the-wittch/ephemeral-nixos-config#settingsjson) explains each one. `diskDevice` is the whole disk, not a partition. `desktop` is `plasma`, `gnome` or `niri`. `nvidia` is `none`, `open` or `legacy`. Installs older than v1.3 have a `settings.nix` instead; it still loads, and the rebuild prints the command that converts it.
 
 ### Unfree packages
 
@@ -113,28 +115,26 @@ A package that isn't listed fails the build and tells you the name to add.
 
 ## Layout
 
-The config follows the [dendritic pattern](https://github.com/mightyiam/dendritic). Every `.nix` file under `modules/` is a [flake-parts](https://flake.parts) module for one feature, loaded automatically by [import-tree](https://github.com/vic/import-tree). Files don't import each other: each one adds to a few shared modules (`flake.modules.nixos.base`, `.pc`, and one per desktop), and the machine is built by combining those. Adding a feature means adding a file.
+This repo is the installer and nothing else. Its `flake.nix` is the machine flake that gets installed to `/persist/etc/nixos`:
 
-Most of these files are shared byte for byte with [ephemeral-nixos-config](https://github.com/the-wittch/ephemeral-nixos-config), and its CI fails if they drift apart.
+```nix
+{
+  inputs = {
+    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v3.0.0";
+    # the installer runs these by name
+    nixpkgs.follows = "ephemeral/nixpkgs";
+    disko.follows = "ephemeral/disko";
+  };
+  outputs = inputs: inputs.ephemeral.lib.mkFlake { inherit inputs; root = ./.; };
+}
+```
+
+Every module, the partition layout included, comes from that pinned release of the config repo; `flake.lock` pins the rest. Each installer release pins a tested config release.
 
 | path | what |
 |------|------|
-| `modules/host-builder.nix`, `modules/hosts/nixos.nix` | build the `nixos` machine from `settings.json` and `hardware-configuration.nix` |
-| `modules/settings/` | the settings options and the `settings.json` loader |
-| `modules/disko.nix` | partitions, LUKS, btrfs |
-| `modules/boot.nix` | bootloader, boot splash, the root wipe |
-| `modules/persist.nix` | what survives a reboot |
-| `modules/users.nix` | the user and sudo |
-| `modules/dotfiles/` | zsh, and chezmoi when it's on |
-| `modules/desktop/` | Plasma, GNOME, niri |
-| `modules/nvidia.nix` | NVIDIA drivers, when `nvidia` isn't `none` |
-| `modules/laptop.nix`, `modules/fingerprint.nix`, `modules/tailscale.nix` | added when their setting is on |
-| `modules/avatar.nix` | the snowflake as the default user picture |
-| `modules/extras.nix`, `modules/apps/catalog.nix` | empty here; the config template fills them in |
-| `modules/apps.nix` | first-boot packages |
-| `modules/hardening.nix` | kernel sysctls and blocked modules |
-| `modules/unfree.nix` | the unfree allowlist |
-| `modules/wallpaper.nix`, `assets/wallpaper.svg` | default wallpaper and login background |
+| `flake.nix`, `flake.lock` | the machine flake, copied to `/persist/etc/nixos` and `/persist/etc/nixos-install` |
+| `hardware-configuration.example.nix` | used until the installer has detected your hardware |
 | `scripts/tui.sh`, `scripts/bootstrap-tui.sh` | installer with menus |
 | `scripts/bootstrap.sh` | installer without menus, for piping from curl |
 | `scripts/install.sh` | the part that partitions and installs |
@@ -151,7 +151,7 @@ Most of these files are shared byte for byte with [ephemeral-nixos-config](https
 - Hibernation is off. Suspend works.
 - `/boot` isn't encrypted. The boot menu editor is disabled.
 - SSH is off. `services.openssh.enable = true` turns it on with port 22 still firewalled; the host key is kept in `/persist/etc/ssh`.
-- `flake.lock` pins every input (nixpkgs, disko, impermanence and flake-parts). The menu installer asks whether to keep the pins or update them; the plain one keeps them unless `FLAKE_INPUTS=update` is set.
+- `flake.lock` pins the config release and, through it, nixpkgs and everything else. Installs are reproducible: the same installer release always installs the same system.
 
 ## Troubleshooting
 
@@ -159,7 +159,7 @@ Most of these files are shared byte for byte with [ephemeral-nixos-config](https
 |---------|-----|
 | black screen at the LUKS prompt | add `boot.kernelParams = [ "plymouth.use-simpledrm" ];`, or load your GPU driver early in `boot.initrd.kernelModules` |
 | settings are ignored | rebuild with `path:.#nixos`, not `.#nixos` |
-| `settings.json is not in this flake` | `cp settings.example.json settings.json`, then rebuild with `path:.#nixos` |
+| `settings.json is not in this flake` | rebuild from `/persist/etc/nixos` with `path:.#nixos`; the file is there, but only `path:` sees it |
 | can't log in | `/persist/passwords/<user>` is missing; write it as above from a TTY or the ISO |
 | no home directory | `sudo install -d -m 0700 -o $USER -g users /persist/home/$USER`, then log in again |
 | VM sits at "Booting from Hard Disk" | use UEFI with Secure Boot off, and detach the ISO |
@@ -169,7 +169,7 @@ Most of these files are shared byte for byte with [ephemeral-nixos-config](https
 ## Manual install
 
 ```bash
-cp settings.example.json settings.json
+printf '{\n  "username": "nixuser",\n  "diskDevice": "/dev/vda",\n  "desktop": "gnome",\n  "profile": "minimal"\n}\n' > settings.json
 nano settings.json
 sudo nix run --inputs-from path:. disko -- --flake path:.#nixos --mode destroy,format,mount
 sudo btrfs subvolume list /mnt
@@ -178,7 +178,7 @@ sudo mkdir -p /mnt/persist/passwords /mnt/persist/etc/ssh /mnt/persist/etc/nixos
 sudo chmod 700 /mnt/persist/passwords /mnt/persist/home/nixuser
 mkpasswd -m yescrypt | sudo tee /mnt/persist/passwords/nixuser
 sudo chmod 600 /mnt/persist/passwords/nixuser
-sudo cp -a . /mnt/persist/etc/nixos/
+sudo cp flake.nix flake.lock .gitignore settings.json hardware-configuration.nix /mnt/persist/etc/nixos/
 sudo nixos-install --no-root-passwd --flake path:/mnt/persist/etc/nixos#nixos
 ```
 
@@ -186,8 +186,4 @@ The subvolume list should include `root-blank`. Use your own username in place o
 
 ## Wallpaper
 
-`assets/wallpaper.svg` is rendered to a 4K PNG at build time and installed at `/run/current-system/sw/share/backgrounds/ephemeral/wallpaper.png`. It's the default on GNOME (desktop, lock screen and login screen) and on the Plasma login screen. On the Plasma desktop or niri, pick that file in the wallpaper settings. A wallpaper you choose always wins.
-
-The snowflake is also the default user picture, until you pick your own.
-
-The snowflake is the "NixOS Logo" by [Simon Frankau](https://github.com/simon-frankau), [Tim Cuthbertson](https://github.com/timbertson) and [Daniel Baker](https://github.com/djacu) (maintained by the [NixOS Marketing Team](https://nixos.org/community/teams/marketing/)), from [NixOS/branding](https://github.com/NixOS/branding), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It has been recoloured.
+The wallpaper and default user picture come from the [config repo](https://github.com/the-wittch/ephemeral-nixos-config#wallpaper), which also lists the credits for the snowflake.

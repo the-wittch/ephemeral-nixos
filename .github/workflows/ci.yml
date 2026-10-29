@@ -28,7 +28,7 @@ jobs:
 
       - name: Use example machine files
         run: |
-          cp settings.example.json settings.json
+          printf '{"username": "alice", "desktop": "gnome", "profile": "minimal"}\n' > settings.json
           cp hardware-configuration.example.nix hardware-configuration.nix
 
       - name: nix flake check
