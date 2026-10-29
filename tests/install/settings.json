@@ -1,0 +1,16 @@
+{
+  "hostname": "installtest",
+  "username": "alice",
+  "diskDevice": "/dev/vda",
+  "swapSize": "1G",
+  "timeZone": "UTC",
+  "desktop": "gnome",
+  "profile": "minimal",
+  "nvidia": "none",
+  "keyboardLayout": "us",
+  "keyboardVariant": "",
+  "locale": "en_US.UTF-8",
+  "extras": false,
+  "laptop": false,
+  "fingerprint": false
+}

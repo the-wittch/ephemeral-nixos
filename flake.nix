@@ -3,9 +3,8 @@
 
   inputs = {
     ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v3.0.0";
-    # the installer runs these by name
+    # the installer runs nixpkgs tools by name
     nixpkgs.follows = "ephemeral/nixpkgs";
-    disko.follows = "ephemeral/disko";
   };
 
   outputs =

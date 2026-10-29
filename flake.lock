@@ -314,10 +314,6 @@
     },
     "root": {
       "inputs": {
-        "disko": [
-          "ephemeral",
-          "disko"
-        ],
         "ephemeral": "ephemeral",
         "nixpkgs": [
           "ephemeral",
