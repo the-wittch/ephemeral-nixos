@@ -82,6 +82,11 @@
                 type = types.str;
                 description = "Proton Pass item for settings-from-pass.";
               };
+              usePassSshAgent = flag "Proton Pass SSH agent at login, serving the keys in passSshVault.";
+              passSshVault = {
+                type = types.nonEmptyStr;
+                description = "Proton Pass vault the SSH agent and ssh-pubs-from-pass read keys from.";
+              };
             };
 
         pickedApps = mkOption {
