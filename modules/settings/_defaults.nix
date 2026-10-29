@@ -19,4 +19,6 @@
   usePassSettings = false;
   passSettingsVault = "Personal";
   passSettingsItem = "nixos-settings";
+  usePassSshAgent = false;
+  passSshVault = "Personal";
 }

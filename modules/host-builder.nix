@@ -50,6 +50,7 @@ let
               laptop = settings.laptop;
               fingerprint = settings.fingerprint;
               tailscale = settings.useTailscale;
+              passSshAgent = settings.usePassSshAgent;
             }
           )
         )
