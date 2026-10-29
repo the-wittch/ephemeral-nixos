@@ -2,6 +2,19 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.1.0
+
+### Added
+
+- An end-to-end test that runs `install.sh` in an offline VM, then unlocks and boots the disk it wrote. It runs on demand, not on every pull request.
+- Unattended installs: `PASSWORD_HASH` and `HARDWARE_CONFIG` answer the last two questions ahead of time.
+- Offline installs: when the system is already built in the live environment, the installer copies it to the disk instead of building it again.
+
+### Changed
+
+- The disk is confirmed once; disko no longer asks a second time.
+- Partitioning runs the machine's own disko script instead of `nix run disko`, so an install no longer downloads a second copy of nixpkgs. `flake.nix` drops its `disko` input.
+
 ## 3.0.0
 
 ### Breaking

@@ -27,6 +27,8 @@ INSTALL_USERNAME=${INSTALL_USERNAME:-nixuser}
 SWAP_SIZE=${SWAP_SIZE:-4G}
 TIMEZONE=${TIMEZONE:-UTC}
 FLAKE_ATTR=${FLAKE_ATTR:-nixos}
+PASSWORD_HASH=${PASSWORD_HASH:-}
+HARDWARE_CONFIG=${HARDWARE_CONFIG:-}
 
 if [[ -z ${DISK:-} ]]; then
   info "disks:"
@@ -112,6 +114,13 @@ validate_username "$INSTALL_USERNAME"
 validate_swap "$SWAP_SIZE"
 validate_timezone "$TIMEZONE"
 validate_flake_attr "$FLAKE_ATTR"
+if [[ -n $PASSWORD_HASH ]]; then
+  [[ $PASSWORD_HASH == '$'* && $PASSWORD_HASH != *[[:space:]:]* ]] || die "PASSWORD_HASH must be a crypt hash, e.g. from mkpasswd -m yescrypt"
+fi
+if [[ -n $HARDWARE_CONFIG ]]; then
+  [[ -f $HARDWARE_CONFIG ]] || die "HARDWARE_CONFIG is not a file: $HARDWARE_CONFIG"
+  HARDWARE_CONFIG=$(realpath "$HARDWARE_CONFIG")
+fi
 info "desktop=$INSTALL_DESKTOP nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT"
 
 info "will erase $DISK"
@@ -170,18 +179,21 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
 
 [[ -s flake.lock ]] || die "flake.lock is missing; the installer pins a config release"
 
-info "disko format+mount (LUKS passphrase next)"
-info "first run downloads nixpkgs/disko — can sit on 0/N for several minutes"
-nix run -L --inputs-from "path:${STAGE}" disko -- \
-  --flake "path:${STAGE}#${FLAKE_ATTR}" \
-  --mode destroy,format,mount
+info "partitioning (LUKS passphrase next)"
+info "the first build downloads nixpkgs and can sit at 0/N for several minutes"
+DISKO=$(nix build -L --no-link --print-out-paths \
+  "path:${STAGE}#nixosConfigurations.${FLAKE_ATTR}.config.system.build.destroyFormatMount")
+"$DISKO/bin/disko-destroy-format-mount" --yes-wipe-all-disks
 
 findmnt /mnt >/dev/null 2>&1 || die "/mnt is not mounted after disko"
 findmnt /mnt/persist >/dev/null 2>&1 || die "/mnt/persist is not mounted after disko"
 findmnt /mnt/boot >/dev/null 2>&1 || die "/mnt/boot is not mounted after disko"
 btrfs subvolume list /mnt | grep -q 'root-blank' || die "root-blank missing after disko"
 
-if command -v nixos-generate-config >/dev/null; then
+if [[ -n $HARDWARE_CONFIG ]]; then
+  info "using $HARDWARE_CONFIG"
+  cp "$HARDWARE_CONFIG" "$STAGE/hardware-configuration.nix"
+elif command -v nixos-generate-config >/dev/null; then
   info "detecting hardware"
   nixos-generate-config --no-filesystems --root /mnt --show-hardware-config >"$STAGE/hardware-configuration.nix" \
     || die "nixos-generate-config failed"
@@ -195,11 +207,15 @@ chmod 755 /mnt/persist/etc/ssh
 # has to exist before the bind mount; activation chowns it
 install -d -m 0700 "/mnt/persist/home/${INSTALL_USERNAME}"
 
-info "login password for ${INSTALL_USERNAME}"
-if command -v mkpasswd >/dev/null; then
-  HASH=$(mkpasswd -m yescrypt)
+if [[ -n $PASSWORD_HASH ]]; then
+  HASH=$PASSWORD_HASH
 else
-  HASH=$(nix shell --inputs-from "path:${STAGE}" nixpkgs#mkpasswd -c mkpasswd -m yescrypt)
+  info "login password for ${INSTALL_USERNAME}"
+  if command -v mkpasswd >/dev/null; then
+    HASH=$(mkpasswd -m yescrypt)
+  else
+    HASH=$(nix shell --inputs-from "path:${STAGE}" nixpkgs#mkpasswd -c mkpasswd -m yescrypt)
+  fi
 fi
 [[ -n $HASH ]] || die "empty password hash (mkpasswd failed or cancelled)"
 
@@ -225,10 +241,22 @@ cleanup
 trap - EXIT
 STAGE=""
 
-info "nixos-install from /mnt/persist/etc/nixos"
-if ! nixos-install --no-root-passwd --flake "path:/mnt/persist/etc/nixos#${FLAKE_ATTR}"; then
-  echo "error: nixos-install failed" >&2
-  echo "  retry (if /mnt still mounted):" >&2
+install_system() {
+  local system
+  system=$(nix eval --raw "path:$1#nixosConfigurations.${FLAKE_ATTR}.config.system.build.toplevel.outPath") || return 1
+  # already built here (an offline install): nixos-install --flake would rebuild it from source
+  if nix path-info "$system" >/dev/null 2>&1; then
+    nix copy --no-check-sigs --to /mnt "$system" || return 1
+    nixos-install --no-root-passwd --no-channel-copy --system "$system"
+  else
+    nixos-install --no-root-passwd --flake "path:$1#${FLAKE_ATTR}"
+  fi
+}
+
+info "installing from /mnt/persist/etc/nixos"
+if ! install_system /mnt/persist/etc/nixos; then
+  echo "error: the install failed" >&2
+  echo "  retry (if /mnt is still mounted):" >&2
   echo "    cd / && sudo nixos-install --no-root-passwd --flake path:/mnt/persist/etc/nixos#${FLAKE_ATTR}" >&2
   echo "  store repair: sudo nix-store --verify --check-contents --repair" >&2
   exit 1

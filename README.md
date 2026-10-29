@@ -57,6 +57,25 @@ The installer asks for the disk, desktop, hostname, user, swap size, keyboard la
 
 **VMs:** UEFI with Secure Boot off and a VirtIO disk (`/dev/vda`). 64 GB of disk and 8 GB of RAM is plenty. The boot splash can look odd on virtual GPUs; unlocking still works.
 
+### Unattended installs
+
+Every question can be answered ahead of time, so only the LUKS passphrase is typed in:
+
+| variable | answer |
+|----------|--------|
+| `DISK` | the whole disk, e.g. `/dev/nvme0n1` |
+| `INSTALL_HOSTNAME`, `INSTALL_USERNAME` | names |
+| `INSTALL_DESKTOP` | `plasma`, `gnome` or `niri` |
+| `NVIDIA_DRIVER` | `none`, `open` or `legacy` |
+| `KEYBOARD_LAYOUT`, `KEYBOARD_VARIANT`, `LOCALE` | e.g. `de`, `nodeadkeys`, `de_DE.UTF-8` |
+| `EXTRAS`, `FINGERPRINT` | `true` or `false` |
+| `SWAP_SIZE`, `TIMEZONE` | e.g. `16G`, `Europe/Berlin` |
+| `PASSWORD_HASH` | the login password as a hash, from `mkpasswd -m yescrypt` |
+| `HARDWARE_CONFIG` | a `hardware-configuration.nix` to use instead of detecting one |
+| `CONFIRM` | `YES` skips the "erase this disk" question |
+
+Pass them with `sudo env`, as above.
+
 ## After the install
 
 The config is at `/persist/etc/nixos`. Rebuild with `path:`, so Nix can see the gitignored files:
@@ -121,15 +140,14 @@ This repo is the installer and nothing else. Its `flake.nix` is the machine flak
 {
   inputs = {
     ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v3.0.0";
-    # the installer runs these by name
+    # the installer runs nixpkgs tools by name
     nixpkgs.follows = "ephemeral/nixpkgs";
-    disko.follows = "ephemeral/disko";
   };
   outputs = inputs: inputs.ephemeral.lib.mkFlake { inherit inputs; root = ./.; };
 }
 ```
 
-Every module, the partition layout included, comes from that pinned release of the config repo; `flake.lock` pins the rest. Each installer release pins a tested config release.
+Every module, the partition layout included, comes from that pinned release of the config repo; `flake.lock` pins the rest. Each installer release pins a tested config release. This repo's own `modules/` only holds its install test, which machines never see.
 
 | path | what |
 |------|------|
@@ -138,6 +156,15 @@ Every module, the partition layout included, comes from that pinned release of t
 | `scripts/tui.sh`, `scripts/bootstrap-tui.sh` | installer with menus |
 | `scripts/bootstrap.sh` | installer without menus, for piping from curl |
 | `scripts/install.sh` | the part that partitions and installs |
+| `modules/tests/install.nix`, `tests/install/` | the end-to-end test: runs `install.sh` in an offline VM, then boots the disk it wrote |
+
+CI checks the scripts and the machine flake on every pull request. The install test takes a while and only runs when you start it: `gh workflow run install-test.yml --ref <branch>`, or locally:
+
+```bash
+printf '{"username": "alice"}\n' > settings.json
+cp hardware-configuration.example.nix hardware-configuration.nix
+nix build path:.#checks.x86_64-linux.install -L
+```
 
 ## Good to know
 
@@ -171,7 +198,7 @@ Every module, the partition layout included, comes from that pinned release of t
 ```bash
 printf '{\n  "username": "nixuser",\n  "diskDevice": "/dev/vda",\n  "desktop": "gnome",\n  "profile": "minimal"\n}\n' > settings.json
 nano settings.json
-sudo nix run --inputs-from path:. disko -- --flake path:.#nixos --mode destroy,format,mount
+sudo $(nix build --no-link --print-out-paths path:.#nixosConfigurations.nixos.config.system.build.destroyFormatMount)/bin/disko-destroy-format-mount
 sudo btrfs subvolume list /mnt
 sudo nixos-generate-config --no-filesystems --root /mnt --show-hardware-config > hardware-configuration.nix
 sudo mkdir -p /mnt/persist/passwords /mnt/persist/etc/ssh /mnt/persist/etc/nixos /mnt/persist/home/nixuser
