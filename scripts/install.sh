@@ -26,10 +26,7 @@ INSTALL_HOSTNAME=${INSTALL_HOSTNAME:-nixos}
 INSTALL_USERNAME=${INSTALL_USERNAME:-nixuser}
 SWAP_SIZE=${SWAP_SIZE:-4G}
 TIMEZONE=${TIMEZONE:-UTC}
-CHEZMOI_REPO=${CHEZMOI_REPO:-}
-CHEZMOI_REV=${CHEZMOI_REV:-}
 FLAKE_ATTR=${FLAKE_ATTR:-nixos}
-FLAKE_INPUTS=${FLAKE_INPUTS:-lock}
 
 if [[ -z ${DISK:-} ]]; then
   info "disks:"
@@ -114,14 +111,8 @@ validate_hostname "$INSTALL_HOSTNAME"
 validate_username "$INSTALL_USERNAME"
 validate_swap "$SWAP_SIZE"
 validate_timezone "$TIMEZONE"
-validate_chezmoi "$CHEZMOI_REPO"
-if [[ -n $CHEZMOI_REPO ]]; then
-  [[ -n $CHEZMOI_REV ]] || die "CHEZMOI_REV is required with CHEZMOI_REPO"
-  validate_chezmoi_rev "$CHEZMOI_REV"
-fi
-validate_flake_inputs "$FLAKE_INPUTS"
 validate_flake_attr "$FLAKE_ATTR"
-info "desktop=$INSTALL_DESKTOP nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT inputs=$FLAKE_INPUTS"
+info "desktop=$INSTALL_DESKTOP nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT"
 
 info "will erase $DISK"
 lsblk "$DISK" | sed 's/^/    /'
@@ -143,24 +134,15 @@ trap cleanup EXIT
 STAGE=$(mktemp -d /tmp/nixos-flake-stage.XXXXXX)
 info "staging flake at $STAGE"
 
-tar -C "$FLAKE_ROOT" \
-  --exclude='.git' \
-  --exclude='result' \
-  --exclude='result-*' \
-  --exclude='.direnv' \
-  --exclude='settings.json' \
-  --exclude='settings.nix' \
-  --exclude='hardware-configuration.nix' \
-  -cf - . | tar -C "$STAGE" -xf -
+cp "$FLAKE_ROOT/flake.nix" "$FLAKE_ROOT/flake.lock" "$FLAKE_ROOT/.gitignore" "$STAGE/"
+cp "$FLAKE_ROOT/hardware-configuration.example.nix" "$STAGE/hardware-configuration.nix"
 
 cd "$STAGE"
-
-cp -f hardware-configuration.example.nix hardware-configuration.nix
 
 # values go in through the environment, so nothing needs escaping
 # shellcheck disable=SC2016 # the ${...} below is nix interpolation
 S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
-  S_SWAP=$SWAP_SIZE S_TZ=$TIMEZONE S_DESKTOP=$INSTALL_DESKTOP S_NVIDIA=$NVIDIA_DRIVER S_CHEZMOI=$CHEZMOI_REPO \
+  S_SWAP=$SWAP_SIZE S_TZ=$TIMEZONE S_DESKTOP=$INSTALL_DESKTOP S_NVIDIA=$NVIDIA_DRIVER \
   S_KB=$KEYBOARD_LAYOUT S_KBV=$KEYBOARD_VARIANT S_LOCALE=$LOCALE S_LAPTOP=$LAPTOP S_FP=$FINGERPRINT S_EXTRAS=$EXTRAS \
   nix eval --impure --raw --expr '
     let
@@ -172,6 +154,7 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
         [ "swapSize" (e "S_SWAP") ]
         [ "timeZone" (e "S_TZ") ]
         [ "desktop" (e "S_DESKTOP") ]
+        [ "profile" "minimal" ]
         [ "nvidia" (e "S_NVIDIA") ]
         [ "keyboardLayout" (e "S_KB") ]
         [ "keyboardVariant" (e "S_KBV") ]
@@ -179,27 +162,13 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
         [ "extras" (e "S_EXTRAS" == "true") ]
         [ "laptop" (e "S_LAPTOP" == "true") ]
         [ "fingerprint" (e "S_FP" == "true") ]
-        [ "useChezmoi" (e "S_CHEZMOI" != "") ]
       ];
       line = f: "  ${builtins.toJSON (builtins.elemAt f 0)}: ${builtins.toJSON (builtins.elemAt f 1)}";
     in
     "{\n" + builtins.concatStringsSep ",\n" (map line fields) + "\n}\n"
   ' >settings.json
 
-case $FLAKE_INPUTS in
-  update)
-    info "updating flake inputs to newest (nix flake update)"
-    nix flake update
-    ;;
-  lock)
-    if [[ ! -f flake.lock ]]; then
-      info "no flake.lock — creating one"
-      nix flake lock
-    else
-      info "using flake.lock pins"
-    fi
-    ;;
-esac
+[[ -s flake.lock ]] || die "flake.lock is missing; the installer pins a config release"
 
 info "disko format+mount (LUKS passphrase next)"
 info "first run downloads nixpkgs/disko — can sit on 0/N for several minutes"
@@ -225,13 +194,6 @@ chmod 700 /mnt/persist/passwords
 chmod 755 /mnt/persist/etc/ssh
 # has to exist before the bind mount; activation chowns it
 install -d -m 0700 "/mnt/persist/home/${INSTALL_USERNAME}"
-if [[ -n $CHEZMOI_REPO ]]; then
-  (
-    umask 077
-    printf '%s\n' "$CHEZMOI_REPO $CHEZMOI_REV" > /mnt/persist/etc/chezmoi-repo
-  )
-  chmod 600 /mnt/persist/etc/chezmoi-repo
-fi
 
 info "login password for ${INSTALL_USERNAME}"
 if command -v mkpasswd >/dev/null; then
@@ -252,6 +214,12 @@ tar -C "$STAGE" -cf - . | tar -C /mnt/persist/etc/nixos -xf -
 [[ -f /mnt/persist/etc/nixos/settings.json ]] || die "settings.json missing after copy"
 [[ -f /mnt/persist/etc/nixos/flake.nix ]] || die "flake.nix missing after copy"
 
+# the system as installed, to rebuild back to after /persist/etc/nixos has moved on
+mkdir -p /mnt/persist/etc/nixos-install
+tar -C "$STAGE" -cf - . | tar -C /mnt/persist/etc/nixos-install -xf -
+chown -R 0:0 /mnt/persist/etc/nixos-install
+chmod -R a-w /mnt/persist/etc/nixos-install
+
 cd /
 cleanup
 trap - EXIT
@@ -270,5 +238,7 @@ cat << EOF
 
 done. detach ISO, reboot, unlock LUKS, log in as ${INSTALL_USERNAME}.
 rebuilds: cd /persist/etc/nixos && sudo nixos-rebuild switch --flake path:.#${FLAKE_ATTR}
+full config: set "profile": "full" in /persist/etc/nixos/settings.json, then rebuild
+back to this install: sudo nixos-rebuild switch --flake path:/persist/etc/nixos-install#${FLAKE_ATTR}
 
 EOF

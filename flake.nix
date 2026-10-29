@@ -1,23 +1,17 @@
 {
-  description = "Ephemeral NixOS with impermanence, LUKS, btrfs (Plasma / GNOME / niri)";
+  description = "An Ephemeral Nix machine";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-parts = {
-      url = "github:hercules-ci/flake-parts";
-      inputs.nixpkgs-lib.follows = "nixpkgs";
-    };
-    import-tree.url = "github:vic/import-tree";
-    impermanence = {
-      url = "github:nix-community/impermanence";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.home-manager.inputs.nixpkgs.follows = "nixpkgs";
-    };
-    disko = {
-      url = "github:nix-community/disko";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v3.0.0";
+    # the installer runs these by name
+    nixpkgs.follows = "ephemeral/nixpkgs";
+    disko.follows = "ephemeral/disko";
   };
 
-  outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
+  outputs =
+    inputs:
+    inputs.ephemeral.lib.mkFlake {
+      inherit inputs;
+      root = ./.;
+    };
 }

@@ -115,34 +115,16 @@ INSTALL_HOSTNAME=$(run_gum input --header "Hostname" --value "${INSTALL_HOSTNAME
 INSTALL_USERNAME=$(run_gum input --header "Username" --value "${INSTALL_USERNAME:-nixuser}" --placeholder "nixuser")
 SWAP_SIZE=$(run_gum input --header "Swap size" --value "${SWAP_SIZE:-4G}" --placeholder "4G")
 TIMEZONE=$(run_gum input --header "Timezone" --value "${TIMEZONE:-UTC}" --placeholder "UTC")
-CHEZMOI_REPO=$(run_gum input --header "chezmoi repo (optional)" --value "${CHEZMOI_REPO:-}" --placeholder "https://github.com/you/dotfiles.git")
-CHEZMOI_REV=${CHEZMOI_REV:-}
-if [[ -n $CHEZMOI_REPO ]]; then
-  CHEZMOI_REV=$(run_gum input --header "chezmoi commit" --value "$CHEZMOI_REV" --placeholder "full 40-character commit hash")
-fi
-
-if [[ -z ${FLAKE_INPUTS:-} ]]; then
-  flake_pick=$(run_gum choose --header "Flake inputs:" \
-    "lock    — use flake.lock (reproducible)" \
-    "update  — newest nixpkgs/disko/impermanence") || die "aborted"
-  FLAKE_INPUTS=$(awk '{print $1}' <<<"$flake_pick")
-fi
 
 validate_hostname "$INSTALL_HOSTNAME"
 validate_username "$INSTALL_USERNAME"
 validate_swap "$SWAP_SIZE"
 validate_timezone "$TIMEZONE"
-validate_chezmoi "$CHEZMOI_REPO"
-if [[ -n $CHEZMOI_REPO ]]; then
-  [[ -n $CHEZMOI_REV ]] || die "chezmoi commit is required with a repo"
-  validate_chezmoi_rev "$CHEZMOI_REV"
-fi
-validate_flake_inputs "$FLAKE_INPUTS"
 
 run_gum style --border rounded --padding "0 2" --border-foreground 196 \
   "WILL ERASE: $DISK" \
   "desktop=$INSTALL_DESKTOP  nvidia=$NVIDIA_DRIVER  host=$INSTALL_HOSTNAME  user=$INSTALL_USERNAME" \
-  "swap=$SWAP_SIZE  tz=$TIMEZONE  inputs=$FLAKE_INPUTS" \
+  "swap=$SWAP_SIZE  tz=$TIMEZONE" \
   "keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+ ($KEYBOARD_VARIANT)}  locale=$LOCALE  extras=$EXTRAS  fingerprint=$FINGERPRINT"
 
 run_gum confirm "Erase $DISK and install?" || die "aborted"
@@ -159,9 +141,6 @@ export FINGERPRINT
 export EXTRAS
 export SWAP_SIZE
 export TIMEZONE
-export CHEZMOI_REPO
-export CHEZMOI_REV
-export FLAKE_INPUTS
 export FLAKE_ATTR="${FLAKE_ATTR:-nixos}"
 export CONFIRM=YES
 

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Problems after the install
+    url: https://github.com/the-wittch/ephemeral-nixos-config/issues/new/choose
+    about: Once the machine boots, the config repo's tracker is the right place.
