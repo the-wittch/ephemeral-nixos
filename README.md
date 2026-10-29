@@ -158,7 +158,7 @@ Every module, the partition layout included, comes from that pinned release of t
 | `scripts/install.sh` | the part that partitions and installs |
 | `modules/tests/install.nix`, `tests/install/` | the end-to-end test: runs `install.sh` in an offline VM, then boots the disk it wrote |
 
-CI checks the scripts and the machine flake on every pull request. The install test takes a while, so it runs on tags, manual runs, and pull requests with the `boot-test` label. To run it locally:
+CI checks the scripts and the machine flake on every pull request. The install test takes a while and only runs when you start it: `gh workflow run install-test.yml --ref <branch>`, or locally:
 
 ```bash
 printf '{"username": "alice"}\n' > settings.json

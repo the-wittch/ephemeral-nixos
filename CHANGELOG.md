@@ -6,7 +6,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Added
 
-- An end-to-end test: CI runs `install.sh` in an offline VM, then unlocks and boots the disk it wrote.
+- An end-to-end test that runs `install.sh` in an offline VM, then unlocks and boots the disk it wrote. It runs on demand, not on every pull request.
 - Unattended installs: `PASSWORD_HASH` and `HARDWARE_CONFIG` answer the last two questions ahead of time.
 - Offline installs: when the system is already built in the live environment, the installer copies it to the disk instead of building it again.
 
