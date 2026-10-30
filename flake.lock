@@ -101,16 +101,16 @@
         "stylix": "stylix"
       },
       "locked": {
-        "lastModified": 1793277226,
-        "narHash": "sha256-DIseaD6yauh0bO9oByjztEKZ0cx8XqpVDdttoQN8TcA=",
+        "lastModified": 1793398365,
+        "narHash": "sha256-O+1SGnm1zvdnx9LLpgOsLughfsd0VDa+aS66KMe4dws=",
         "owner": "the-wittch",
         "repo": "ephemeral-nixos-config",
-        "rev": "cb311f7af5a2f81a8ac5223e7e226842aba91402",
+        "rev": "6056471f03e4ff75ef8ad27f83bc63a524275b57",
         "type": "github"
       },
       "original": {
         "owner": "the-wittch",
-        "ref": "v3.1.0",
+        "ref": "v3.1.1",
         "repo": "ephemeral-nixos-config",
         "type": "github"
       }
