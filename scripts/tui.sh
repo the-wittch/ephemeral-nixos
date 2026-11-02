@@ -99,9 +99,36 @@ if [[ -z ${LOCALE:-} ]]; then
 fi
 validate_locale "$LOCALE"
 
-if [[ -z ${EXTRAS:-} ]]; then
-  EXTRAS=false
-  run_gum confirm --default=false "Install extra apps and tools? Steam, VS Code, Brave, VLC, atuin, comma and more." && EXTRAS=true
+if [[ -z ${PROFILE:-} ]]; then
+  profile_pick=$(run_gum choose --header "What to install" \
+    "full   — everything, with the options you pick next" \
+    "small  — a plain desktop now; the rest later with ephemeral-setup") || die "aborted"
+  case $profile_pick in
+    full*) PROFILE=full ;;
+    *) PROFILE=minimal ;;
+  esac
+fi
+validate_profile "$PROFILE"
+
+if [[ $PROFILE == full ]]; then
+  if [[ -z ${EXTRAS:-} ]]; then
+    EXTRAS=false
+    run_gum confirm --default=false "Install extra apps and tools? Steam, VS Code, Brave, VLC, atuin, comma and more." && EXTRAS=true
+  fi
+  if [[ -z ${OPENSNITCH:-} ]]; then
+    OPENSNITCH=false
+    run_gum confirm "OpenSnitch: ask before programs connect out?" && OPENSNITCH=true
+  fi
+  if [[ -z ${PASS_SSH_AGENT:-} ]]; then
+    PASS_SSH_AGENT=false
+    run_gum confirm --default=false "Proton Pass SSH agent at login?" && PASS_SSH_AGENT=true
+  fi
+  if [[ $PASS_SSH_AGENT == true && -z ${PASS_SSH_VAULT:-} ]]; then
+    PASS_SSH_VAULT=$(run_gum input --header "Proton Pass vault with your SSH keys" --value "Personal")
+  fi
+  if [[ -z ${CONTROLD_RESOLVER+x} ]]; then
+    CONTROLD_RESOLVER=$(run_gum input --header "Control D resolver id (empty for none)" --placeholder "abcd1234")
+  fi
 fi
 
 if [[ -z ${FINGERPRINT:-} ]]; then
@@ -125,7 +152,8 @@ run_gum style --border rounded --padding "0 2" --border-foreground 196 \
   "WILL ERASE: $DISK" \
   "desktop=$INSTALL_DESKTOP  nvidia=$NVIDIA_DRIVER  host=$INSTALL_HOSTNAME  user=$INSTALL_USERNAME" \
   "swap=$SWAP_SIZE  tz=$TIMEZONE" \
-  "keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+ ($KEYBOARD_VARIANT)}  locale=$LOCALE  extras=$EXTRAS  fingerprint=$FINGERPRINT"
+  "keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+ ($KEYBOARD_VARIANT)}  locale=$LOCALE  fingerprint=$FINGERPRINT" \
+  "profile=$PROFILE  extras=${EXTRAS:-false}  opensnitch=${OPENSNITCH:-true}  pass-ssh-agent=${PASS_SSH_AGENT:-false}${CONTROLD_RESOLVER:+  controld=on}"
 
 run_gum confirm "Erase $DISK and install?" || die "aborted"
 
@@ -139,6 +167,11 @@ export KEYBOARD_VARIANT
 export LOCALE
 export FINGERPRINT
 export EXTRAS
+export PROFILE
+export OPENSNITCH
+export PASS_SSH_AGENT
+export PASS_SSH_VAULT
+export CONTROLD_RESOLVER
 export SWAP_SIZE
 export TIMEZONE
 export FLAKE_ATTR="${FLAKE_ATTR:-nixos}"

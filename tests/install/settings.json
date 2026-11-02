@@ -5,12 +5,15 @@
   "swapSize": "1G",
   "timeZone": "UTC",
   "desktop": "gnome",
-  "profile": "minimal",
+  "profile": "full",
   "nvidia": "none",
   "keyboardLayout": "us",
   "keyboardVariant": "",
   "locale": "en_US.UTF-8",
   "extras": false,
   "laptop": false,
-  "fingerprint": false
+  "fingerprint": false,
+  "useOpenSnitch": true,
+  "useControlD": false,
+  "usePassSshAgent": false
 }

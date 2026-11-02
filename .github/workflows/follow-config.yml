@@ -1,0 +1,47 @@
+name: follow config
+
+on:
+  schedule:
+    - cron: "0 6 3 * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: DeterminateSystems/determinate-nix-action@f296148a827001a9a82d3685b53210c06e5d3b67 # v3.24.0
+      - name: open the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          latest=$(gh release view --repo the-wittch/ephemeral-nixos-config --json tagName -q .tagName)
+          [[ $latest =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "unexpected tag: $latest"; exit 1; }
+          current=$(grep -oE 'ephemeral-nixos-config/v[0-9]+\.[0-9]+\.[0-9]+' flake.nix | cut -d/ -f2)
+          if [[ $latest == "$current" ]]; then
+            echo "already on $latest"
+            exit 0
+          fi
+          branch="automation/config-$latest"
+          if git ls-remote --exit-code origin "refs/heads/$branch" >/dev/null; then
+            echo "$branch is already open"
+            exit 0
+          fi
+
+          sed -i -E "s#(ephemeral-nixos-config/)v[0-9]+\.[0-9]+\.[0-9]+\"#\1$latest\"#" flake.nix README.md
+          nix flake update ephemeral
+
+          git switch -c "$branch"
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -am "use config $latest"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" --title "use config $latest" \
+            --body "Points new installs at config $latest. Run the install test on this branch before tagging: \`gh workflow run install-test.yml --ref $branch\`"
+          # PRs opened with the default token don't trigger CI
+          gh workflow run ci.yml --ref "$branch"

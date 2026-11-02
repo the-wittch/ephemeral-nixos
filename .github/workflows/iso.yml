@@ -1,0 +1,44 @@
+name: iso
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: release to attach the ISO to
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  iso:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+      - name: free disk space
+        run: sudo sh -c "rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost &" &
+      - uses: DeterminateSystems/determinate-nix-action@f296148a827001a9a82d3685b53210c06e5d3b67 # v3.24.0
+      - name: build
+        run: |
+          printf '{"username": "alice"}\n' > settings.json
+          cp hardware-configuration.example.nix hardware-configuration.nix
+          nix build path:.#iso -L
+          cd result/iso && sha256sum ./*.iso > "$GITHUB_WORKSPACE/SHA256SUMS"
+      - name: attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          # the release is made by hand right after the tag is pushed
+          for _ in $(seq 1 30); do
+            gh release view "$TAG" >/dev/null 2>&1 && break
+            sleep 20
+          done
+          gh release upload "$TAG" result/iso/*.iso SHA256SUMS --clobber

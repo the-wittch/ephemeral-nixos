@@ -2,6 +2,19 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.2.0
+
+### Added
+
+- The Ephemeral Nix ISO: the installer on the minimal NixOS ISO, branded, starting on its own. Each release has it attached.
+- A monthly workflow that opens a PR pointing the installer at the newest config release.
+- The README is split: the overview stays, the reference moves to `docs/`, one topic per page.
+
+### Changed
+
+- The installer asks what to install and installs it: the full system by default, with OpenSnitch, the Proton Pass SSH agent and Control D as options, or a small install to finish later with `ephemeral-setup`. Unattended installs use `PROFILE`, `OPENSNITCH`, `PASS_SSH_AGENT`, `PASS_SSH_VAULT` and `CONTROLD_RESOLVER`.
+- The end-to-end install test installs the full system.
+
 ## 3.1.0
 
 ### Added
