@@ -2,7 +2,9 @@
 
 The short version of the [README](./README.md). The tag and commit for the current release are in [`RELEASE`](./RELEASE).
 
-From a release, with menus:
+Easiest: download the `.iso` from the latest [release](https://github.com/the-wittch/ephemeral-nixos/releases), check it with `sha256sum -c SHA256SUMS`, write it to a USB stick and boot it. The installer starts on its own.
+
+From the NixOS ISO, from a release, with menus:
 
 ```bash
 TAG=v3.1.1

@@ -28,6 +28,25 @@ validate_desktop() {
   esac
 }
 
+validate_profile() {
+  case $1 in
+    full | minimal) ;;
+    *) die "PROFILE must be full or minimal (got: $1)" ;;
+  esac
+}
+
+validate_bool() {
+  [[ $2 == true || $2 == false ]] || die "$1 must be true or false (got: $2)"
+}
+
+validate_vault() {
+  [[ -n $1 && $1 != *[[:cntrl:]]* ]] || die "invalid Proton Pass vault name: $1"
+}
+
+validate_controld() {
+  [[ -z $1 || $1 =~ ^[A-Za-z0-9_-]+$ ]] || die "invalid Control D resolver id: $1"
+}
+
 validate_nvidia() {
   case $1 in
     none | open | legacy) ;;

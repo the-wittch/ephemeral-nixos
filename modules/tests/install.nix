@@ -111,6 +111,7 @@ in
                   " INSTALL_DESKTOP=${answers.desktop} NVIDIA_DRIVER=${answers.nvidia}"
                   " KEYBOARD_LAYOUT=${answers.keyboardLayout} KEYBOARD_VARIANT="
                   " LOCALE=${answers.locale} EXTRAS=false FINGERPRINT=false"
+                  " PROFILE=${answers.profile} OPENSNITCH=true PASS_SSH_AGENT=false CONTROLD_RESOLVER="
                   " SWAP_SIZE=${answers.swapSize} TIMEZONE=${answers.timeZone}"
                   " HARDWARE_CONFIG=/root/installer/tests/install/hardware-configuration.nix"
                   " PASSWORD_HASH=${lib.escapeShellArg hash}"

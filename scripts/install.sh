@@ -92,12 +92,59 @@ if [[ -z ${LOCALE:-} ]]; then
 fi
 validate_locale "$LOCALE"
 
-if [[ -z ${EXTRAS:-} ]]; then
-  read -r -p "Install extra apps and tools (Steam, VS Code, Brave, VLC, atuin, comma and more)? [y/N]: " ex
-  EXTRAS=false
-  [[ ${ex:-n} =~ ^[Yy] ]] && EXTRAS=true
+if [[ -z ${PROFILE:-} ]]; then
+  echo
+  info "what to install:"
+  echo "  1) full   — everything below, with the options you pick"
+  echo "  2) small  — a plain desktop now; the rest later with ephemeral-setup"
+  echo
+  read -r -p "Choice [1]: " profile_choice
+  case ${profile_choice:-1} in
+    1 | full) PROFILE=full ;;
+    2 | small | minimal) PROFILE=minimal ;;
+    *) die "invalid choice: ${profile_choice}" ;;
+  esac
 fi
-[[ $EXTRAS == true || $EXTRAS == false ]] || die "EXTRAS must be true or false"
+validate_profile "$PROFILE"
+
+if [[ $PROFILE == full ]]; then
+  if [[ -z ${EXTRAS:-} ]]; then
+    read -r -p "Install extra apps and tools (Steam, VS Code, Brave, VLC, atuin, comma and more)? [y/N]: " ex
+    EXTRAS=false
+    [[ ${ex:-n} =~ ^[Yy] ]] && EXTRAS=true
+  fi
+  if [[ -z ${OPENSNITCH:-} ]]; then
+    read -r -p "OpenSnitch: ask before programs connect out? [Y/n]: " os
+    OPENSNITCH=true
+    [[ ${os:-y} =~ ^[Nn] ]] && OPENSNITCH=false
+  fi
+  if [[ -z ${PASS_SSH_AGENT:-} ]]; then
+    read -r -p "Proton Pass SSH agent at login? [y/N]: " pa
+    PASS_SSH_AGENT=false
+    [[ ${pa:-n} =~ ^[Yy] ]] && PASS_SSH_AGENT=true
+  fi
+  if [[ $PASS_SSH_AGENT == true && -z ${PASS_SSH_VAULT:-} ]]; then
+    read -r -p "Proton Pass vault with your SSH keys [Personal]: " PASS_SSH_VAULT
+  fi
+  if [[ -z ${CONTROLD_RESOLVER+x} ]]; then
+    read -r -p "Control D resolver id (empty for none): " CONTROLD_RESOLVER
+  fi
+fi
+EXTRAS=${EXTRAS:-false}
+OPENSNITCH=${OPENSNITCH:-true}
+PASS_SSH_AGENT=${PASS_SSH_AGENT:-false}
+PASS_SSH_VAULT=${PASS_SSH_VAULT:-Personal}
+CONTROLD_RESOLVER=${CONTROLD_RESOLVER:-}
+validate_bool EXTRAS "$EXTRAS"
+validate_bool OPENSNITCH "$OPENSNITCH"
+validate_bool PASS_SSH_AGENT "$PASS_SSH_AGENT"
+validate_vault "$PASS_SSH_VAULT"
+validate_controld "$CONTROLD_RESOLVER"
+if [[ $PROFILE == minimal ]]; then
+  EXTRAS=false
+  PASS_SSH_AGENT=false
+  CONTROLD_RESOLVER=
+fi
 
 LAPTOP=false
 has_battery && LAPTOP=true
@@ -121,7 +168,8 @@ if [[ -n $HARDWARE_CONFIG ]]; then
   [[ -f $HARDWARE_CONFIG ]] || die "HARDWARE_CONFIG is not a file: $HARDWARE_CONFIG"
   HARDWARE_CONFIG=$(realpath "$HARDWARE_CONFIG")
 fi
-info "desktop=$INSTALL_DESKTOP nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT"
+info "desktop=$INSTALL_DESKTOP profile=$PROFILE nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT"
+info "opensnitch=$OPENSNITCH pass-ssh-agent=$PASS_SSH_AGENT${CONTROLD_RESOLVER:+ controld=on}"
 
 info "will erase $DISK"
 lsblk "$DISK" | sed 's/^/    /'
@@ -153,6 +201,7 @@ cd "$STAGE"
 S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
   S_SWAP=$SWAP_SIZE S_TZ=$TIMEZONE S_DESKTOP=$INSTALL_DESKTOP S_NVIDIA=$NVIDIA_DRIVER \
   S_KB=$KEYBOARD_LAYOUT S_KBV=$KEYBOARD_VARIANT S_LOCALE=$LOCALE S_LAPTOP=$LAPTOP S_FP=$FINGERPRINT S_EXTRAS=$EXTRAS \
+  S_PROFILE=$PROFILE S_OPENSNITCH=$OPENSNITCH S_AGENT=$PASS_SSH_AGENT S_VAULT=$PASS_SSH_VAULT S_CONTROLD=$CONTROLD_RESOLVER \
   nix eval --impure --raw --expr '
     let
       e = builtins.getEnv;
@@ -163,7 +212,7 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
         [ "swapSize" (e "S_SWAP") ]
         [ "timeZone" (e "S_TZ") ]
         [ "desktop" (e "S_DESKTOP") ]
-        [ "profile" "minimal" ]
+        [ "profile" (e "S_PROFILE") ]
         [ "nvidia" (e "S_NVIDIA") ]
         [ "keyboardLayout" (e "S_KB") ]
         [ "keyboardVariant" (e "S_KBV") ]
@@ -171,7 +220,11 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
         [ "extras" (e "S_EXTRAS" == "true") ]
         [ "laptop" (e "S_LAPTOP" == "true") ]
         [ "fingerprint" (e "S_FP" == "true") ]
-      ];
+        [ "useOpenSnitch" (e "S_OPENSNITCH" == "true") ]
+        [ "useControlD" (e "S_CONTROLD" != "") ]
+        [ "usePassSshAgent" (e "S_AGENT" == "true") ]
+      ]
+      ++ (if e "S_AGENT" == "true" then [ [ "passSshVault" (e "S_VAULT") ] ] else [ ]);
       line = f: "  ${builtins.toJSON (builtins.elemAt f 0)}: ${builtins.toJSON (builtins.elemAt f 1)}";
     in
     "{\n" + builtins.concatStringsSep ",\n" (map line fields) + "\n}\n"
@@ -206,6 +259,12 @@ chmod 700 /mnt/persist/passwords
 chmod 755 /mnt/persist/etc/ssh
 # has to exist before the bind mount; activation chowns it
 install -d -m 0700 "/mnt/persist/home/${INSTALL_USERNAME}"
+if [[ -n $CONTROLD_RESOLVER ]]; then
+  (
+    umask 077
+    printf '%s\n' "$CONTROLD_RESOLVER" >/mnt/persist/etc/controld-resolver
+  )
+fi
 
 if [[ -n $PASSWORD_HASH ]]; then
   HASH=$PASSWORD_HASH
@@ -266,7 +325,7 @@ cat << EOF
 
 done. detach ISO, reboot, unlock LUKS, log in as ${INSTALL_USERNAME}.
 rebuilds: cd /persist/etc/nixos && sudo nixos-rebuild switch --flake path:.#${FLAKE_ATTR}
-full config: set "profile": "full" in /persist/etc/nixos/settings.json, then rebuild
+change what is installed later: ephemeral-setup
 back to this install: sudo nixos-rebuild switch --flake path:/persist/etc/nixos-install#${FLAKE_ATTR}
 
 EOF
