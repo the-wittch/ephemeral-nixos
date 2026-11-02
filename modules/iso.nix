@@ -68,9 +68,6 @@ let
         grubTheme = null;
       };
 
-      networking.networkmanager.enable = true;
-      networking.wireless.enable = lib.mkForce false;
-
       console.colors = [
         mocha.base
         mocha.red
