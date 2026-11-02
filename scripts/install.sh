@@ -191,8 +191,9 @@ trap cleanup EXIT
 STAGE=$(mktemp -d /tmp/nixos-flake-stage.XXXXXX)
 info "staging flake at $STAGE"
 
-cp "$FLAKE_ROOT/flake.nix" "$FLAKE_ROOT/flake.lock" "$FLAKE_ROOT/.gitignore" "$STAGE/"
-cp "$FLAKE_ROOT/hardware-configuration.example.nix" "$STAGE/hardware-configuration.nix"
+# the ISO runs from the read-only store; the copies have to be editable
+cp --no-preserve=mode "$FLAKE_ROOT/flake.nix" "$FLAKE_ROOT/flake.lock" "$FLAKE_ROOT/.gitignore" "$STAGE/"
+cp --no-preserve=mode "$FLAKE_ROOT/hardware-configuration.example.nix" "$STAGE/hardware-configuration.nix"
 
 cd "$STAGE"
 
