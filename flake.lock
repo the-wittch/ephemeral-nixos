@@ -101,16 +101,16 @@
         "stylix": "stylix"
       },
       "locked": {
-        "lastModified": 1793590731,
-        "narHash": "sha256-D98pSArcx1JzH8S28NC+j53VxTSlSXlrN7UDyDa+BO4=",
+        "lastModified": 1793592303,
+        "narHash": "sha256-21CpxCVTYv17PgigXux/HNgneteo1owzOEtMjxQlK1U=",
         "owner": "the-wittch",
         "repo": "ephemeral-nixos-config",
-        "rev": "9ada516a363064836104f318b7a405e06ddfda27",
+        "rev": "47a7cf02cc1336bc25866a67e7cd73f38b791b84",
         "type": "github"
       },
       "original": {
         "owner": "the-wittch",
-        "ref": "v3.2.0",
+        "ref": "v3.2.1",
         "repo": "ephemeral-nixos-config",
         "type": "github"
       }
@@ -171,20 +171,18 @@
     "gnome-shell": {
       "flake": false,
       "locked": {
-        "host": "gitlab.gnome.org",
         "lastModified": 1776175984,
         "narHash": "sha256-RJFlFW8GiMei6oqUGrMkGEvVqOH8U7Q8abc1yK4VKD8=",
         "owner": "GNOME",
         "repo": "gnome-shell",
         "rev": "e0fdc4c13250e9a9b8ea9594c83925274f4a5dca",
-        "type": "gitlab"
+        "type": "github"
       },
       "original": {
-        "host": "gitlab.gnome.org",
         "owner": "GNOME",
         "ref": "50.1",
         "repo": "gnome-shell",
-        "type": "gitlab"
+        "type": "github"
       }
     },
     "home-manager": {
