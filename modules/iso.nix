@@ -48,6 +48,7 @@ let
           until curl -fsS --max-time 5 -o /dev/null https://cache.nixos.org/nix-cache-info; do
             gum confirm "No internet connection yet. Set one up?" --affirmative "Network setup" --negative "Shell" || exit 0
             nmtui
+            gum spin --title "Waiting for the connection..." -- nm-online -q -t 20 || true
           done
 
           exec sudo --preserve-env=GUM_CHOOSE_CURSOR_FOREGROUND,GUM_CHOOSE_SELECTED_FOREGROUND,GUM_CHOOSE_HEADER_FOREGROUND,GUM_INPUT_CURSOR_FOREGROUND,GUM_CONFIRM_SELECTED_BACKGROUND \

@@ -12,8 +12,7 @@ require_uefi
 FLAKE_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 cd "$FLAKE_ROOT"
 
-[[ -f $SCRIPT_DIR/install.sh ]] || die "install.sh missing"
-chmod +x "$SCRIPT_DIR/install.sh"
+[[ -x $SCRIPT_DIR/install.sh ]] || die "install.sh missing or not executable"
 
 export NIX_CONFIG="${NIX_CONFIG-}
 experimental-features = nix-command flakes

@@ -7,6 +7,9 @@ Breaking changes are listed first in each release, with what to do about them. R
 ### Fixed
 
 - Wi-Fi on the ISO: NetworkManager showed every Wi-Fi card as unavailable, because the ISO turned off the wpa_supplicant it needs.
+- The ISO's installer stopped right away with a permissions error. It tried to make `install.sh` executable, but the ISO runs it from the read-only Nix store.
+- Installs from the ISO left the files in `/persist/etc/nixos` read-only. They are now copied as normal, editable files.
+- After you set up Wi-Fi in `nmtui`, the ISO waits for the connection before it checks again, so the installer starts instead of asking a second time.
 
 ## 3.2.0
 
