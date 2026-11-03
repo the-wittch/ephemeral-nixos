@@ -116,9 +116,6 @@ let
     };
 in
 {
-  perSystem =
-    { system, ... }:
-    {
-      packages.iso = (inputs.nixpkgs.lib.nixosSystem { modules = [ iso ]; }).config.system.build.isoImage;
-    };
+  perSystem.packages.iso =
+    (inputs.nixpkgs.lib.nixosSystem { modules = [ iso ]; }).config.system.build.isoImage;
 }

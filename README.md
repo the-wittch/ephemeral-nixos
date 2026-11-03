@@ -20,15 +20,17 @@ Machine details (hostname, user, disk, desktop) live in `settings.json`, which i
 - One user per machine.
 - Suspend works; hibernation doesn't.
 - The disk unlocks with a passphrase only, no TPM.
+- It's opinionated: Catppuccin, Ghostty and zsh out of the box. Changing them takes a module of your own ([appearance](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/appearance.md)).
 
 ## Install
 
 ### From the ISO (easiest)
 
-Download the `.iso` and `SHA256SUMS` from the latest [release](https://github.com/the-wittch/ephemeral-nixos/releases), check it, and write it to a USB stick:
+Download the `.iso` and `SHA256SUMS` from the latest [release](https://github.com/the-wittch/ephemeral-nixos/releases), check it, and write it to a USB stick. From v3.2.4 on, `gh attestation verify` also proves the ISO was built by this repo's CI:
 
 ```bash
 sha256sum -c SHA256SUMS
+gh attestation verify ephemeral-nix-*.iso -R the-wittch/ephemeral-nixos
 sudo dd if=ephemeral-nix-*.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
@@ -106,7 +108,7 @@ This repo is the installer and nothing else. Its `flake.nix` is the machine flak
 ```nix
 {
   inputs = {
-    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v3.2.3";
+    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v3.2.1";
     # the installer runs nixpkgs tools by name
     nixpkgs.follows = "ephemeral/nixpkgs";
   };

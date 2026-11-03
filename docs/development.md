@@ -19,3 +19,5 @@ printf '{"username": "alice"}\n' > settings.json
 cp hardware-configuration.example.nix hardware-configuration.nix
 nix build path:.#checks.x86_64-linux.install -L
 ```
+
+Releases mostly run themselves. On the 3rd of each month, `follow config` opens a PR for the newest config release and runs the install test on it. If the test passes, the PR is merged, the next patch is tagged and released, the ISO is built and attested, and a `pin` PR updates the install instructions.

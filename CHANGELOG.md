@@ -2,6 +2,21 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.2.4
+
+### Changed
+
+- New installs get config [v3.3.1](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md), with the Terminal apps in `ephemeral-apps`.
+
+### Added
+
+- The ISO comes with a build attestation. `gh attestation verify` checks it was built by this repo's CI.
+- Monthly releases run on their own: once the install test passes on the `follow config` PR, it's merged and released.
+
+### Fixed
+
+- The README said the installer used config v3.2.3, which doesn't exist. It uses v3.2.1.
+
 ## 3.2.3
 
 ### Fixed
