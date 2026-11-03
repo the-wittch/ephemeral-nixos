@@ -42,6 +42,58 @@ fi
 
 run_gum() { "$GUM_BIN" "$@"; }
 
+# type to narrow the list; text that matches nothing is taken as typed
+pick() {
+  local line
+  line=$(run_gum filter --header "$1" --placeholder "type to search" --height 15 --no-strict) || die "aborted"
+  printf '%s\n' "${line%% *}"
+}
+
+# $1 first, then the rest of stdin
+default_first() {
+  local all
+  all=$(cat)
+  grep -E "^$1( |$)" <<<"$all" || true
+  grep -vE "^$1( |$)" <<<"$all" || true
+}
+
+LISTS=${EPHEMERAL_LISTS:-/etc/ephemeral-nixos-lists}
+
+xkb_rules() {
+  local f
+  for f in "$LISTS/base.lst" /etc/X11/xkb/rules/base.lst /run/current-system/sw/share/X11/xkb/rules/base.lst; do
+    [[ -r $f ]] && { echo "$f"; return 0; }
+  done
+  return 1
+}
+
+# layouts as "code  description"; variants of one layout the same way
+xkb_list() {
+  awk -v section="! $2" -v layout="${3:-}:" '
+    $0 == section { on = 1; next }
+    /^!/ { on = 0 }
+    !on || NF < 2 { next }
+    section == "! variant" && $2 != layout { next }
+    {
+      code = $1
+      $1 = ""
+      if (section == "! variant") $2 = ""
+      sub(/^ +/, "")
+      printf "%-16s %s\n", code, $0
+    }' "$1"
+}
+
+locales() {
+  local f
+  for f in "$LISTS/locales" /run/current-system/sw/share/i18n/SUPPORTED; do
+    if [[ -r $f ]]; then
+      sed -n 's#^\([A-Za-z_]*\.UTF-8\)/UTF-8.*#\1#p' "$f"
+      return 0
+    fi
+  done
+  return 1
+}
+
 if ! run_gum style "ok" >/dev/null 2>&1; then
   fallback_plain "gum failed on this terminal"
 fi
@@ -87,14 +139,28 @@ fi
 validate_nvidia "$NVIDIA_DRIVER"
 
 if [[ -z ${KEYBOARD_LAYOUT:-} ]]; then
-  KEYBOARD_LAYOUT=$(run_gum input --header "Keyboard layout" --value "us" --placeholder "us, de, fr, us,de")
-  KEYBOARD_VARIANT=$(run_gum input --header "Keyboard variant (empty for the default)" --value "${KEYBOARD_VARIANT:-}" --placeholder "nodeadkeys")
+  if rules=$(xkb_rules); then
+    KEYBOARD_LAYOUT=$(xkb_list "$rules" layout | default_first us | pick "Keyboard layout (us,de for more than one)")
+    variants=$(xkb_list "$rules" variant "$KEYBOARD_LAYOUT")
+    KEYBOARD_VARIANT=
+    if [[ -n $variants ]]; then
+      KEYBOARD_VARIANT=$(printf '%s\n%s\n' "default" "$variants" | pick "Variant of $KEYBOARD_LAYOUT")
+      [[ $KEYBOARD_VARIANT != default ]] || KEYBOARD_VARIANT=
+    fi
+  else
+    KEYBOARD_LAYOUT=$(run_gum input --header "Keyboard layout" --value "us" --placeholder "us, de, fr, us,de")
+    KEYBOARD_VARIANT=$(run_gum input --header "Keyboard variant (empty for the default)" --value "${KEYBOARD_VARIANT:-}" --placeholder "nodeadkeys")
+  fi
 fi
 KEYBOARD_VARIANT=${KEYBOARD_VARIANT:-}
 validate_keyboard "$KEYBOARD_LAYOUT" "$KEYBOARD_VARIANT"
 warn_luks_layout "$KEYBOARD_LAYOUT"
 if [[ -z ${LOCALE:-} ]]; then
-  LOCALE=$(run_gum input --header "Language" --value "en_US.UTF-8" --placeholder "de_DE.UTF-8")
+  if all_locales=$(locales); then
+    LOCALE=$(default_first "en_US\.UTF-8" <<<"$all_locales" | pick "Language")
+  else
+    LOCALE=$(run_gum input --header "Language" --value "en_US.UTF-8" --placeholder "de_DE.UTF-8")
+  fi
 fi
 validate_locale "$LOCALE"
 
@@ -140,7 +206,11 @@ fi
 INSTALL_HOSTNAME=$(run_gum input --header "Hostname" --value "${INSTALL_HOSTNAME:-nixos}" --placeholder "nixos")
 INSTALL_USERNAME=$(run_gum input --header "Username" --value "${INSTALL_USERNAME:-nixuser}" --placeholder "nixuser")
 SWAP_SIZE=$(run_gum input --header "Swap size" --value "${SWAP_SIZE:-4G}" --placeholder "4G")
-TIMEZONE=$(run_gum input --header "Timezone" --value "${TIMEZONE:-UTC}" --placeholder "UTC")
+if [[ -z ${TIMEZONE:-} ]] && zones=$(timedatectl list-timezones 2>/dev/null) && [[ -n $zones ]]; then
+  TIMEZONE=$(default_first UTC <<<"$zones" | pick "Timezone")
+else
+  TIMEZONE=$(run_gum input --header "Timezone" --value "${TIMEZONE:-UTC}" --placeholder "UTC")
+fi
 
 validate_hostname "$INSTALL_HOSTNAME"
 validate_username "$INSTALL_USERNAME"

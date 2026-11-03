@@ -10,6 +10,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Added
 
+- Keyboard layout, variant, language and timezone are picked from a list you can type to narrow down, in place of typing the exact name. Something not in the list can still be typed in, such as `us,de` for two layouts.
 - The ISO comes with a build attestation. `gh attestation verify` checks it was built by this repo's CI.
 - Monthly releases run on their own: once the install test passes on the `follow config` PR, it's merged and released.
 

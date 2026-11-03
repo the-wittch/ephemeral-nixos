@@ -33,6 +33,25 @@ let
             rsvg-convert -w ${toString width} -h ${toString height} ${inputs.ephemeral}/assets/wallpaper.svg -o $out
           '';
 
+      gumColours = {
+        GUM_CHOOSE_CURSOR_FOREGROUND = "#${mocha.mauve}";
+        GUM_CHOOSE_SELECTED_FOREGROUND = "#${mocha.mauve}";
+        GUM_CHOOSE_HEADER_FOREGROUND = "#${mocha.blue}";
+        GUM_INPUT_CURSOR_FOREGROUND = "#${mocha.mauve}";
+        GUM_CONFIRM_SELECTED_BACKGROUND = "#${mocha.mauve}";
+        GUM_FILTER_HEADER_FOREGROUND = "#${mocha.blue}";
+        GUM_FILTER_INDICATOR_FOREGROUND = "#${mocha.mauve}";
+        GUM_FILTER_MATCH_FOREGROUND = "#${mocha.mauve}";
+        GUM_FILTER_PROMPT_FOREGROUND = "#${mocha.mauve}";
+      };
+
+      # copies, so the ISO doesn't carry all of glibcLocales and xkeyboard-config
+      lists = pkgs.runCommand "ephemeral-nixos-lists" { } ''
+        mkdir $out
+        cp ${pkgs.xkeyboard-config}/share/X11/xkb/rules/base.lst $out/base.lst
+        grep '\.UTF-8/UTF-8' ${pkgs.glibcLocales}/share/i18n/SUPPORTED > $out/locales
+      '';
+
       install = pkgs.writeShellApplication {
         name = "ephemeral-install";
         runtimeInputs = with pkgs; [
@@ -51,7 +70,7 @@ let
             gum spin --title "Waiting for the connection..." -- nm-online -q -t 20 || true
           done
 
-          exec sudo --preserve-env=GUM_CHOOSE_CURSOR_FOREGROUND,GUM_CHOOSE_SELECTED_FOREGROUND,GUM_CHOOSE_HEADER_FOREGROUND,GUM_INPUT_CURSOR_FOREGROUND,GUM_CONFIRM_SELECTED_BACKGROUND \
+          exec sudo --preserve-env=${lib.concatStringsSep "," (lib.attrNames gumColours)} \
             /etc/ephemeral-nixos/scripts/tui.sh
         '';
       };
@@ -88,15 +107,10 @@ let
         "a6adc8"
       ];
 
-      environment.variables = {
-        GUM_CHOOSE_CURSOR_FOREGROUND = "#${mocha.mauve}";
-        GUM_CHOOSE_SELECTED_FOREGROUND = "#${mocha.mauve}";
-        GUM_CHOOSE_HEADER_FOREGROUND = "#${mocha.blue}";
-        GUM_INPUT_CURSOR_FOREGROUND = "#${mocha.mauve}";
-        GUM_CONFIRM_SELECTED_BACKGROUND = "#${mocha.mauve}";
-      };
+      environment.variables = gumColours;
 
       environment.etc."ephemeral-nixos".source = source;
+      environment.etc."ephemeral-nixos-lists".source = lists;
       environment.systemPackages = [
         install
         pkgs.gum
