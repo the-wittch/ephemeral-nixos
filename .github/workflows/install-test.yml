@@ -3,6 +3,11 @@ name: install test
 # manual only: gh workflow run install-test.yml --ref <branch>
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: on a follow-config branch, merge it and release the installer if the test passes
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,3 +36,62 @@ jobs:
           cp hardware-configuration.example.nix hardware-configuration.nix
       - name: install and boot
         run: nix build path:.#checks.x86_64-linux.install -L --no-link
+
+  release:
+    needs: install-test
+    if: inputs.release && startsWith(github.ref_name, 'automation/config-')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: merge, tag and pin
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          pr=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number')
+          [[ -n $pr ]] || { echo "no open PR for $BRANCH"; exit 1; }
+          gh pr merge "$pr" --squash --delete-branch
+          sha=$(gh pr view "$pr" --json mergeCommit -q .mergeCommit.oid)
+          git fetch -q origin main
+          git switch -q -c pin "$sha"
+
+          old_tag=$(sed -n 's/^TAG=//p' RELEASE)
+          old_rev=$(sed -n 's/^COMMIT=//p' RELEASE)
+          [[ $old_tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && $old_rev =~ ^[0-9a-f]{40}$ ]] || { echo "can't read RELEASE"; exit 1; }
+          IFS=. read -r major minor patch <<<"${old_tag#v}"
+          next="v$major.$minor.$((patch + 1))"
+          grep -q "^## ${next#v}$" CHANGELOG.md || { echo "CHANGELOG has no ${next#v} entry"; exit 1; }
+          config=$(grep -oE 'ephemeral-nixos-config/v[0-9]+\.[0-9]+\.[0-9]+' flake.nix | cut -d/ -f2)
+
+          gh release create "$next" --target "$sha" --title "$next" --notes "New installs get config $config."
+          # a tag made with the default token doesn't start the iso workflow
+          gh workflow run iso.yml -f tag="$next"
+
+          t=${old_tag//./\\.}
+          sed -i -E -e "s/$old_rev/$sha/g" -e "s#(TAG=)$t( |\$)#\1$next\2#g" -e "s#(ephemeral-nixos/)$t/#\1$next/#g" \
+            RELEASE README.md INSTALL.md
+          if ! grep -q "^TAG=$next$" RELEASE || ! grep -q "^COMMIT=$sha$" RELEASE; then
+            echo "RELEASE wasn't updated"
+            exit 1
+          fi
+          if grep -qE "$old_rev|ephemeral-nixos/$t/|TAG=$t( |\$)" RELEASE README.md INSTALL.md; then
+            echo "the old pin is still there"
+            exit 1
+          fi
+
+          branch="automation/pin-$next"
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qam "pin $next"
+          git push origin "HEAD:refs/heads/$branch"
+          gh pr create --base main --head "$branch" --title "pin $next" \
+            --body "Points the install instructions at $next."
+          gh workflow run ci.yml --ref "$branch"
+          gh pr merge "$branch" --squash --auto --delete-branch

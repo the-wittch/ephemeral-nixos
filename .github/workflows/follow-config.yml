@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: DeterminateSystems/determinate-nix-action@f296148a827001a9a82d3685b53210c06e5d3b67 # v3.24.0
+      - uses: DeterminateSystems/determinate-nix-action@92957199488000b908fdad19f63711000965d8f3 # v3.24.1
       - name: open the PR
         env:
           GH_TOKEN: ${{ github.token }}
@@ -37,11 +37,19 @@ jobs:
           sed -i -E "s#(ephemeral-nixos-config/)v[0-9]+\.[0-9]+\.[0-9]+\"#\1$latest\"#" flake.nix README.md
           nix flake update ephemeral
 
+          installer=$(sed -n 's/^TAG=//p' RELEASE)
+          IFS=. read -r major minor patch <<<"${installer#v}"
+          next="$major.$minor.$((patch + 1))"
+          entry="## $next\n\n### Changed\n\n- New installs get config [$latest](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).\n"
+          awk -v entry="$entry" '!done && /^## /{ printf "%s\n", entry; done = 1 } { print }' CHANGELOG.md >CHANGELOG.new
+          mv CHANGELOG.new CHANGELOG.md
+
           git switch -c "$branch"
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -am "use config $latest"
           git push origin "$branch"
           gh pr create --base main --head "$branch" --title "use config $latest" \
-            --body "Points new installs at config $latest. Run the install test on this branch before tagging: \`gh workflow run install-test.yml --ref $branch\`"
+            --body "Points new installs at config $latest. If the install test passes, this merges itself and v$next is released."
           # PRs opened with the default token don't trigger CI
           gh workflow run ci.yml --ref "$branch"
+          gh workflow run install-test.yml --ref "$branch" -f release=true

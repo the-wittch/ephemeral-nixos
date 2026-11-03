@@ -11,6 +11,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   iso:
@@ -23,20 +25,23 @@ jobs:
           persist-credentials: false
       - name: free disk space
         run: sudo sh -c "rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost &" &
-      - uses: DeterminateSystems/determinate-nix-action@f296148a827001a9a82d3685b53210c06e5d3b67 # v3.24.0
+      - uses: DeterminateSystems/determinate-nix-action@92957199488000b908fdad19f63711000965d8f3 # v3.24.1
       - name: build
         run: |
           printf '{"username": "alice"}\n' > settings.json
           cp hardware-configuration.example.nix hardware-configuration.nix
           nix build path:.#iso -L
           cd result/iso && sha256sum ./*.iso > "$GITHUB_WORKSPACE/SHA256SUMS"
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: result/iso/*.iso
       - name: attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
-          # the release is made by hand right after the tag is pushed
+          # the release can show up a little after the tag
           for _ in $(seq 1 30); do
             gh release view "$TAG" >/dev/null 2>&1 && break
             sleep 20
