@@ -9,8 +9,8 @@ This repo is the installer and nothing else. Its `flake.nix`, shown in the [READ
 | `scripts/tui.sh`, `scripts/bootstrap-tui.sh` | installer with menus |
 | `scripts/bootstrap.sh` | installer without menus, for piping from curl |
 | `scripts/install.sh` | the part that partitions and installs |
-| `modules/iso.nix` | the Ephemeral Nix ISO: the installer on the minimal NixOS ISO, in Catppuccin colours |
-| `modules/tests/install.nix`, `tests/install/` | the end-to-end test: runs `install.sh` in an offline VM, then boots the disk it wrote |
+| `modules/iso.nix` | the Ephemeral Nix ISO: the installer on the minimal NixOS ISO, in Catppuccin colours. Its live system is `flake.modules.nixos.iso` |
+| `modules/tests/install.nix`, `tests/install/` | the end-to-end test: boots the ISO's live system offline, installs from its read-only copy of the scripts, then boots the disk it wrote |
 
 CI checks the scripts and the machine flake on every pull request. The install test takes a while and only runs when you start it: `gh workflow run install-test.yml --ref <branch>`, or locally:
 

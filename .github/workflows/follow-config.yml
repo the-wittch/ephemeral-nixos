@@ -40,9 +40,7 @@ jobs:
           installer=$(sed -n 's/^TAG=//p' RELEASE)
           IFS=. read -r major minor patch <<<"${installer#v}"
           next="$major.$minor.$((patch + 1))"
-          entry="## $next\n\n### Changed\n\n- New installs get config [$latest](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).\n"
-          awk -v entry="$entry" '!done && /^## /{ printf "%s\n", entry; done = 1 } { print }' CHANGELOG.md >CHANGELOG.new
-          mv CHANGELOG.new CHANGELOG.md
+          .github/changelog-config.sh CHANGELOG.md "$next" "$latest"
 
           git switch -c "$branch"
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \

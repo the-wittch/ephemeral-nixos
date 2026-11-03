@@ -2,6 +2,17 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.2.5
+
+### Changed
+
+- The install test now boots the ISO's own live system and installs from its read-only copy of the scripts, so it catches problems that only show up on the ISO.
+- CI checks on every pull request that the ISO still has Wi-Fi, NetworkManager and the installer.
+
+### Fixed
+
+- When a release already had a changelog entry, the monthly pin would have added a second heading for the same version.
+
 ## 3.2.4
 
 ### Changed
