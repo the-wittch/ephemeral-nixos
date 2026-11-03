@@ -1,5 +1,5 @@
 # nix build path:.#checks.x86_64-linux.install -L
-# runs scripts/install.sh in a VM with no network, then boots the disk it wrote
+# boots the ISO's live system with no network, installs from it, then boots the disk it wrote
 {
   config,
   inputs,
@@ -36,10 +36,18 @@ in
     {
       checks.install = pkgs.testers.runNixOSTest {
         name = "install";
+        # the installer profile sets nixpkgs.overlays
+        node.pkgsReadOnly = false;
 
+        # the ISO without its image: the same profiles, scripts and live system
         nodes.installer =
-          { pkgs, ... }:
+          { modulesPath, pkgs, ... }:
           {
+            imports = [
+              (modulesPath + "/profiles/base.nix")
+              (modulesPath + "/profiles/installation-device.nix")
+              config.flake.modules.nixos.iso
+            ];
             virtualisation = {
               diskImage = "./target.qcow2";
               diskSize = 20 * 1024;
@@ -101,11 +109,15 @@ in
 
           installer.start()
           installer.wait_for_unit("multi-user.target")
-          installer.succeed("cp -r ${inputs.self} /root/installer && chmod -R u+w /root/installer")
 
-          with subtest("install.sh partitions, encrypts and installs"):
+          with subtest("the live system starts the installer, which runs from the read-only store"):
+              installer.wait_until_tty_matches("1", "No internet connection yet")
+              installer.succeed("test -x /etc/ephemeral-nixos/scripts/install.sh")
+              installer.fail("touch /etc/ephemeral-nixos/scripts/install.sh")
+
+          with subtest("install.sh partitions, encrypts and installs, from the read-only store"):
               installer.succeed(
-                  "cd /root/installer && env"
+                  "cd / && env"
                   " DISK=${answers.diskDevice} CONFIRM=YES"
                   " INSTALL_HOSTNAME=${answers.hostname} INSTALL_USERNAME=${answers.username}"
                   " INSTALL_DESKTOP=${answers.desktop} NVIDIA_DRIVER=${answers.nvidia}"
@@ -113,10 +125,10 @@ in
                   " LOCALE=${answers.locale} EXTRAS=false FINGERPRINT=false"
                   " PROFILE=${answers.profile} OPENSNITCH=true PASS_SSH_AGENT=false CONTROLD_RESOLVER="
                   " SWAP_SIZE=${answers.swapSize} TIMEZONE=${answers.timeZone}"
-                  " HARDWARE_CONFIG=/root/installer/tests/install/hardware-configuration.nix"
+                  " HARDWARE_CONFIG=${fixture}/hardware-configuration.nix"
                   " PASSWORD_HASH=${lib.escapeShellArg hash}"
                   " IN_DISKO_TEST=1"
-                  " ./scripts/install.sh >&2"
+                  " /etc/ephemeral-nixos/scripts/install.sh >&2"
               )
 
           with subtest("settings.json has the answers, and the fresh-install copy is read-only"):
@@ -125,12 +137,13 @@ in
               assert got == want, f"settings.json differs:\n{got}\n{want}"
               installer.succeed("cmp /mnt/persist/etc/nixos/flake.lock /mnt/persist/etc/nixos-install/flake.lock")
               assert installer.succeed("stat -c %a /mnt/persist/etc/nixos-install/flake.nix").strip() == "444"
+              assert installer.succeed("stat -c %a /mnt/persist/etc/nixos/flake.nix").strip() == "644"
               installer.succeed("test -s /mnt/persist/passwords/${answers.username}")
 
           with subtest("reinstall with the test backdoor, through the machine's own modules/"):
               installer.succeed(
-                  "install -D -m 0644 /root/installer/tests/install/hosts.nix /mnt/persist/etc/nixos/modules/hosts.nix",
-                  "install -m 0644 /root/installer/tests/install/_instrumentation.nix /mnt/persist/etc/nixos/modules/",
+                  "install -D -m 0644 ${fixture}/hosts.nix /mnt/persist/etc/nixos/modules/hosts.nix",
+                  "install -m 0644 ${fixture}/_instrumentation.nix /mnt/persist/etc/nixos/modules/",
                   "system=$(nix eval --raw path:/mnt/persist/etc/nixos#nixosConfigurations.nixos.config.system.build.toplevel.outPath)"
                   " && nix copy --no-check-sigs --to /mnt \"$system\""
                   " && nixos-install --no-root-passwd --no-channel-copy --system \"$system\" >&2",

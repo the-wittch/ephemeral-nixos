@@ -1,5 +1,10 @@
 # nix build path:.#iso
-{ inputs, lib, ... }:
+{
+  config,
+  inputs,
+  lib,
+  ...
+}:
 let
   mocha = {
     base = "1e1e2e";
@@ -19,20 +24,10 @@ let
     ];
   };
 
-  iso =
-    { config, pkgs, ... }:
+  # the live system; the install test boots it too
+  live =
+    { pkgs, ... }:
     let
-      splash =
-        width: height:
-        pkgs.runCommand "ephemeral-splash-${toString width}.png"
-          {
-            nativeBuildInputs = [ pkgs.librsvg ];
-            FONTCONFIG_FILE = pkgs.makeFontsConf { fontDirectories = [ pkgs.jetbrains-mono ]; };
-          }
-          ''
-            rsvg-convert -w ${toString width} -h ${toString height} ${inputs.ephemeral}/assets/wallpaper.svg -o $out
-          '';
-
       gumColours = {
         GUM_CHOOSE_CURSOR_FOREGROUND = "#${mocha.mauve}";
         GUM_CHOOSE_SELECTED_FOREGROUND = "#${mocha.mauve}";
@@ -76,17 +71,7 @@ let
       };
     in
     {
-      imports = [ "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix" ];
-
-      nixpkgs.hostPlatform = "x86_64-linux";
       system.nixos.distroName = "Ephemeral Nix";
-      image.baseName = lib.mkForce "ephemeral-nix-${config.system.nixos.release}";
-      isoImage = {
-        volumeID = "EPHEMERAL_NIX";
-        splashImage = splash 800 600;
-        efiSplashImage = splash 1920 1080;
-        grubTheme = null;
-      };
 
       console.colors = [
         mocha.base
@@ -128,8 +113,60 @@ let
         fi
       '';
     };
+  image =
+    { config, pkgs, ... }:
+    let
+      splash =
+        width: height:
+        pkgs.runCommand "ephemeral-splash-${toString width}.png"
+          {
+            nativeBuildInputs = [ pkgs.librsvg ];
+            FONTCONFIG_FILE = pkgs.makeFontsConf { fontDirectories = [ pkgs.jetbrains-mono ]; };
+          }
+          ''
+            rsvg-convert -w ${toString width} -h ${toString height} ${inputs.ephemeral}/assets/wallpaper.svg -o $out
+          '';
+    in
+    {
+      imports = [ "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix" ];
+
+      nixpkgs.hostPlatform = "x86_64-linux";
+      image.baseName = lib.mkForce "ephemeral-nix-${config.system.nixos.release}";
+      isoImage = {
+        volumeID = "EPHEMERAL_NIX";
+        splashImage = splash 800 600;
+        efiSplashImage = splash 1920 1080;
+        grubTheme = null;
+      };
+    };
+  system = inputs.nixpkgs.lib.nixosSystem {
+    modules = [
+      image
+      config.flake.modules.nixos.iso
+    ];
+  };
+  iso = system.config;
 in
 {
-  perSystem.packages.iso =
-    (inputs.nixpkgs.lib.nixosSystem { modules = [ iso ]; }).config.system.build.isoImage;
+  flake.modules.nixos.iso = live;
+
+  perSystem =
+    { pkgs, ... }:
+    {
+      packages.iso = iso.system.build.isoImage;
+
+      # test VMs turn Wi-Fi off, so the install test can't check it
+      checks.iso-eval =
+        assert lib.assertMsg iso.networking.networkmanager.enable "the ISO lost NetworkManager";
+        assert lib.assertMsg iso.networking.wireless.enable
+          "the ISO lost wpa_supplicant, which NetworkManager needs for Wi-Fi";
+        assert lib.assertMsg (iso.environment.etc ? "ephemeral-nixos") "the ISO lost the installer scripts";
+        assert lib.assertMsg (
+          iso.environment.etc ? "ephemeral-nixos-lists"
+        ) "the ISO lost the keyboard and language lists";
+        assert lib.assertMsg (lib.any (
+          p: p.name or "" == "ephemeral-install"
+        ) iso.environment.systemPackages) "the ISO lost ephemeral-install";
+        pkgs.runCommand "iso-eval" { } "touch $out";
+    };
 }
