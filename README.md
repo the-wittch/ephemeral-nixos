@@ -15,12 +15,12 @@ Machine details (hostname, user, disk, desktop) live in `settings.json`, which i
 
 ## Limits
 
-- x86_64 with UEFI, Secure Boot off.
-- The whole disk is wiped. No dual boot.
+- x86_64 with UEFI, Secure Boot off. See [Hardware](docs/hardware.md) for what's been tested.
+- Installing wipes the whole disk, and reinstalling wipes it again, `/persist` included. Make a [backup](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/backup.md) first. No dual boot.
 - One user per machine.
 - Suspend works; hibernation doesn't.
 - The disk unlocks with a passphrase only, no TPM.
-- It's opinionated: Catppuccin, Ghostty and zsh out of the box. Changing them takes a module of your own ([appearance](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/appearance.md)).
+- It's opinionated: Catppuccin, Ghostty and zsh by default. Changing them takes a module of your own ([appearance](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/appearance.md)).
 
 ## Install
 
@@ -76,6 +76,8 @@ curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/main/scr
 
 Use `sudo env VAR=...`. Plain `sudo VAR=...` usually drops the variables.
 
+Without the menus, it doesn't ask for the hostname, user, swap size or timezone, and it skips the apps. It uses `nixos`, `nixuser`, `4G` and `UTC` unless you set them, as in [Unattended installs](docs/unattended.md).
+
 The installer asks for the disk, desktop, hostname, user, swap size, keyboard layout, language and timezone (type to search the list), then a LUKS passphrase and a login password. With a non-US layout, switch the live session to that layout before typing the passphrase, since that's the layout you'll type it in at boot. It asks what to install: the full system, or a small install (a plain desktop, finished later with `ephemeral-setup`). For the full system it asks about the extras (Steam, VS Code, Brave and more shell tools), OpenSnitch, the Proton Pass SSH agent and Control D, then offers the same apps as `ephemeral-apps`. It turns on the laptop extras when it finds a battery, and asks about fingerprint login when it finds a reader. If it finds an NVIDIA card, it shows its name and asks whether to install the drivers: `open` for RTX 20 / GTX 16 series and newer, `legacy` for GTX 900 / 10 series, or `none`. The driver is compiled during the install, which adds a few minutes. It detects the rest of your hardware once the disk is mounted. When it's done, remove the ISO and reboot.
 
 **VMs:** UEFI with Secure Boot off and a VirtIO disk (`/dev/vda`). 64 GB of disk and 8 GB of RAM is plenty. The boot splash can look odd on virtual GPUs; unlocking still works.
@@ -126,7 +128,8 @@ The wallpaper and default user picture come from the [config repo](https://githu
 
 - [Unattended installs](docs/unattended.md): every question answered ahead of time
 - [settings.json and unfree packages](docs/settings.md)
-- [Troubleshooting](docs/troubleshooting.md), and things good to know
+- [Troubleshooting](docs/troubleshooting.md): install problems, and where to report them
 - [Manual install](docs/manual-install.md): the same steps without the scripts
+- [Hardware](docs/hardware.md): what's required, what's tested and what the installer detects
 - [Working on the installer](docs/development.md): files, CI and the install test
 - [The config's docs](https://github.com/the-wittch/ephemeral-nixos-config#documentation): everything after the install

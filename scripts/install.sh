@@ -15,6 +15,11 @@ cd "$FLAKE_ROOT"
 command -v nix >/dev/null || die "nix not found"
 command -v lsblk >/dev/null || die "lsblk not found"
 
+LOG=/tmp/ephemeral-install.log
+(umask 077 && : >"$LOG")
+exec > >(tee -a "$LOG") 2>&1
+info "a copy of this output goes to $LOG"
+
 export NIX_CONFIG="${NIX_CONFIG-}
 experimental-features = nix-command flakes
 http2 = false
@@ -328,8 +333,11 @@ if ! install_system /mnt/persist/etc/nixos; then
   echo "  retry (if /mnt is still mounted):" >&2
   echo "    cd / && sudo nixos-install --no-root-passwd --flake path:/mnt/persist/etc/nixos#${FLAKE_ATTR}" >&2
   echo "  store repair: sudo nix-store --verify --check-contents --repair" >&2
+  echo "  the full output is in $LOG" >&2
   exit 1
 fi
+
+install -m 600 "$LOG" /mnt/var/log/ephemeral-install.log || true
 
 cat << EOF
 

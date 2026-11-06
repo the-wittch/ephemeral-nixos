@@ -1,5 +1,4 @@
 # nix build path:.#checks.x86_64-linux.install -L
-# boots the ISO's live system with no network, installs from it, then boots the disk it wrote
 {
   config,
   inputs,
@@ -136,6 +135,7 @@ in
               want = json.loads('${builtins.toJSON answers}')
               assert got == want, f"settings.json differs:\n{got}\n{want}"
               installer.succeed("cmp ${fixture}/apps.json /mnt/persist/etc/nixos/apps.json")
+              installer.succeed("test -s /mnt/var/log/ephemeral-install.log")
               installer.succeed("cmp /mnt/persist/etc/nixos/flake.lock /mnt/persist/etc/nixos-install/flake.lock")
               assert installer.succeed("stat -c %a /mnt/persist/etc/nixos-install/flake.nix").strip() == "444"
               assert installer.succeed("stat -c %a /mnt/persist/etc/nixos/flake.nix").strip() == "644"
@@ -162,6 +162,7 @@ in
               target.succeed("btrfs subvolume list / | grep -q root-blank")
               target.succeed("test -s /persist/passwords/${answers.username}")
               target.succeed("command -v glow")
+              target.succeed("systemctl is-active --quiet root-reset-check.service")
 
           with subtest("root is wiped on reboot, /persist is kept"):
               target.succeed("touch /root-was-here /persist/persist-was-here")

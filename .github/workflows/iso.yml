@@ -27,14 +27,20 @@ jobs:
         run: sudo sh -c "rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost &" &
       - uses: DeterminateSystems/determinate-nix-action@92957199488000b908fdad19f63711000965d8f3 # v3.24.1
       - name: build
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
+          set -euo pipefail
+          [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release tag: $TAG"; exit 1; }
           printf '{"username": "alice"}\n' > settings.json
           cp hardware-configuration.example.nix hardware-configuration.nix
           nix build path:.#iso -L
-          cd result/iso && sha256sum ./*.iso > "$GITHUB_WORKSPACE/SHA256SUMS"
+          mkdir out
+          cp result/iso/*.iso "out/ephemeral-nix-$TAG.iso"
+          cd out && sha256sum ./*.iso > "$GITHUB_WORKSPACE/SHA256SUMS"
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: result/iso/*.iso
+          subject-path: out/*.iso
       - name: attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -46,4 +52,4 @@ jobs:
             gh release view "$TAG" >/dev/null 2>&1 && break
             sleep 20
           done
-          gh release upload "$TAG" result/iso/*.iso SHA256SUMS --clobber
+          gh release upload "$TAG" out/*.iso SHA256SUMS --clobber

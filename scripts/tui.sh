@@ -49,7 +49,6 @@ pick() {
   printf '%s\n' "${line%% *}"
 }
 
-# $1 first, then the rest of stdin
 default_first() {
   local all
   all=$(cat)
@@ -105,7 +104,6 @@ load_catalog() {
   [[ -r $CATALOG && -x $JQ ]]
 }
 
-# ticked apps as "id id ..."
 pick_apps() {
   local id row out
   local -A ids=()
@@ -137,10 +135,17 @@ if [[ -z ${DISK:-} ]]; then
   [[ ${#disk_paths[@]} -gt 0 ]] || die "no disks found (lsblk -dpn -o NAME,TYPE)"
 
   choices=()
+  hidden=0
   for path in "${disk_paths[@]}"; do
+    if disk_in_use "$path" && [[ ${FORCE_DISK:-} != 1 ]]; then
+      hidden=$((hidden + 1))
+      continue
+    fi
     meta=$(lsblk -dn -o SIZE,TRAN,MODEL "$path" 2>/dev/null | sed 's/[[:space:]]\+/ /g')
     choices+=("$path  $meta")
   done
+  ((hidden == 0)) || info "$hidden disk(s) with mounted filesystems left out, such as the one you booted from (FORCE_DISK=1 shows them)"
+  [[ ${#choices[@]} -gt 0 ]] || die "every disk is in use; unmount the one to install on first"
 
   picked=$(run_gum choose --header "Whole disk to erase:" "${choices[@]}") || die "aborted"
   DISK=$(awk '{print $1}' <<<"$picked")

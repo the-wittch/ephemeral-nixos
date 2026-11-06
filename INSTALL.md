@@ -23,7 +23,7 @@ cd ~/nix
 sudo ./scripts/tui.sh
 ```
 
-Without menus, onto a whole disk:
+Without menus, onto a whole disk. The user is `nixuser` unless you set `INSTALL_USERNAME`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v3.3.0/scripts/bootstrap.sh | sudo env TAG=v3.3.0 EXPECTED_REV=a7fd6e324a648a588323b120245b372d7aba27a0 SWAP_SIZE=4G bash -s -- /dev/vda
