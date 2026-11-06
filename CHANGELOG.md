@@ -8,6 +8,10 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 - For the full system, the installer offers the same apps as `ephemeral-apps`, so they're there on the first boot. Unattended installs use `APPS`, e.g. `APPS=obsidian,glow`.
 
+### Changed
+
+- New installs get config [v3.4.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.2.5
 
 ### Changed
