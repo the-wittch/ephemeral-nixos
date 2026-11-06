@@ -2,6 +2,12 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.3.0
+
+### Added
+
+- For the full system, the installer offers the same apps as `ephemeral-apps`, so they're there on the first boot. Unattended installs use `APPS`, e.g. `APPS=obsidian,glow`.
+
 ## 3.2.5
 
 ### Changed

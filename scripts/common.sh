@@ -47,6 +47,10 @@ validate_controld() {
   [[ -z $1 || $1 =~ ^[A-Za-z0-9_-]+$ ]] || die "invalid Control D resolver id: $1"
 }
 
+validate_apps() {
+  [[ $1 =~ ^[A-Za-z0-9._+\ -]*$ ]] || die "APPS has to be app names separated by commas or spaces (got: $1)"
+}
+
 validate_nvidia() {
   case $1 in
     none | open | legacy) ;;

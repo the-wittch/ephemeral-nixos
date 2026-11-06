@@ -94,6 +94,37 @@ locales() {
   return 1
 }
 
+# the config's app catalog and a jq to read it; the ISO has no jq
+load_catalog() {
+  local out
+  out=$(run_gum spin --show-stdout --title "Loading the app list (the first time takes a few minutes)..." -- \
+    nix build --no-link --print-out-paths --inputs-from "path:$FLAKE_ROOT" \
+    "path:$FLAKE_ROOT#app-catalog" nixpkgs#jq) || return 1
+  CATALOG=$(grep -m1 -- '-app-catalog.json$' <<<"$out") || return 1
+  JQ=$(grep -m1 -- '-bin$' <<<"$out")/bin/jq
+  [[ -r $CATALOG && -x $JQ ]]
+}
+
+# ticked apps as "id id ..."
+pick_apps() {
+  local id row out
+  local -A ids=()
+  local -a rows=()
+  while IFS=$'\t' read -r id row; do
+    ids[$row]=$id
+    rows+=("$row")
+  done < <("$JQ" -r 'to_entries | sort_by(.value.category, (.value.label | ascii_downcase)) | .[] |
+    "\(.key)\t\(.value.category): \(.value.label) — \(.value.description)"
+    + (if .value.unfree then " · unfree" else "" end)
+    + (if .value.flatpak then " · flatpak" else "" end)' "$CATALOG")
+
+  out=$(printf '%s\n' "${rows[@]}" |
+    run_gum filter --no-limit --height 20 --header "Apps: tab to tick, enter when done" --placeholder "type to search") || return 0
+  while IFS= read -r row; do
+    [[ -z $row ]] || printf '%s ' "${ids[$row]}"
+  done <<<"$out"
+}
+
 if ! run_gum style "ok" >/dev/null 2>&1; then
   fallback_plain "gum failed on this terminal"
 fi
@@ -194,6 +225,22 @@ if [[ $PROFILE == full ]]; then
   if [[ -z ${CONTROLD_RESOLVER+x} ]]; then
     CONTROLD_RESOLVER=$(run_gum input --header "Control D resolver id (empty for none)" --placeholder "abcd1234")
   fi
+  if [[ -z ${APPS+x} ]]; then
+    APPS=
+    if run_gum confirm --default=false "Pick more apps now? ephemeral-apps does the same after the install."; then
+      if load_catalog; then
+        APPS=$(pick_apps)
+        for id in $APPS; do
+          # shellcheck disable=SC2016 # $id is jq's
+          warn=$("$JQ" -r --arg id "$id" '.[$id] | if .warn then "\(.label): \(.warn)" else empty end' "$CATALOG")
+          [[ -z $warn ]] || run_gum style --foreground 214 "$warn"
+        done
+        [[ -z $APPS ]] || run_gum confirm "Add ${APPS% }?" || APPS=
+      else
+        info "couldn't load the app list; pick apps after the install with ephemeral-apps"
+      fi
+    fi
+  fi
 fi
 
 if [[ -z ${FINGERPRINT:-} ]]; then
@@ -217,12 +264,15 @@ validate_username "$INSTALL_USERNAME"
 validate_swap "$SWAP_SIZE"
 validate_timezone "$TIMEZONE"
 
-run_gum style --border rounded --padding "0 2" --border-foreground 196 \
-  "WILL ERASE: $DISK" \
-  "desktop=$INSTALL_DESKTOP  nvidia=$NVIDIA_DRIVER  host=$INSTALL_HOSTNAME  user=$INSTALL_USERNAME" \
-  "swap=$SWAP_SIZE  tz=$TIMEZONE" \
-  "keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+ ($KEYBOARD_VARIANT)}  locale=$LOCALE  fingerprint=$FINGERPRINT" \
+summary=(
+  "WILL ERASE: $DISK"
+  "desktop=$INSTALL_DESKTOP  nvidia=$NVIDIA_DRIVER  host=$INSTALL_HOSTNAME  user=$INSTALL_USERNAME"
+  "swap=$SWAP_SIZE  tz=$TIMEZONE"
+  "keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+ ($KEYBOARD_VARIANT)}  locale=$LOCALE  fingerprint=$FINGERPRINT"
   "profile=$PROFILE  extras=${EXTRAS:-false}  opensnitch=${OPENSNITCH:-true}  pass-ssh-agent=${PASS_SSH_AGENT:-false}${CONTROLD_RESOLVER:+  controld=on}"
+)
+[[ -z ${APPS// /} ]] || summary+=("apps=${APPS% }")
+run_gum style --border rounded --padding "0 2" --border-foreground 196 "${summary[@]}"
 
 run_gum confirm "Erase $DISK and install?" || die "aborted"
 
@@ -241,6 +291,7 @@ export OPENSNITCH
 export PASS_SSH_AGENT
 export PASS_SSH_VAULT
 export CONTROLD_RESOLVER
+export APPS
 export SWAP_SIZE
 export TIMEZONE
 export FLAKE_ATTR="${FLAKE_ATTR:-nixos}"

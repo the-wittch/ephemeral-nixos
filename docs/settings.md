@@ -28,6 +28,8 @@ The installer writes your answers, for example:
 
 The config's [`settings.example.json`](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/settings.example.json) lists every setting with its default; the [config's settings page](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/settings.md) explains each one. `diskDevice` is the whole disk, not a partition. `desktop` is `plasma`, `gnome` or `niri`. `nvidia` is `none`, `open` or `legacy`. Installs older than v1.3 have a `settings.nix` instead; it still loads, and the rebuild prints the command that converts it.
 
+Apps picked during the install go in `apps.json`, next to it, the same file `ephemeral-apps` writes.
+
 ### Unfree packages
 
 Nothing unfree builds unless it's listed by name, next to the package that needs it:
