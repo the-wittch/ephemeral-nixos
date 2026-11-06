@@ -2,6 +2,25 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.4.0
+
+### Changed
+
+- The installer refuses a disk with mounted filesystems or swap, such as the USB stick it runs from, and the menu leaves those disks out. `FORCE_DISK=1` overrides it.
+- The ISO is named after its release, such as `ephemeral-nix-v3.4.0.iso`.
+
+### Fixed
+
+- The installer took any Proton Pass vault name, including ones with quotes or `$` that the login shell would run as a command. It refuses those now.
+- `bootstrap.sh` and `bootstrap-tui.sh` stopped with a permissions error when run from the ISO's copy of the scripts.
+- The README didn't say that an install without the menus uses the user `nixuser` and skips the apps.
+
+### Added
+
+- A private way to report security problems, in `SECURITY.md`. The install problem form asks how you installed.
+- A hardware page: what's required, what's been tested and what the installer detects. Also CONTRIBUTING.md and a pull request template.
+- The installer's output is saved to `/tmp/ephemeral-install.log`, and a successful install keeps a copy in `/var/log/ephemeral-install.log` for bug reports.
+
 ## 3.3.0
 
 ### Added

@@ -40,7 +40,11 @@ validate_bool() {
 }
 
 validate_vault() {
-  [[ -n $1 && $1 != *[[:cntrl:]]* ]] || die "invalid Proton Pass vault name: $1"
+  case $1 in
+    "" | *[[:cntrl:]]* | *'"'* | *'$'* | *'`'* | *\\*)
+      die "invalid Proton Pass vault name: $1 (no quotes, \$, backticks or backslashes)"
+      ;;
+  esac
 }
 
 validate_controld() {
@@ -131,6 +135,13 @@ validate_disk() {
   if [[ $d =~ [0-9]+$ && ! $d =~ nvme[0-9]+n[0-9]+$ && ! $d =~ mmcblk[0-9]+$ && ! $d =~ loop[0-9]+$ ]]; then
     die "looks like a partition: $d (use the whole disk, e.g. /dev/vda)"
   fi
+  if disk_in_use "$d" && [[ ${FORCE_DISK:-} != 1 ]]; then
+    die "$d has mounted filesystems or swap, so it may be the disk you booted from. Unmount it first (sudo umount -R /mnt; sudo swapoff -a), or set FORCE_DISK=1"
+  fi
+}
+
+disk_in_use() {
+  lsblk -nro MOUNTPOINTS "$1" 2>/dev/null | grep -q .
 }
 
 validate_flake_attr() {

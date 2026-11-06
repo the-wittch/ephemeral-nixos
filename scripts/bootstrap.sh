@@ -57,9 +57,6 @@ if [[ -n $SCRIPT_DIR && -f $SCRIPT_DIR/../flake.nix ]]; then
 fi
 
 if [[ -z $FLAKE_ROOT ]]; then
-  if [[ $REPO_URL == *YOUR_USER* || $REPO_URL == *YOUR_REPO* ]]; then
-    die "REPO_URL still looks like a placeholder: $REPO_URL"
-  fi
   command -v git >/dev/null || die "git not found"
 
   FLAKE_ROOT=$(mktemp -d /tmp/nixos-flake.XXXXXX)
@@ -71,7 +68,7 @@ fi
 [[ -f $FLAKE_ROOT/scripts/install.sh ]] || die "install.sh missing in clone"
 [[ -f $FLAKE_ROOT/scripts/common.sh ]] || die "common.sh missing in clone"
 [[ -f $FLAKE_ROOT/flake.nix ]] || die "flake.nix missing in clone"
-chmod +x "$FLAKE_ROOT/scripts/install.sh"
+[[ -x $FLAKE_ROOT/scripts/install.sh ]] || die "install.sh is not executable"
 
 # checked here, not by code from the clone being checked
 if [[ -n $EXPECTED_REV ]]; then

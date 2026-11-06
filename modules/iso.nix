@@ -24,7 +24,6 @@ let
     ];
   };
 
-  # the live system; the install test boots it too
   live =
     { pkgs, ... }:
     let
