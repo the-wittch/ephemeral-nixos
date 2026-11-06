@@ -6,6 +6,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Changed
 
+- New installs get config [v3.5.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
 - The installer refuses a disk with mounted filesystems or swap, such as the USB stick it runs from, and the menu leaves those disks out. `FORCE_DISK=1` overrides it.
 - The ISO is named after its release, such as `ephemeral-nix-v3.4.0.iso`.
 
