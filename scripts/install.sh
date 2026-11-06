@@ -135,6 +135,9 @@ OPENSNITCH=${OPENSNITCH:-true}
 PASS_SSH_AGENT=${PASS_SSH_AGENT:-false}
 PASS_SSH_VAULT=${PASS_SSH_VAULT:-Personal}
 CONTROLD_RESOLVER=${CONTROLD_RESOLVER:-}
+APPS=${APPS:-}
+APPS=${APPS//,/ }
+validate_apps "$APPS"
 validate_bool EXTRAS "$EXTRAS"
 validate_bool OPENSNITCH "$OPENSNITCH"
 validate_bool PASS_SSH_AGENT "$PASS_SSH_AGENT"
@@ -144,6 +147,7 @@ if [[ $PROFILE == minimal ]]; then
   EXTRAS=false
   PASS_SSH_AGENT=false
   CONTROLD_RESOLVER=
+  APPS=
 fi
 
 LAPTOP=false
@@ -168,7 +172,7 @@ if [[ -n $HARDWARE_CONFIG ]]; then
   [[ -f $HARDWARE_CONFIG ]] || die "HARDWARE_CONFIG is not a file: $HARDWARE_CONFIG"
   HARDWARE_CONFIG=$(realpath "$HARDWARE_CONFIG")
 fi
-info "desktop=$INSTALL_DESKTOP profile=$PROFILE nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT"
+info "desktop=$INSTALL_DESKTOP profile=$PROFILE nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT${APPS:+ apps=$APPS}"
 info "opensnitch=$OPENSNITCH pass-ssh-agent=$PASS_SSH_AGENT${CONTROLD_RESOLVER:+ controld=on}"
 
 info "will erase $DISK"
@@ -230,6 +234,11 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
     in
     "{\n" + builtins.concatStringsSep ",\n" (map line fields) + "\n}\n"
   ' >settings.json
+
+if [[ -n ${APPS// /} ]]; then
+  # shellcheck disable=SC2086 # one app per word
+  printf '%s\n' $APPS | sort -u | sed 's/.*/  "&"/; $!s/$/,/' | { echo '['; cat; echo ']'; } >apps.json
+fi
 
 [[ -s flake.lock ]] || die "flake.lock is missing; the installer pins a config release"
 

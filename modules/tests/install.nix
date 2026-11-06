@@ -124,17 +124,18 @@ in
                   " KEYBOARD_LAYOUT=${answers.keyboardLayout} KEYBOARD_VARIANT="
                   " LOCALE=${answers.locale} EXTRAS=false FINGERPRINT=false"
                   " PROFILE=${answers.profile} OPENSNITCH=true PASS_SSH_AGENT=false CONTROLD_RESOLVER="
-                  " SWAP_SIZE=${answers.swapSize} TIMEZONE=${answers.timeZone}"
+                  " APPS=glow SWAP_SIZE=${answers.swapSize} TIMEZONE=${answers.timeZone}"
                   " HARDWARE_CONFIG=${fixture}/hardware-configuration.nix"
                   " PASSWORD_HASH=${lib.escapeShellArg hash}"
                   " IN_DISKO_TEST=1"
                   " /etc/ephemeral-nixos/scripts/install.sh >&2"
               )
 
-          with subtest("settings.json has the answers, and the fresh-install copy is read-only"):
+          with subtest("settings.json and apps.json have the answers, and the fresh-install copy is read-only"):
               got = json.loads(installer.succeed("cat /mnt/persist/etc/nixos/settings.json"))
               want = json.loads('${builtins.toJSON answers}')
               assert got == want, f"settings.json differs:\n{got}\n{want}"
+              installer.succeed("cmp ${fixture}/apps.json /mnt/persist/etc/nixos/apps.json")
               installer.succeed("cmp /mnt/persist/etc/nixos/flake.lock /mnt/persist/etc/nixos-install/flake.lock")
               assert installer.succeed("stat -c %a /mnt/persist/etc/nixos-install/flake.nix").strip() == "444"
               assert installer.succeed("stat -c %a /mnt/persist/etc/nixos/flake.nix").strip() == "644"
@@ -160,6 +161,7 @@ in
               assert failed == "", f"failed units:\n{failed}"
               target.succeed("btrfs subvolume list / | grep -q root-blank")
               target.succeed("test -s /persist/passwords/${answers.username}")
+              target.succeed("command -v glow")
 
           with subtest("root is wiped on reboot, /persist is kept"):
               target.succeed("touch /root-was-here /persist/persist-was-here")

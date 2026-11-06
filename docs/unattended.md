@@ -13,6 +13,7 @@ Every question can be answered ahead of time, so only the LUKS passphrase is typ
 | `EXTRAS`, `OPENSNITCH`, `PASS_SSH_AGENT`, `FINGERPRINT` | `true` or `false` |
 | `PASS_SSH_VAULT` | the Proton Pass vault with your SSH keys |
 | `CONTROLD_RESOLVER` | your Control D resolver id; empty for none |
+| `APPS` | apps from the `ephemeral-apps` catalog, e.g. `obsidian,glow`; empty for none |
 | `SWAP_SIZE`, `TIMEZONE` | e.g. `16G`, `Europe/Berlin` |
 | `PASSWORD_HASH` | the login password as a hash, from `mkpasswd -m yescrypt` |
 | `HARDWARE_CONFIG` | a `hardware-configuration.nix` to use instead of detecting one |
