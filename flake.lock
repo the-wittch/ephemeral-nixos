@@ -98,19 +98,20 @@
         "import-tree": "import-tree",
         "nix-index-database": "nix-index-database",
         "nixpkgs": "nixpkgs",
-        "stylix": "stylix"
+        "stylix": "stylix",
+        "zork-nix": "zork-nix"
       },
       "locked": {
-        "lastModified": 1793934130,
-        "narHash": "sha256-LDOu01JVwEWGRwJm1yD/maxMOtfmGUmQN49BI4wEuQ8=",
+        "lastModified": 1793941964,
+        "narHash": "sha256-FE6qq3J9sayNbaLGlh49tNJrCZA2aIK5h4cITcOYZtc=",
         "owner": "the-wittch",
         "repo": "ephemeral-nixos-config",
-        "rev": "49a8d6f0c258e02fc5d429e1b723588694e2180a",
+        "rev": "f639f73b7b531dc066306159d9dd2c1e1475aa5f",
         "type": "github"
       },
       "original": {
         "owner": "the-wittch",
-        "ref": "v3.5.0",
+        "ref": "v3.6.2",
         "repo": "ephemeral-nixos-config",
         "type": "github"
       }
@@ -433,6 +434,35 @@
       "original": {
         "owner": "tinted-theming",
         "repo": "base16-zed",
+        "type": "github"
+      }
+    },
+    "zork-nix": {
+      "inputs": {
+        "flake-parts": [
+          "ephemeral",
+          "flake-parts"
+        ],
+        "import-tree": [
+          "ephemeral",
+          "import-tree"
+        ],
+        "nixpkgs": [
+          "ephemeral",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793941523,
+        "narHash": "sha256-dJ8MZ2GtR4r+VSkDE5ksL88FONj2TJQr3lYI224J8VE=",
+        "owner": "the-wittch",
+        "repo": "zork-nix",
+        "rev": "f8d3df1a4066e76e7efc66f5f913770772a4c747",
+        "type": "github"
+      },
+      "original": {
+        "owner": "the-wittch",
+        "repo": "zork-nix",
         "type": "github"
       }
     }
