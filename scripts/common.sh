@@ -127,21 +127,22 @@ fingerprint_reader() {
 }
 
 validate_disk() {
-  local d=$1
+  local d=$1 type
   [[ -b $d ]] || die "not a block device: $d"
-  if [[ $d =~ p[0-9]+$ ]]; then
-    die "looks like a partition: $d (use the whole disk, e.g. /dev/nvme0n1)"
-  fi
-  if [[ $d =~ [0-9]+$ && ! $d =~ nvme[0-9]+n[0-9]+$ && ! $d =~ mmcblk[0-9]+$ && ! $d =~ loop[0-9]+$ ]]; then
-    die "looks like a partition: $d (use the whole disk, e.g. /dev/vda)"
-  fi
+  type=$(lsblk -ndo TYPE "$d" 2>/dev/null) || die "lsblk can't read $d"
+  case $type in
+    disk | loop) ;;
+    part) die "$d is a partition; use the whole disk, e.g. /dev/nvme0n1" ;;
+    *) die "$d is a $type device, not a whole disk" ;;
+  esac
   if disk_in_use "$d" && [[ ${FORCE_DISK:-} != 1 ]]; then
-    die "$d has mounted filesystems or swap, so it may be the disk you booted from. Unmount it first (sudo umount -R /mnt; sudo swapoff -a), or set FORCE_DISK=1"
+    die "$d is in use (mounted, swap, or an open LUKS, LVM or RAID device), so it may be the disk you booted from. Unmount and close it first (sudo umount -R /mnt; sudo swapoff -a; sudo cryptsetup close <name>), or set FORCE_DISK=1"
   fi
 }
 
 disk_in_use() {
-  lsblk -nro MOUNTPOINTS "$1" 2>/dev/null | grep -q .
+  lsblk -nro MOUNTPOINTS "$1" 2>/dev/null | grep -q . && return 0
+  lsblk -nro TYPE "$1" 2>/dev/null | grep -qE '^(crypt|lvm|raid)'
 }
 
 validate_flake_attr() {

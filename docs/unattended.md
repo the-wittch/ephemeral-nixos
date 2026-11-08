@@ -4,7 +4,7 @@ Every question can be answered ahead of time, so only the LUKS passphrase is typ
 
 | variable | answer |
 |----------|--------|
-| `DISK` | the whole disk, e.g. `/dev/nvme0n1` |
+| `DISK` | the whole disk, e.g. `/dev/nvme0n1` or a `/dev/disk/by-id/` name |
 | `INSTALL_HOSTNAME`, `INSTALL_USERNAME` | names |
 | `INSTALL_DESKTOP` | `plasma`, `gnome`, `niri` or `umbriel` |
 | `NVIDIA_DRIVER` | `none`, `open` or `legacy` |
@@ -18,6 +18,6 @@ Every question can be answered ahead of time, so only the LUKS passphrase is typ
 | `PASSWORD_HASH` | the login password as a hash, from `mkpasswd -m yescrypt` |
 | `HARDWARE_CONFIG` | a `hardware-configuration.nix` to use instead of detecting one |
 | `CONFIRM` | `YES` skips the "erase this disk" question |
-| `FORCE_DISK` | `1` allows a disk with mounted filesystems or swap; normally refused |
+| `FORCE_DISK` | `1` allows a disk that's in use (mounted, swap, or an open LUKS, LVM or RAID device); normally refused |
 
 Pass them with `sudo env`, as in the README's install commands. Plain `sudo VAR=...` usually drops them.
