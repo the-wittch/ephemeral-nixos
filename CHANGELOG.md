@@ -2,6 +2,13 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.5.1
+
+### Fixed
+
+- The disk check asks lsblk whether a device is a whole disk instead of guessing from its name. `/dev/disk/by-id/` names of whole disks are accepted now, and partitions are refused whatever they're called.
+- A disk with an open LUKS, LVM or RAID device on it counts as in use, like a mounted one.
+
 ## 3.5.0
 
 ### Added
