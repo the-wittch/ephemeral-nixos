@@ -6,7 +6,7 @@ Every question can be answered ahead of time, so only the LUKS passphrase is typ
 |----------|--------|
 | `DISK` | the whole disk, e.g. `/dev/nvme0n1` |
 | `INSTALL_HOSTNAME`, `INSTALL_USERNAME` | names |
-| `INSTALL_DESKTOP` | `plasma`, `gnome` or `niri` |
+| `INSTALL_DESKTOP` | `plasma`, `gnome`, `niri` or `umbriel` |
 | `NVIDIA_DRIVER` | `none`, `open` or `legacy` |
 | `KEYBOARD_LAYOUT`, `KEYBOARD_VARIANT`, `LOCALE` | e.g. `de`, `nodeadkeys`, `de_DE.UTF-8` |
 | `PROFILE` | `full` or `minimal` (the small install) |

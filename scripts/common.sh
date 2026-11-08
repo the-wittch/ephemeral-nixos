@@ -23,8 +23,8 @@ validate_timezone() {
 
 validate_desktop() {
   case $1 in
-    plasma | gnome | niri) ;;
-    *) die "desktop must be plasma, gnome, or niri (got: $1)" ;;
+    plasma | gnome | niri | umbriel) ;;
+    *) die "desktop must be plasma, gnome, niri or umbriel (got: $1)" ;;
   esac
 }
 

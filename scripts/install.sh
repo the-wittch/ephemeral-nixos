@@ -50,12 +50,14 @@ if [[ -z ${INSTALL_DESKTOP:-} ]]; then
   echo "  1) plasma  — KDE Plasma 6"
   echo "  2) gnome   — GNOME"
   echo "  3) niri    — niri + Noctalia shell"
+  echo "  4) umbriel — Umbriel + Noctalia shell (new, may change between releases)"
   echo
   read -r -p "Choice [1]: " desk_choice
   case ${desk_choice:-1} in
     1 | plasma | Plasma | kde | KDE) INSTALL_DESKTOP=plasma ;;
     2 | gnome | Gnome | GNOME) INSTALL_DESKTOP=gnome ;;
     3 | niri | Niri) INSTALL_DESKTOP=niri ;;
+    4 | umbriel | Umbriel) INSTALL_DESKTOP=umbriel ;;
     *) die "invalid desktop choice: ${desk_choice}" ;;
   esac
 fi
