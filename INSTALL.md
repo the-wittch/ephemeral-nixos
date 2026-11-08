@@ -7,8 +7,8 @@ Easiest: download the `.iso` from the latest [release](https://github.com/the-wi
 From the NixOS ISO, from a release, with menus:
 
 ```bash
-TAG=v3.5.0
-REV=cd349d855a098043b8a508ffea445690cc12aa47
+TAG=v3.5.1
+REV=f8b2160f0c8b1306e287dc8974729479a31cffda
 git clone --branch "$TAG" --depth 1 https://github.com/the-wittch/ephemeral-nixos.git ~/nix
 cd ~/nix
 [[ $(git rev-parse HEAD) == "$REV" ]] || echo "hash mismatch, stop here"
@@ -26,7 +26,7 @@ sudo ./scripts/tui.sh
 Without menus, onto a whole disk. The user is `nixuser` unless you set `INSTALL_USERNAME`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v3.5.0/scripts/bootstrap.sh | sudo env TAG=v3.5.0 EXPECTED_REV=cd349d855a098043b8a508ffea445690cc12aa47 SWAP_SIZE=4G bash -s -- /dev/vda
+curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v3.5.1/scripts/bootstrap.sh | sudo env TAG=v3.5.1 EXPECTED_REV=f8b2160f0c8b1306e287dc8974729479a31cffda SWAP_SIZE=4G bash -s -- /dev/vda
 ```
 
 Rebuilding later:
