@@ -10,6 +10,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Changed
 
+- New installs get config [v3.8.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
 - New installs get config [v3.8.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md): Plasma tiles with Krohnkite and takes its colors from the wallpaper.
 
 ## 3.4.2
