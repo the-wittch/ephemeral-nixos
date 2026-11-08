@@ -9,6 +9,10 @@ Breaking changes are listed first in each release, with what to do about them. R
 - The disk check asks lsblk whether a device is a whole disk instead of guessing from its name. `/dev/disk/by-id/` names of whole disks are accepted now, and partitions are refused whatever they're called.
 - A disk with an open LUKS, LVM or RAID device on it counts as in use, like a mounted one.
 
+### Changed
+
+- New installs get config [v3.8.1](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.5.0
 
 ### Added
