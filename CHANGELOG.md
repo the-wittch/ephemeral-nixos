@@ -2,6 +2,16 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.5.0
+
+### Added
+
+- Umbriel as a fourth desktop choice, with the Noctalia shell like niri. It's a young compositor, so its settings and keybinds may still change between releases.
+
+### Changed
+
+- New installs get config [v3.8.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md): Plasma tiles with Krohnkite and takes its colors from the wallpaper.
+
 ## 3.4.2
 
 ### Changed

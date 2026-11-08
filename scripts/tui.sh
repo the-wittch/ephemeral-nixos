@@ -156,7 +156,8 @@ if [[ -z ${INSTALL_DESKTOP:-} ]]; then
   desk=$(run_gum choose --header "Desktop:" \
     "plasma  — KDE Plasma 6" \
     "gnome   — GNOME" \
-    "niri    — niri + Noctalia shell") || die "aborted"
+    "niri    — niri + Noctalia shell" \
+    "umbriel — Umbriel + Noctalia shell (new, may change between releases)") || die "aborted"
   INSTALL_DESKTOP=$(awk '{print $1}' <<<"$desk")
 fi
 validate_desktop "$INSTALL_DESKTOP"
