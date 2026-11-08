@@ -98,20 +98,21 @@
         "import-tree": "import-tree",
         "nix-index-database": "nix-index-database",
         "nixpkgs": "nixpkgs",
+        "plasma-manager": "plasma-manager",
         "stylix": "stylix",
         "zork-nix": "zork-nix"
       },
       "locked": {
-        "lastModified": 1794161824,
-        "narHash": "sha256-lCMKA8/0U8F0ArmrRoOc8XZSI/Xc6cXDr5ilcBBd3Dc=",
+        "lastModified": 1794166737,
+        "narHash": "sha256-h0zFq3+x+ntore5JpekVV/Ti+CWarpwNvt/EZ/aH9K0=",
         "owner": "the-wittch",
         "repo": "ephemeral-nixos-config",
-        "rev": "003c0c93c89e8f5abed6a29ae8da389e94dd0024",
+        "rev": "082c6cd6105952d51a681fc531eb0d23a1f68c79",
         "type": "github"
       },
       "original": {
         "owner": "the-wittch",
-        "ref": "v3.7.0",
+        "ref": "v3.8.0",
         "repo": "ephemeral-nixos-config",
         "type": "github"
       }
@@ -308,6 +309,31 @@
       "original": {
         "owner": "nix-community",
         "repo": "NUR",
+        "type": "github"
+      }
+    },
+    "plasma-manager": {
+      "inputs": {
+        "home-manager": [
+          "ephemeral",
+          "home-manager"
+        ],
+        "nixpkgs": [
+          "ephemeral",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1785762349,
+        "narHash": "sha256-jZhZkzAwc7f3exzcTDJWP2WCAchCv0iNC3UF/QsahdQ=",
+        "owner": "nix-community",
+        "repo": "plasma-manager",
+        "rev": "a19a2a029fa180911bd89c554dca1616e10f4c1d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "plasma-manager",
         "type": "github"
       }
     },
