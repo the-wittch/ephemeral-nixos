@@ -18,6 +18,7 @@ func (m model) startInstall() (tea.Model, tea.Cmd) {
 	}
 	m.history = nil
 	m.step = stInstalling
+	m.stepShown = m.spinFrame
 	m.reattached = false
 	m.resetProgress(time.Now())
 	return m, nil
@@ -36,6 +37,7 @@ func (m *model) resetProgress(started time.Time) {
 // picks up an install that a quit or crashed run of the screens left going
 func (m *model) reattach() {
 	m.step = stInstalling
+	m.stepShown = m.spinFrame
 	m.reattached = true
 	started := time.Now()
 	if fi, err := os.Stat(m.run.pid); err == nil {
@@ -68,8 +70,10 @@ func (m *model) poll() {
 	m.showLog = false
 	if code == 0 {
 		m.step = stDone
+		m.stepShown = m.spinFrame
 	} else {
 		m.step = stFailed
+		m.stepShown = m.spinFrame
 		uiLog.Printf("install.sh exited with status %d", code)
 	}
 }
@@ -118,6 +122,7 @@ func (m model) keyEnd(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m.startInstall()
 		case "Change an answer":
 			m.step = stReview
+			m.stepShown = m.spinFrame
 			return m, m.enter()
 		case "Start over":
 			fresh := newModel(m.cfg)
@@ -143,10 +148,14 @@ func (m model) elapsed() time.Duration {
 	return end.Sub(m.started).Round(time.Second)
 }
 
-func (m model) installHeader(w int, state string) string {
-	left := sTitle.Render("Ephemeral Nix")
-	right := sDim.Render(state + " · " + formatDuration(m.elapsed()))
-	return left + spaces(max(w-lipgloss.Width(left)-lipgloss.Width(right), 1)) + right
+// the title row of the install screens; framed, it's in the border instead
+func (m model) titleLines(w int) []string {
+	if m.framed {
+		return nil
+	}
+	left, right := m.crumbs()
+	left, right = sTitle.Render(left), sDim.Render(right)
+	return []string{left + spaces(max(w-lipgloss.Width(left)-lipgloss.Width(right), 1)) + right}
 }
 
 func (m model) stepList(failedAt int) []string {
@@ -167,7 +176,7 @@ func (m model) stepList(failedAt int) []string {
 }
 
 func (m model) viewInstalling(w int) ([]string, string) {
-	out := []string{m.installHeader(w, "installing"), ""}
+	out := append(m.titleLines(w), m.installBar(w), "")
 	if m.showLog {
 		out = append(out, strings.Split(m.logView.View(), "\n")...)
 		return out, hint("↑↓", "scroll", "l", "back to the steps")
@@ -193,13 +202,17 @@ func (m model) viewInstalling(w int) ([]string, string) {
 func (m model) viewEnd(w int) ([]string, string) {
 	var out []string
 	if m.showLog {
-		out = []string{m.installHeader(w, "log"), ""}
+		out = append(m.titleLines(w), "")
 		out = append(out, strings.Split(m.logView.View(), "\n")...)
 		return out, hint("↑↓", "scroll", "esc", "back")
 	}
 	if m.step == stDone {
-		out = []string{m.installHeader(w, "installed"), ""}
-		out = append(out, sGreen.Bold(true).Render(g.done+" Installed.")+" "+sText.Render("Remove the USB stick and reboot."), "")
+		out = append(m.titleLines(w), m.installBar(w), "")
+		installed := "Installed."
+		if m.cfg.effects {
+			installed = scramble(installed, m.spinFrame, revealFrac(m.age(), wordSpan))
+		}
+		out = append(out, sGreen.Bold(true).Render(g.done+" "+installed)+" "+sText.Render("Remove the USB stick and reboot."), "")
 		user := m.a.Username
 		if m.reattached {
 			user = "the user you picked"
@@ -216,7 +229,7 @@ func (m model) viewEnd(w int) ([]string, string) {
 		out = append(out, "", sSub.Render("The config is in /persist/etc/nixos. A read-only copy of this install is kept"),
 			sSub.Render("in /persist/etc/nixos-install to rebuild back to."), "")
 	} else {
-		out = []string{m.installHeader(w, "stopped"), ""}
+		out = append(m.titleLines(w), "")
 		out = append(out, sRed.Bold(true).Render(g.failed+" The install stopped at:")+" "+sText.Render(installSteps[m.curStep]), "")
 		if l := lastError(m.lines); l != "" {
 			out = append(out, sRed.Render(truncate(l, w)))

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -100,11 +101,14 @@ func (m model) viewApps(w int) ([]string, string) {
 			count++
 		}
 	}
-	intro := sSub.Render("Optional. Everything here can be added later with ephemeral-apps.")
-	picked := sMauve.Render(fmt.Sprintf("%d picked", count))
-	out = append(out, intro+spaces(max(w-lipgloss.Width(intro)-lipgloss.Width(picked), 2))+picked, "")
-
 	cats := m.appCategories()
+	// on a short screen the categories and the panel come first; each category shows its own count
+	if len(out)+2+len(cats)+appPanel <= m.bodyRows() {
+		intro := sSub.Render("Optional. Everything here can be added later with ephemeral-apps.")
+		picked := sMauve.Render(fmt.Sprintf("%d picked", count))
+		out = append(out, intro+spaces(max(w-lipgloss.Width(intro)-lipgloss.Width(picked), 2))+picked, "")
+	}
+
 	apps := m.appsIn(cats[m.appCat])
 	var left []string
 	for i, c := range cats {
@@ -129,28 +133,40 @@ func (m model) viewApps(w int) ([]string, string) {
 		}
 	}
 	rw := w - 26
+	labelW := 0
+	for _, a := range apps {
+		labelW = max(labelW, lipgloss.Width(a.Label))
+	}
+	labelW = min(labelW, 20) + 2
+
+	// the list gets the rows the header and the panel don't use
+	rows := max(m.bodyRows()-len(out)-appPanel, 3)
+	start, end := 0, len(apps)
+	if len(apps) > rows {
+		rows -= 2
+		start = min(max(m.appIdx-rows/2, 0), len(apps)-rows)
+		end = start + rows
+	}
 	var right []string
-	for i, a := range apps {
+	if start > 0 {
+		right = append(right, sDim.Render(fmt.Sprintf("  ↑ %d more", start)))
+	}
+	for i := start; i < end; i++ {
+		a := apps[i]
 		box := sDim.Render(g.unchecked)
 		if m.picked[a.ID] {
 			box = sGreen.Render(g.checked)
 		}
-		flags := ""
-		if a.Unfree {
-			flags += " unfree"
-		}
-		if a.Flatpak {
-			flags += " flathub"
-		}
-		text := padRight(a.Label, 18) + truncate(a.Description, rw-30)
+		flags := appFlags(a)
+		text := padRight(truncate(a.Label, labelW-2), labelW) + truncate(a.Description, rw-4-labelW-len(flags))
 		if i == m.appIdx && m.appPane == 1 {
-			right = append(right, box+" "+sCursor.Render(padRight(text, rw-8))+sDim.Render(flags))
-			if a.Warn != "" {
-				right = append(right, "    "+sYellow.Render(g.warn+" "+truncate(a.Warn, rw-8)))
-			}
+			right = append(right, box+" "+sCursor.Render(padRight(text, rw-4-len(flags)))+sDim.Render(flags))
 		} else {
 			right = append(right, box+" "+sText.Render(text)+sDim.Render(flags))
 		}
+	}
+	if end < len(apps) {
+		right = append(right, sDim.Render(fmt.Sprintf("  ↓ %d more", len(apps)-end)))
 	}
 	for i := 0; i < max(len(left), len(right)); i++ {
 		l, r := "", ""
@@ -162,5 +178,35 @@ func (m model) viewApps(w int) ([]string, string) {
 		}
 		out = append(out, padRight(l, 26)+r)
 	}
+
+	// the selected app in full, since its row may be cut short
+	if m.appPane == 1 && m.appIdx < len(apps) {
+		a := apps[m.appIdx]
+		out = append(out, "", sBold.Render(a.Label)+sDim.Render(appFlags(a)), sSub.Render(truncate(a.Description, w)))
+		if a.Warn != "" {
+			warn := strings.Split(lipgloss.NewStyle().Width(w-2).Render(a.Warn), "\n")
+			for i, l := range warn[:min(len(warn), 2)] {
+				lead := "  "
+				if i == 0 {
+					lead = g.warn + " "
+				}
+				out = append(out, sYellow.Render(lead+strings.TrimRight(l, " ")))
+			}
+		}
+	}
 	return out, hint("space", "tick", "tab", "switch side", "↑↓", "move", "enter", "next step", "esc", "back")
 }
+
+func appFlags(a app) string {
+	flags := ""
+	if a.Unfree {
+		flags += " unfree"
+	}
+	if a.Flatpak {
+		flags += " flathub"
+	}
+	return flags
+}
+
+// lines under the list for the selected app: a blank, its name, its description, two for a warning
+const appPanel = 5

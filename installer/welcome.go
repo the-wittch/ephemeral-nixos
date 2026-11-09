@@ -22,6 +22,9 @@ func (m model) keyWelcome(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if cur < len(welcomeItems)-1 {
 			cur++
 		}
+	case "e":
+		m.cfg.effects = !m.cfg.effects
+		return m, nil
 	case "q":
 		m.quitTo = "shell"
 		return m, tea.Quit
@@ -51,7 +54,7 @@ func (m model) keyWelcome(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m model) viewWelcome(w int) ([]string, string) {
 	var out []string
-	out = append(out, strings.Split(renderWord(), "\n")...)
+	out = append(out, strings.Split(renderWord(m.spinFrame, m.age(), m.cfg.effects), "\n")...)
 	out = append(out, sSub.Render("NixOS on an encrypted disk, with a root that's wiped on every boot"), "")
 
 	var status string
@@ -102,10 +105,14 @@ func (m model) viewWelcome(w int) ([]string, string) {
 		out = append(out, sSub.Render("Nothing is written to disk until you confirm on the review screen."))
 	}
 	if m.logo != nil {
-		logo := strings.Split(renderLogo(m.logo), "\n")
+		logo := strings.Split(renderLogo(m.logo, m.spinFrame, m.age(), m.cfg.effects), "\n")
 		if len(logo)+1+len(out) <= m.bodyRows() {
 			out = append(append(logo, ""), out...)
 		}
 	}
-	return out, hint("enter", "select", "←→", "move", "q", "quit")
+	effects := "effects off"
+	if !m.cfg.effects {
+		effects = "effects on"
+	}
+	return out, hint("enter", "select", "←→", "move", "e", effects, "q", "quit")
 }

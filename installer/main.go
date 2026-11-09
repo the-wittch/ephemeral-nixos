@@ -36,9 +36,11 @@ func main() {
 	flag.StringVar(&cfg.logoPath, "logo", os.Getenv("EPHEMERAL_LOGO"), "the snowflake as truecolor characters")
 	flag.BoolVar(&cfg.dryRun, "dry-run", false, "go through the screens without installing anything")
 	flag.StringVar(&answersFile, "answers", "", "install from a JSON file of answers, without the screens")
+	noEffects := flag.Bool("no-effects", false, "no animations; EPHEMERAL_NO_EFFECTS=1 does the same")
 	flag.Parse()
 	cfg.flakeRoot = filepath.Clean(filepath.Join(cfg.scriptsDir, ".."))
 	cfg.forceDisk = os.Getenv("FORCE_DISK") == "1"
+	cfg.effects = !*noEffects && os.Getenv("EPHEMERAL_NO_EFFECTS") != "1"
 	cfg.version = version
 
 	if !cfg.dryRun && os.Geteuid() != 0 {

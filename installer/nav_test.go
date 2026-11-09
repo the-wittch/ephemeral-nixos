@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -370,5 +371,59 @@ func TestOnlyTheNewestConnectionCheckCarriesOn(t *testing.T) {
 	}
 	if _, cmd := m.Update(onlineMsg{ok: false, round: 1}); cmd == nil {
 		t.Error("the newest check should keep going while offline")
+	}
+}
+
+func TestLongAppListScrolls(t *testing.T) {
+	m := toInstallType(t, newTestModel(t))
+	m = press(t, m, enter, enter)
+	wantStep(t, m, stApps)
+	var apps []app
+	for i := range 40 {
+		apps = append(apps, app{ID: fmt.Sprintf("tool%02d", i), Label: fmt.Sprintf("Tool %02d", i), Category: "Terminal", Description: "a terminal tool"})
+	}
+	m = update(t, m, catalogMsg{apps: apps})
+	m = update(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = press(t, m, tab)
+	for range 30 {
+		m = press(t, m, down)
+	}
+	v := m.View()
+	if !strings.Contains(v, "Tool 30") || !strings.Contains(v, "more") {
+		t.Errorf("the selected app should be on screen with the rest counted:\n%s", v)
+	}
+	if strings.Contains(v, "Tool 00") {
+		t.Error("the top of the list should have scrolled away")
+	}
+}
+
+func TestEffects(t *testing.T) {
+	m := newTestModel(t)
+	m.cfg.effects = true
+	g = consoleGlyphs
+	defer func() { g = pickGlyphs() }()
+
+	if strings.Contains(renderWord(0, 0, true), "E P H E M E R A L") {
+		t.Error("the title should start scrambled")
+	}
+	if !strings.Contains(renderWord(0, wordSpan, true), "E P H E M E R A L   N I X") {
+		t.Error("the title should settle")
+	}
+	if !strings.Contains(renderWord(0, 0, false), "E P H E M E R A L   N I X") {
+		t.Error("with effects off the title shouldn't scramble")
+	}
+	m = press(t, m, typed("e"))
+	if m.cfg.effects {
+		t.Error("e on the welcome screen should turn effects off")
+	}
+
+	m = update(t, m, tea.WindowSizeMsg{Width: 113, Height: 32})
+	m = toInstallType(t, m)
+	if !strings.Contains(m.View(), "┌─ Ephemeral Nix") {
+		t.Error("a roomy screen should have the frame with the title in it")
+	}
+	m = update(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
+	if strings.Contains(m.View(), "┌") {
+		t.Error("80x24 has no room for the frame")
 	}
 }
