@@ -45,8 +45,8 @@ Boot the NixOS graphical ISO in UEFI mode and connect to the network, then use o
 Take the tag and commit from the latest [release](https://github.com/the-wittch/ephemeral-nixos/releases), or from [`RELEASE`](./RELEASE) on that tag, and check the clone against them:
 
 ```bash
-TAG=v3.6.0
-REV=d430ec720cbc336963af138690f56d7c689dba83
+TAG=v3.7.0
+REV=b8fd6b75ed1aec9a9f1596597fe1260a4871774f
 git clone --branch "$TAG" --depth 1 https://github.com/the-wittch/ephemeral-nixos.git ~/nix
 cd ~/nix
 [[ $(git rev-parse HEAD) == "$REV" ]] || echo "hash mismatch, stop here"
@@ -56,8 +56,8 @@ sudo ./scripts/tui.sh
 Or let the bootstrap script clone and check it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v3.6.0/scripts/bootstrap-tui.sh -o /tmp/bootstrap-tui.sh
-sudo env TAG=v3.6.0 EXPECTED_REV=d430ec720cbc336963af138690f56d7c689dba83 bash /tmp/bootstrap-tui.sh
+curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v3.7.0/scripts/bootstrap-tui.sh -o /tmp/bootstrap-tui.sh
+sudo env TAG=v3.7.0 EXPECTED_REV=b8fd6b75ed1aec9a9f1596597fe1260a4871774f bash /tmp/bootstrap-tui.sh
 ```
 
 Release tags are signed with the maintainer's SSH key, and GitHub shows them as Verified. The exception is the [monthly automatic release](docs/development.md), which CI tags and can't sign; the commit check above covers both.
