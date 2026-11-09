@@ -51,20 +51,26 @@ func loadLogo(path string) [][]cell {
 	return parseLogo(string(b))
 }
 
-func renderLogo(rows [][]cell) string {
+// For its first frames the snowflake draws in alternating mauve and blue, then in its own colours.
+func renderLogo(rows [][]cell, frame, age int, effects bool) string {
 	truecolor := lipgloss.ColorProfile() == termenv.TrueColor
+	flash := effects && age < logoFlash
 	var sb strings.Builder
 	for i, row := range rows {
 		if i > 0 {
 			sb.WriteByte('\n')
 		}
-		for _, c := range row {
+		for j, c := range row {
 			if !c.colored || c.ch == " " {
 				sb.WriteString(c.ch)
 				continue
 			}
 			var col lipgloss.TerminalColor
 			switch {
+			case flash && (frame+i+j)%2 == 0:
+				col = cMauve
+			case flash:
+				col = cBlue
 			case truecolor:
 				col = lipgloss.Color("#" + hex2(c.r) + hex2(c.g) + hex2(c.b))
 			case c.r > c.g:
@@ -92,16 +98,25 @@ var wordRows = []string{
 }
 
 // the wallpaper's purple to blue across the word; on the console, spaced capitals in mauve
-func renderWord() string {
+// The title settles out of scrambled characters, left to right, over its first wordSpan ticks.
+func renderWord(frame, age int, effects bool) string {
+	frac := 1.0
+	if effects {
+		frac = revealFrac(age, wordSpan)
+	}
 	if !g.blockWord {
-		return sTitle.Render("E P H E M E R A L   N I X")
+		return sTitle.Render(scramble("E P H E M E R A L   N I X", frame, frac))
 	}
 	from, to := [3]float64{0xa8, 0x55, 0xf7}, [3]float64{0x38, 0xbd, 0xf8}
 	var lines []string
-	for _, row := range wordRows {
+	for y, row := range wordRows {
 		runes := []rune(row)
+		shown := int(float64(len(runes)) * frac)
 		var sb strings.Builder
 		for i, r := range runes {
+			if i >= shown && r != ' ' {
+				r = glitchChar(frame + i*7 + y*13)
+			}
 			t := float64(i) / float64(len(runes)-1)
 			c := "#"
 			for k := 0; k < 3; k++ {

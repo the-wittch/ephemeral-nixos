@@ -41,7 +41,7 @@ var errNoMatch = errors.New("nothing matches")
 
 type config struct {
 	scriptsDir, flakeRoot, listsDir, logoPath, version string
-	dryRun, forceDisk                                  bool
+	dryRun, forceDisk, effects                         bool
 }
 
 type model struct {
@@ -67,7 +67,11 @@ type model struct {
 	configVer   string
 	logo        [][]cell
 	spinFrame   int
-	listCursor  map[stepID]int
+	// spinFrame when the current screen appeared, for effects that play once
+	stepShown int
+	// set by View when there's room for the frame
+	framed     bool
+	listCursor map[stepID]int
 
 	region      []*picker
 	regionFocus int
@@ -243,6 +247,7 @@ func (m model) visible() []stepID {
 func (m *model) goTo(s stepID) tea.Cmd {
 	m.history = append(m.history, m.step)
 	m.step = s
+	m.stepShown = m.spinFrame
 	m.note = ""
 	return m.enter()
 }
@@ -274,6 +279,7 @@ func (m *model) back() tea.Cmd {
 		return nil
 	}
 	m.step = m.history[len(m.history)-1]
+	m.stepShown = m.spinFrame
 	m.history = m.history[:len(m.history)-1]
 	m.note = ""
 	if m.step == stReview {
@@ -409,3 +415,5 @@ func envOr(key, def string) string {
 	}
 	return def
 }
+
+func (m model) age() int { return m.spinFrame - m.stepShown }

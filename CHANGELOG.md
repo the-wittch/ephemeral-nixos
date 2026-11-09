@@ -2,6 +2,18 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.7.2
+
+### Fixed
+
+- The app list scrolls. Categories longer than the screen, such as Terminal with 37 apps, were cut off with no way to reach the rest.
+- App names and descriptions no longer run together: the name column fits the longest name in the category. The selected app's full description and any warning show under the list, so a shortened row hides nothing.
+
+### Changed
+
+- The installer uses the whole screen, up to 140 columns wide and all of its height. On a 1080p laptop it had left about a third of the width empty.
+- When the screen has room, the installer is framed, with the step in the top border. The title decodes out of scrambled characters on the welcome screen, the snowflake flashes mauve and blue as it appears, a light travels along the install's progress bar, and "Installed" glitches in at the end. `e` on the welcome screen turns the animations off, as does `ephemeral-install --no-effects`.
+
 ## 3.7.1
 
 ### Fixed

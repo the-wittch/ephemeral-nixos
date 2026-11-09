@@ -8,7 +8,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const frameWidth = 100
+// wide enough to use a laptop console (160 columns at 1080p), narrow enough to read on a big one
+const frameWidth = 140
 
 func (m model) View() string {
 	if m.width == 0 {
@@ -19,6 +20,7 @@ func (m model) View() string {
 			sText.Render(fmt.Sprintf("Make the window at least 80×24 (it's %d×%d).", m.width, m.height)))
 	}
 	w := min(m.width-4, frameWidth)
+	m.framed = m.roomy() && m.width >= 90
 	var body []string
 	var hints string
 	switch m.step {
@@ -62,6 +64,9 @@ func (m model) View() string {
 	}
 	body = append(body, foot...)
 	content := lipgloss.NewStyle().Width(w).Render(strings.Join(body, "\n"))
+	if m.framed {
+		content = m.frame(w, content)
+	}
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
 }
 
@@ -81,8 +86,11 @@ func (m model) roomy() bool { return m.height >= 30 }
 
 // the lines a screen has, above the error line and the keys
 func (m model) bodyRows() int {
+	if m.framed {
+		return m.height - 2 - 4 - 2
+	}
 	if m.roomy() {
-		return min(m.height-2, 40) - 4
+		return m.height - 2 - 4
 	}
 	return m.height - 2 - 2
 }
@@ -102,19 +110,47 @@ func hint(pairs ...string) string {
 	return strings.Join(parts, "   ")
 }
 
-func (m model) header(w int) []string {
+func (m model) stepNumber() (n, of int) {
 	steps := m.visible()
-	n := 0
 	for i, s := range steps {
 		if s == m.step {
 			n = i + 1
 		}
 	}
-	left := sTitle.Render("Ephemeral Nix")
-	right := sDim.Render(fmt.Sprintf("%d of %d · %s", n, len(steps), stepName[m.step]))
-	gap := max(w-lipgloss.Width(left)-lipgloss.Width(right), 1)
-	done := w * n / max(len(steps), 1)
+	return n, len(steps)
+}
+
+// what goes on the title row, or in the top of the frame
+func (m model) crumbs() (left, right string) {
+	switch m.step {
+	case stWelcome:
+		return "", ""
+	case stInstalling:
+		return "Ephemeral Nix", "installing · " + formatDuration(m.elapsed())
+	case stDone, stFailed:
+		state := "installed"
+		switch {
+		case m.showLog:
+			state = "log"
+		case m.step == stFailed:
+			state = "stopped"
+		}
+		return "Ephemeral Nix", state + " · " + formatDuration(m.elapsed())
+	}
+	n, of := m.stepNumber()
+	return "Ephemeral Nix", fmt.Sprintf("%d of %d · %s", n, of, stepName[m.step])
+}
+
+func (m model) header(w int) []string {
+	n, of := m.stepNumber()
+	done := w * n / max(of, 1)
 	bar := sMauve.Render(strings.Repeat(g.barOn, done)) + sDim.Render(strings.Repeat(g.barOff, w-done))
+	if m.framed {
+		return []string{bar, ""}
+	}
+	left, right := m.crumbs()
+	left, right = sTitle.Render(left), sDim.Render(right)
+	gap := max(w-lipgloss.Width(left)-lipgloss.Width(right), 1)
 	return []string{left + spaces(gap) + right, bar, ""}
 }
 
@@ -176,4 +212,21 @@ func fieldHints(last bool) string {
 		return hint("type", "to fill it in", "enter", "next step", "↑↓", "move", "esc", "back")
 	}
 	return hint("type", "to fill it in", "enter", "next field", "↑↓", "move", "esc", "back")
+}
+
+// A line border round the screen, with the title and the step set into its top edge.
+func (m model) frame(w int, content string) string {
+	left, right := m.crumbs()
+	top := sDim.Render("┌" + strings.Repeat("─", w+2) + "┐")
+	if left != "" {
+		fill := max(w-lipgloss.Width(left)-lipgloss.Width(right)-4, 1)
+		top = sDim.Render("┌─ ") + sTitle.Render(left) + sDim.Render(" "+strings.Repeat("─", fill)+" ") +
+			sDim.Render(right) + sDim.Render(" ─┐")
+	}
+	lines := []string{top}
+	for _, l := range strings.Split(content, "\n") {
+		lines = append(lines, sDim.Render("│ ")+padRight(l, w)+sDim.Render(" │"))
+	}
+	lines = append(lines, sDim.Render("└"+strings.Repeat("─", w+2)+"┘"))
+	return strings.Join(lines, "\n")
 }
