@@ -19,7 +19,8 @@ let
     in
     lib.unique (lib.concatMap collect (lib.attrValues inputs));
 
-  hash = "$y$j9T$jaQ.MaSahZXl8SYNSWtSD0$Jn8oyD73Z4h51tFFi6xcKlEWHRESYftAr..1WaGThz4";
+  # typed into the boot prompt below, so the test fails if disko got anything else
+  passphrase = "correct horse battery staple";
 in
 {
   ephemeral.hosts = {
@@ -32,6 +33,20 @@ in
 
   perSystem =
     { pkgs, ... }:
+    let
+      # what the screens would collect, keyed like settings.json
+      answersFile = pkgs.writeText "answers.json" (
+        builtins.toJSON (
+          answers
+          // {
+            apps = lib.importJSON (fixture + "/apps.json");
+            inherit passphrase;
+            password = "alice";
+            hardwareConfig = "${fixture}/hardware-configuration.nix";
+          }
+        )
+      );
+    in
     {
       checks.install = pkgs.testers.runNixOSTest {
         name = "install";
@@ -103,7 +118,7 @@ in
           def unlock_and_boot():
               target.start()
               target.wait_for_console_text("passphrase")
-              target.send_console("disko\n")
+              target.send_console("${passphrase}\n")
               target.wait_for_unit("multi-user.target")
 
           installer.start()
@@ -114,21 +129,8 @@ in
               installer.succeed("test -x /etc/ephemeral-nixos/scripts/install.sh")
               installer.fail("touch /etc/ephemeral-nixos/scripts/install.sh")
 
-          with subtest("install.sh partitions, encrypts and installs, from the read-only store"):
-              installer.succeed(
-                  "cd / && env"
-                  " DISK=${answers.diskDevice} CONFIRM=YES"
-                  " INSTALL_HOSTNAME=${answers.hostname} INSTALL_USERNAME=${answers.username}"
-                  " INSTALL_DESKTOP=${answers.desktop} NVIDIA_DRIVER=${answers.nvidia}"
-                  " KEYBOARD_LAYOUT=${answers.keyboardLayout} KEYBOARD_VARIANT="
-                  " LOCALE=${answers.locale} EXTRAS=false FINGERPRINT=false"
-                  " PROFILE=${answers.profile} OPENSNITCH=true PASS_SSH_AGENT=false CONTROLD_RESOLVER="
-                  " APPS=glow SWAP_SIZE=${answers.swapSize} TIMEZONE=${answers.timeZone}"
-                  " HARDWARE_CONFIG=${fixture}/hardware-configuration.nix"
-                  " PASSWORD_HASH=${lib.escapeShellArg hash}"
-                  " IN_DISKO_TEST=1"
-                  " /etc/ephemeral-nixos/scripts/install.sh >&2"
-              )
+          with subtest("the installer partitions, encrypts and installs, the passphrase going to disko on stdin"):
+              installer.succeed("ephemeral-install --answers ${answersFile} >&2")
 
           with subtest("settings.json and apps.json have the answers, and the fresh-install copy is read-only"):
               got = json.loads(installer.succeed("cat /mnt/persist/etc/nixos/settings.json"))
@@ -139,7 +141,7 @@ in
               installer.succeed("cmp /mnt/persist/etc/nixos/flake.lock /mnt/persist/etc/nixos-install/flake.lock")
               assert installer.succeed("stat -c %a /mnt/persist/etc/nixos-install/flake.nix").strip() == "444"
               assert installer.succeed("stat -c %a /mnt/persist/etc/nixos/flake.nix").strip() == "644"
-              installer.succeed("test -s /mnt/persist/passwords/${answers.username}")
+              installer.succeed("grep -q '^\\$y\\$' /mnt/persist/passwords/${answers.username}")
 
           with subtest("reinstall with the test backdoor, through the machine's own modules/"):
               installer.succeed(

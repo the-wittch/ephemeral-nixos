@@ -2,6 +2,17 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.7.0
+
+### Changed
+
+- With a non-US keyboard layout, the console switches to it before the passphrase, so it's typed the way it will be at boot.
+- The install runs on its own: leaving the installer, or the installer crashing, doesn't stop it, and running `ephemeral-install` again picks it back up.
+- Disks under 32G are marked as tight for a full install.
+- The welcome screen shows the installer's version next to the config version it installs.
+- `scripts/tui.sh` starts the same installer from a clone of the repo, in place of its own menus. Without a terminal it still falls back to `install.sh`'s prompts.
+- The install test goes through the installer's `--answers` mode, so each release checks that the disk unlocks with the passphrase it was given.
+
 ## 3.6.0
 
 ### Changed
