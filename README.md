@@ -60,6 +60,8 @@ curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v3.5.1/s
 sudo env TAG=v3.5.1 EXPECTED_REV=f8b2160f0c8b1306e287dc8974729479a31cffda bash /tmp/bootstrap-tui.sh
 ```
 
+Release tags are signed with the maintainer's SSH key, and GitHub shows them as Verified. The exception is the [monthly automatic release](docs/development.md), which CI tags and can't sign; the commit check above covers both.
+
 #### From main
 
 ```bash
