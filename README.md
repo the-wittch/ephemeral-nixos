@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/the-wittch/ephemeral-nixos/actions/workflows/ci.yml/badge.svg)](https://github.com/the-wittch/ephemeral-nixos/actions/workflows/ci.yml)
 
-<img width="3840" height="2160" alt="wallpaper" src="https://github.com/user-attachments/assets/b4e08080-876a-4ab3-911f-4055a4f2de0d" />
+<img width="1920" height="1080" alt="The Ephemeral Nix wallpaper: a neon NixOS snowflake breaking up into pixels above EPHEMERAL NIX" src="docs/images/wallpaper.png" />
 
 An installer for NixOS on an encrypted btrfs disk where `/` is wiped on every boot. Only `/home` and a short list of system paths survive, on `/persist`. You pick Plasma, GNOME, niri or Umbriel (both with Noctalia) during the install.
 
