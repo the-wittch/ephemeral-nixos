@@ -11,6 +11,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Changed
 
+- New installs get config [v3.9.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
 - The installer uses the whole screen, up to 140 columns wide and all of its height. On a 1080p laptop it had left about a third of the width empty.
 - When the screen has room, the installer is framed, with the step in the top border. The title decodes out of scrambled characters on the welcome screen, the snowflake flashes mauve and blue as it appears, a light travels along the install's progress bar, and "Installed" glitches in at the end. `e` on the welcome screen turns the animations off, as does `ephemeral-install --no-effects`.
 
