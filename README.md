@@ -34,7 +34,7 @@ gh attestation verify ephemeral-nix-*.iso -R the-wittch/ephemeral-nixos
 sudo dd if=ephemeral-nix-*.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
-Boot it in UEFI mode. The installer starts on its own, one question per screen: `esc` goes back, and a review screen at the end lets you change any answer before anything is written. It offers `nmtui` if there's no network yet. Run `ephemeral-install` to start it again.
+Boot it in UEFI mode. The installer starts on its own, one question per screen: `esc` goes back, and a review screen at the end lets you change any answer before anything is written. It offers `nmtui` if there's no network yet. Run `ephemeral-install` to start it again; if you leave it while it's installing, the install carries on and running it again picks it back up.
 
 ### From the NixOS ISO
 
@@ -80,7 +80,7 @@ Use `sudo env VAR=...`. Plain `sudo VAR=...` usually drops the variables.
 
 Without the menus, it doesn't ask for the hostname, user, swap size or timezone, and it skips the apps. It uses `nixos`, `nixuser`, `4G` and `UTC` unless you set them, as in [Unattended installs](docs/unattended.md).
 
-The installer asks for the disk, desktop, hostname, user, swap size, keyboard layout, language and timezone (type to search the list), then a LUKS passphrase and a login password. With a non-US layout, switch the live session to that layout before typing the passphrase, since that's the layout you'll type it in at boot. It asks what to install: the full system, or a small install (a plain desktop, finished later with `ephemeral-setup`). For the full system it asks about the extras (Steam, VS Code, Brave and more shell tools), OpenSnitch, the Proton Pass SSH agent and Control D, then offers the same apps as `ephemeral-apps`. It turns on the laptop extras when it finds a battery, and asks about fingerprint login when it finds a reader. If it finds an NVIDIA card, it shows its name and asks whether to install the drivers: `open` for RTX 20 / GTX 16 series and newer, `legacy` for GTX 900 / 10 series, or `none`. The driver is compiled during the install, which adds a few minutes. It detects the rest of your hardware once the disk is mounted. When it's done, remove the ISO and reboot.
+The installer asks for the disk, desktop, keyboard layout, language and timezone (type to search the list), hostname, user and swap size, then a LUKS passphrase and a login password. With a non-US layout it switches the console to that layout before the passphrase, so you type it the way you will at boot; where it can't, it says so. It asks what to install: the full system, or a small install (a plain desktop, finished later with `ephemeral-setup`). For the full system it asks about the extras (Steam, VS Code, Brave and more shell tools), OpenSnitch, the Proton Pass SSH agent and Control D, then offers the same apps as `ephemeral-apps`. It turns on the laptop extras when it finds a battery, and asks about fingerprint login when it finds a reader. If it finds an NVIDIA card, it shows its name and asks whether to install the drivers: `open` for RTX 20 / GTX 16 series and newer, `legacy` for GTX 900 / 10 series, or `none`. The driver is compiled during the install, which adds a few minutes. It detects the rest of your hardware once the disk is mounted. When it's done, remove the ISO and reboot.
 
 **VMs:** UEFI with Secure Boot off and a VirtIO disk (`/dev/vda`). 64 GB of disk and 8 GB of RAM is plenty. The boot splash can look odd on virtual GPUs; unlocking still works.
 

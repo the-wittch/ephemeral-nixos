@@ -17,25 +17,6 @@ let
   live =
     { pkgs, ... }:
     let
-      gumColours = {
-        GUM_CHOOSE_CURSOR_FOREGROUND = "#${mocha.mauve}";
-        GUM_CHOOSE_SELECTED_FOREGROUND = "#${mocha.mauve}";
-        GUM_CHOOSE_HEADER_FOREGROUND = "#${mocha.blue}";
-        GUM_INPUT_CURSOR_FOREGROUND = "#${mocha.mauve}";
-        GUM_CONFIRM_SELECTED_BACKGROUND = "#${mocha.mauve}";
-        GUM_FILTER_HEADER_FOREGROUND = "#${mocha.blue}";
-        GUM_FILTER_INDICATOR_FOREGROUND = "#${mocha.mauve}";
-        GUM_FILTER_MATCH_FOREGROUND = "#${mocha.mauve}";
-        GUM_FILTER_PROMPT_FOREGROUND = "#${mocha.mauve}";
-      };
-
-      # copies, so the ISO doesn't carry all of glibcLocales and xkeyboard-config
-      lists = pkgs.runCommand "ephemeral-nixos-lists" { } ''
-        mkdir $out
-        cp ${pkgs.xkeyboard-config}/share/X11/xkb/rules/base.lst $out/base.lst
-        grep '\.UTF-8/UTF-8' ${pkgs.glibcLocales}/share/i18n/SUPPORTED > $out/locales
-      '';
-
       installer = withSystem pkgs.stdenv.hostPlatform.system ({ config, ... }: config.packages.installer);
 
       install = pkgs.writeShellApplication {
@@ -71,13 +52,10 @@ let
         "a6adc8"
       ];
 
-      environment.variables = gumColours;
-
       environment.etc."ephemeral-nixos".source = "${installer}/share/ephemeral-nixos";
-      environment.etc."ephemeral-nixos-lists".source = lists;
+      environment.etc."ephemeral-nixos-lists".source = "${installer}/share/ephemeral-nixos-lists";
       environment.systemPackages = [
         install
-        pkgs.gum
         pkgs.git
       ];
 

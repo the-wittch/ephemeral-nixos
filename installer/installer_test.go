@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestValidation(t *testing.T) {
@@ -118,5 +119,67 @@ func TestParseCatalog(t *testing.T) {
 		"docker":{"label":"Docker","category":"Development","description":"the real Docker","flatpak":null,"warn":"root-equivalent","unfree":false}}`))
 	if err != nil || len(apps) != 2 || apps[0].Label != "Docker" || apps[0].Warn != "root-equivalent" {
 		t.Errorf("catalog: %+v %v", apps, err)
+	}
+}
+
+func TestReadAnswers(t *testing.T) {
+	dir := t.TempDir()
+	good := filepath.Join(dir, "good.json")
+	os.WriteFile(good, []byte(`{"hostname":"installtest","username":"alice","diskDevice":"/dev/vda","swapSize":"1G",
+		"timeZone":"UTC","desktop":"gnome","profile":"full","nvidia":"none","keyboardLayout":"us","keyboardVariant":"",
+		"locale":"en_US.UTF-8","extras":false,"laptop":false,"fingerprint":false,"useOpenSnitch":true,
+		"useControlD":false,"usePassSshAgent":false,"apps":["glow"],"passphrase":"correct horse","password":"pw"}`), 0o600)
+	a, err := readAnswers(good)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.Disk != "/dev/vda" || a.Hostname != "installtest" || len(a.Apps) != 1 || a.ControlD || !a.OpenSnitch {
+		t.Errorf("answers: %+v", a)
+	}
+
+	bad := filepath.Join(dir, "bad.json")
+	os.WriteFile(bad, []byte(`{"hostname":"My Laptop","diskDevice":"/dev/vda","passphrase":"short","password":"pw"}`), 0o600)
+	_, err = readAnswers(bad)
+	if err == nil || !strings.Contains(err.Error(), "hostname") || !strings.Contains(err.Error(), "passphrase") {
+		t.Errorf("want hostname and passphrase errors, got %v", err)
+	}
+}
+
+func TestFollower(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "output")
+	f := follower{path: p}
+	os.WriteFile(p, []byte("==> partitioning\npart"), 0o600)
+	if got := f.next(); len(got) != 1 || got[0] != "==> partitioning" {
+		t.Errorf("first read: %q", got)
+	}
+	fh, _ := os.OpenFile(p, os.O_APPEND|os.O_WRONLY, 0o600)
+	fh.WriteString("ial line\n\x1b[1mbold\x1b[0m\n")
+	fh.Close()
+	if got := f.next(); len(got) != 2 || got[0] != "partial line" || got[1] != "bold" {
+		t.Errorf("second read: %q", got)
+	}
+}
+
+func TestHeadlessDryRun(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	dryRunPause = time.Millisecond
+	a := defaultAnswers()
+	a.Disk, a.Passphrase, a.Password = "/dev/vda", "correct horse", "pw"
+	if code := runHeadless(config{dryRun: true}, a); code != 0 {
+		t.Errorf("dry run exited %d", code)
+	}
+	t.Setenv("EPHEMERAL_DRY_RUN_FAIL", "1")
+	if code := runHeadless(config{dryRun: true}, a); code != 1 {
+		t.Errorf("failing dry run exited %d", code)
+	}
+}
+
+func TestDryRunNeedsThePassphrase(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	dryRunPause = time.Millisecond
+	a := defaultAnswers()
+	a.Disk, a.Password = "/dev/vda", "pw"
+	if code := runHeadless(config{dryRun: true}, a); code != 3 {
+		t.Errorf("an empty passphrase should reach the script empty and fail it, got %d", code)
 	}
 }

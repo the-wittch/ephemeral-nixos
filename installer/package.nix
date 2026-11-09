@@ -10,12 +10,23 @@
   mkpasswd,
   pciutils,
   networkmanager,
+  kbd,
+  xkeyboard-config,
+  glibcLocales,
   # the config's assets/wallpaper.svg, for the snowflake on the welcome screen
   wallpaper,
+  version,
   # flake.nix, flake.lock and scripts/, which install.sh copies and runs
   source,
 }:
 let
+  # copies, so it doesn't carry all of glibcLocales and xkeyboard-config
+  lists = runCommand "ephemeral-nixos-lists" { } ''
+    mkdir $out
+    cp ${xkeyboard-config}/share/X11/xkb/rules/base.lst $out/base.lst
+    grep '\.UTF-8/UTF-8' ${glibcLocales}/share/i18n/SUPPORTED > $out/locales
+  '';
+
   logo =
     runCommand "ephemeral-install-logo"
       {
@@ -31,7 +42,7 @@ let
 in
 buildGoModule {
   pname = "ephemeral-install";
-  version = "0";
+  inherit version;
 
   src = lib.fileset.toSource {
     root = ./.;
@@ -44,12 +55,14 @@ buildGoModule {
   vendorHash = "sha256-4NZ5eEAnaXggxhspYHLRZuvYK6SlOAG62QA0lAgwpbE=";
 
   env.CGO_ENABLED = "0";
+  ldflags = [ "-X main.version=v${version}" ];
   nativeBuildInputs = [ makeWrapper ];
 
   postInstall = ''
     mv $out/bin/installer $out/bin/ephemeral-install
     mkdir -p $out/share
     cp -r ${source} $out/share/ephemeral-nixos
+    ln -s ${lists} $out/share/ephemeral-nixos-lists
     wrapProgram $out/bin/ephemeral-install \
       --set-default EPHEMERAL_LOGO ${logo} \
       --prefix PATH : ${
@@ -58,6 +71,7 @@ buildGoModule {
           mkpasswd
           pciutils
           networkmanager
+          kbd
         ]
       }
   '';

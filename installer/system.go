@@ -239,3 +239,28 @@ func printable(s string) string {
 		return r
 	}, s)
 }
+
+// The console keymaps from kbd are mostly named after the XKB layout. Switching the live
+// console means the passphrase is typed here the way it will be at the boot prompt.
+// Returns the layout now active, or "" when it couldn't be switched.
+func switchConsoleLayout(layout, variant string, dryRun bool) string {
+	if dryRun || os.Getenv("TERM") != "linux" || strings.Contains(layout, ",") {
+		return ""
+	}
+	keymap := layout
+	if layout == "gb" {
+		keymap = "uk"
+	}
+	if variant != "" {
+		keymap += "-" + variant
+	}
+	out, err := exec.Command("loadkeys", keymap).CombinedOutput()
+	if err != nil {
+		uiLog.Printf("loadkeys %s: %v: %s", keymap, err, strings.TrimSpace(string(out)))
+		return ""
+	}
+	return layout
+}
+
+// below this a full install fills up fast, since old generations stay until they're cleaned up
+const minDiskSize = 32 << 30
