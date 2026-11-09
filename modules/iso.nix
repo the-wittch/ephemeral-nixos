@@ -3,6 +3,7 @@
   config,
   inputs,
   lib,
+  withSystem,
   ...
 }:
 let
@@ -11,17 +12,6 @@ let
     mauve = "cba6f7";
     blue = "89b4fa";
     red = "f38ba8";
-  };
-
-  source = lib.fileset.toSource {
-    root = ../.;
-    fileset = lib.fileset.unions [
-      ../flake.nix
-      ../flake.lock
-      ../.gitignore
-      ../hardware-configuration.example.nix
-      ../scripts
-    ];
   };
 
   live =
@@ -46,31 +36,21 @@ let
         grep '\.UTF-8/UTF-8' ${pkgs.glibcLocales}/share/i18n/SUPPORTED > $out/locales
       '';
 
+      installer = withSystem pkgs.stdenv.hostPlatform.system ({ config, ... }: config.packages.installer);
+
       install = pkgs.writeShellApplication {
         name = "ephemeral-install";
-        runtimeInputs = with pkgs; [
-          gum
-          curl
-          networkmanager
-        ];
         text = ''
-          gum style --border rounded --border-foreground "#${mocha.mauve}" --padding "1 4" --margin "1 0" \
-            "$(gum style --bold --foreground "#${mocha.mauve}" "Ephemeral Nix")" \
-            "NixOS on an encrypted disk, with a root that's wiped on every boot"
-
-          until curl -fsS --max-time 5 -o /dev/null https://cache.nixos.org/nix-cache-info; do
-            gum confirm "No internet connection yet. Set one up?" --affirmative "Network setup" --negative "Shell" || exit 0
-            nmtui
-            gum spin --title "Waiting for the connection..." -- nm-online -q -t 20 || true
-          done
-
-          exec sudo --preserve-env=${lib.concatStringsSep "," (lib.attrNames gumColours)} \
-            /etc/ephemeral-nixos/scripts/tui.sh
+          exec sudo ${lib.getExe installer} "$@"
         '';
       };
     in
     {
       system.nixos.distroName = "Ephemeral Nix";
+
+      # 24px Terminus keeps the installer readable on large screens
+      console.font = "ter-v24n";
+      console.packages = [ pkgs.terminus_font ];
 
       console.colors = [
         mocha.base
@@ -78,7 +58,7 @@ let
         "a6e3a1"
         "f9e2af"
         mocha.blue
-        "f5c2e7"
+        mocha.mauve
         "94e2d5"
         "bac2de"
         "585b70"
@@ -86,14 +66,14 @@ let
         "a6e3a1"
         "f9e2af"
         mocha.blue
-        "f5c2e7"
+        mocha.mauve
         "94e2d5"
         "a6adc8"
       ];
 
       environment.variables = gumColours;
 
-      environment.etc."ephemeral-nixos".source = source;
+      environment.etc."ephemeral-nixos".source = "${installer}/share/ephemeral-nixos";
       environment.etc."ephemeral-nixos-lists".source = lists;
       environment.systemPackages = [
         install

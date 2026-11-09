@@ -34,7 +34,7 @@ gh attestation verify ephemeral-nix-*.iso -R the-wittch/ephemeral-nixos
 sudo dd if=ephemeral-nix-*.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
-Boot it in UEFI mode. The installer starts on its own and offers `nmtui` if there's no network yet. Run `ephemeral-install` to start it again.
+Boot it in UEFI mode. The installer starts on its own, one question per screen: `esc` goes back, and a review screen at the end lets you change any answer before anything is written. It offers `nmtui` if there's no network yet. Run `ephemeral-install` to start it again.
 
 ### From the NixOS ISO
 
@@ -120,7 +120,7 @@ This repo is the installer and nothing else. Its `flake.nix` is the machine flak
 }
 ```
 
-Every module, the partition layout included, comes from that pinned release of the config repo; `flake.lock` pins the rest. Each installer release pins a tested config release. This repo's own `modules/` only holds the ISO and the install test, which machines never see.
+Every module, the partition layout included, comes from that pinned release of the config repo; `flake.lock` pins the rest. Each installer release pins a tested config release. This repo's own `modules/` and `installer/` only hold the ISO, its installer screens and the install test, which machines never see.
 
 ## Wallpaper
 

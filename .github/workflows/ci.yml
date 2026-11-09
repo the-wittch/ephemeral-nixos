@@ -21,7 +21,7 @@ jobs:
       - uses: DeterminateSystems/determinate-nix-action@92957199488000b908fdad19f63711000965d8f3 # v3.24.1
 
       - name: shellcheck
-        run: nix run --inputs-from path:. nixpkgs#shellcheck -- -x -P SCRIPTDIR scripts/*.sh .github/*.sh
+        run: nix run --inputs-from path:. nixpkgs#shellcheck -- -x -P SCRIPTDIR scripts/*.sh .github/*.sh installer/logo.sh
 
       - name: nixfmt
         run: git ls-files -z '*.nix' | xargs -0 nix run --inputs-from path:. nixpkgs#nixfmt -- --check
@@ -33,3 +33,10 @@ jobs:
 
       - name: nix flake check
         run: nix flake check path:. --no-write-lock-file --no-build
+
+      - name: gofmt
+        run: test -z "$(nix shell --inputs-from path:. nixpkgs#go -c gofmt -l installer | tee /dev/stderr)"
+
+      # the Go tests run while it builds
+      - name: installer
+        run: nix build path:.#checks.x86_64-linux.installer -L --no-link
