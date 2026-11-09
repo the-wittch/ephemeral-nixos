@@ -6,6 +6,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Changed
 
+- New installs get config [v3.8.3](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
 - The ISO starts a new installer: one question per screen, `esc` to go back, input checked as you type, and a review screen where any answer can be changed before the disk is touched. Installing needs the disk's name typed, not just a yes. While it installs, it shows the steps instead of raw build output, and if something fails it shows where and offers to try again with the same answers. `install.sh` still does all the disk work, and unattended installs are unchanged.
 - The disk passphrase and login password are asked before anything is written, instead of halfway through the install.
 - The ISO's console uses Terminus at 24 px and has mauve in its palette, for the installer's colours and the snowflake on its welcome screen.
