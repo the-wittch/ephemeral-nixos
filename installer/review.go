@@ -121,7 +121,10 @@ func (m model) keyReview(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m model) viewReview(w int) ([]string, string) {
 	out := m.header(w)
 	out = append(out, sBold.Render("Check everything.")+" "+sSub.Render("Nothing has been written yet. Pick a line to change it."), "")
-	for i, l := range m.reviewLines() {
+	lines := m.reviewLines()
+	// the header, the lines, the confirmation box and the dry-run line
+	spaced := m.roomy() && 5+2*len(lines)+5 <= m.bodyRows()
+	for i, l := range lines {
 		val := truncate(l.value, w-16)
 		if l.danger {
 			val = sRed.Render(val)
@@ -132,6 +135,9 @@ func (m model) viewReview(w int) ([]string, string) {
 		} else {
 			out = append(out, "   "+line)
 		}
+		if spaced {
+			out = append(out, "")
+		}
 	}
 	name := filepath.Base(m.a.Disk)
 	prompt := "Type " + sRed.Bold(true).Render(name) + " to erase it and install:  "
@@ -139,7 +145,9 @@ func (m model) viewReview(w int) ([]string, string) {
 	if m.reviewFocus == 1 {
 		box = box.BorderForeground(cMauve)
 	}
-	out = append(out, "")
+	if !spaced {
+		out = append(out, "")
+	}
 	out = append(out, strings.Split(box.Render(prompt+m.confirmIn.View()), "\n")...)
 	if m.cfg.dryRun {
 		out = append(out, sYellow.Render("Dry run: install.sh won't run."))

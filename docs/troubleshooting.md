@@ -18,4 +18,4 @@
 
 ## Reporting a problem
 
-If the installer fails or the new install won't boot, open an [install problem](https://github.com/the-wittch/ephemeral-nixos/issues/new/choose) with the end of `/tmp/ephemeral-install.log`. If the installer's screens themselves went wrong, add `/tmp/ephemeral-install-ui.log`. A successful install keeps a copy in `/var/log/ephemeral-install.log`. Once the machine boots, problems go to the [config's tracker](https://github.com/the-wittch/ephemeral-nixos-config/issues/new/choose). Security problems go through [SECURITY.md](../SECURITY.md), not an issue.
+If the installer fails or the new install won't boot, open an [install problem](https://github.com/the-wittch/ephemeral-nixos/issues/new/choose) with the end of `/tmp/ephemeral-install.log`. If the installer's screens themselves went wrong, or the app list didn't load, add `/tmp/ephemeral-install-ui.log`. A successful install keeps a copy in `/var/log/ephemeral-install.log`. Once the machine boots, problems go to the [config's tracker](https://github.com/the-wittch/ephemeral-nixos-config/issues/new/choose). Security problems go through [SECURITY.md](../SECURITY.md), not an issue.

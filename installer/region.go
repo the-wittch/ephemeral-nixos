@@ -61,18 +61,21 @@ func (m model) viewRegion(w int) ([]string, string) {
 	for i, p := range m.region {
 		label := padRight(p.label, 18)
 		if i == m.regionFocus {
-			out = append(out, sMauve.Render(label)+p.input.View())
-			for _, l := range p.listView(w - 18) {
-				out = append(out, spaces(18)+l)
+			out = append(out, sMauve.Render(" "+g.cursor+" "+label)+p.input.View())
+			for _, l := range p.listView(w - 21) {
+				out = append(out, spaces(21)+l)
 			}
 			if m.regionErr != "" {
-				out = append(out, spaces(18)+sRed.Render(g.failed+" "+m.regionErr))
+				out = append(out, spaces(21)+sRed.Render(g.failed+" "+m.regionErr))
 			}
-			continue
+		} else {
+			out = append(out, "   "+sText.Render(label)+sText.Render(p.displayValue()))
 		}
-		out = append(out, sText.Render(label)+sText.Render(p.displayValue()))
+		out = append(out, m.gap()...)
 	}
-	out = append(out, "")
+	if !m.roomy() {
+		out = append(out, "")
+	}
 	if m.region[0].value != "us" {
 		out = append(out, sSub.Render("At boot you type the disk passphrase with "+m.region[0].value+". The passphrase screen switches to it"),
 			sSub.Render("too, where it can, so you type it the same way there."))

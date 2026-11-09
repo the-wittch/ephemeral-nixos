@@ -91,21 +91,28 @@ func (m model) viewChoice(w int) ([]string, string) {
 	}
 	cur := m.choiceCursor(m.step)
 	for i, c := range m.choices(m.step) {
-		label := padRight(c.label, 9) + c.desc
-		if i == cur {
+		tag := ""
+		if c.tag != "" {
+			tag = "  " + sTag.Render(" "+c.tag+" ")
+		}
+		switch {
+		case m.roomy() && i == cur:
+			out = append(out, sCursor.Render(" "+g.cursor+" "+c.label+" ")+tag, "     "+sSub.Render(truncate(c.desc, w-5)), "")
+		case m.roomy():
+			out = append(out, "   "+sText.Render(c.label)+tag, "     "+sSub.Render(truncate(c.desc, w-5)), "")
+		case i == cur:
+			paren := ""
 			if c.tag != "" {
-				label += "  (" + c.tag + ")"
+				paren = "  (" + c.tag + ")"
 			}
-			out = append(out, row(true, w, truncate(label, w-4)))
-		} else {
-			line := padRight(c.label, 9) + sSub.Render(truncate(c.desc, w-16))
-			if c.tag != "" {
-				line += "  " + sTag.Render(" "+c.tag+" ")
-			}
-			out = append(out, "   "+line)
+			out = append(out, row(true, w, truncate(padRight(c.label, 9)+c.desc+paren, w-4)))
+		default:
+			out = append(out, "   "+padRight(c.label, 9)+sSub.Render(truncate(c.desc, w-16))+tag)
 		}
 	}
-	out = append(out, "")
+	if !m.roomy() {
+		out = append(out, "")
+	}
 	switch m.step {
 	case stDesktop:
 		out = append(out, sSub.Render("You can switch later in settings.json; your files stay."))

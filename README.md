@@ -34,7 +34,7 @@ gh attestation verify ephemeral-nix-*.iso -R the-wittch/ephemeral-nixos
 sudo dd if=ephemeral-nix-*.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
-Boot it in UEFI mode. The installer starts on its own, one question per screen: `esc` goes back, and a review screen at the end lets you change any answer before anything is written. It offers `nmtui` if there's no network yet. Run `ephemeral-install` to start it again; if you leave it while it's installing, the install carries on and running it again picks it back up.
+Boot it in UEFI mode. The installer starts on its own, one question per screen: `esc` goes back, and a review screen at the end lets you change any answer before anything is written. With no network yet, it starts on Connect to Wi-Fi, and moves on to Install once it's online. The Wi-Fi network you join is copied to the new system. Run `ephemeral-install` to start it again; if you leave it while it's installing, the install carries on and running it again picks it back up.
 
 ### From the NixOS ISO
 

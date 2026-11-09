@@ -2,6 +2,22 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.7.1
+
+### Fixed
+
+- The app list loads on the ISO. It failed every time, because nix wouldn't read the installer's copy of the flake through the link in `/etc`. If it fails for another reason, the screen says why, and `r` tries again.
+- The vault name and Control D resolver id fields say what to type, and ticking their option puts the cursor in them.
+- The machine and secrets fields show which one has the cursor, say what goes in it, and `enter` goes through them one at a time on both screens.
+
+### Changed
+
+- Problems show in one place, just above the keys, and go away at the next key.
+- With no network, the welcome screen starts on Connect to Wi-Fi and moves to Install once it's online.
+- Wi-Fi networks joined on the ISO are copied to the new system, root-only like NetworkManager keeps them, so it's online at the first login.
+- The snowflake shows on the welcome screen whenever it fits, so on 768 px screens too.
+- More space between rows when the screen has room.
+
 ## 3.7.0
 
 ### Changed
