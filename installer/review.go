@@ -141,7 +141,7 @@ func (m model) viewReview(w int) ([]string, string) {
 	}
 	name := filepath.Base(m.a.Disk)
 	prompt := "Type " + sRed.Bold(true).Render(name) + " to erase it and install:  "
-	box := lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(cDim).Padding(0, 1).Width(w - 4)
+	box := lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(cDim).Padding(0, 1).Width(w - 2)
 	if m.reviewFocus == 1 {
 		box = box.BorderForeground(cMauve)
 	}
