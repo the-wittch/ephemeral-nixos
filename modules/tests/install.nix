@@ -46,6 +46,16 @@ in
           }
         )
       );
+
+      # a network joined with nmtui on the live system
+      wifi = pkgs.writeText "home.nmconnection" ''
+        [connection]
+        id=home
+        type=wifi
+
+        [wifi]
+        ssid=home
+      '';
     in
     {
       checks.install = pkgs.testers.runNixOSTest {
@@ -125,11 +135,12 @@ in
           installer.wait_for_unit("multi-user.target")
 
           with subtest("the live system starts the installer, which runs from the read-only store"):
-              installer.wait_until_tty_matches("1", "No internet connection yet")
+              installer.wait_until_tty_matches("1", "Not connected")
               installer.succeed("test -x /etc/ephemeral-nixos/scripts/install.sh")
               installer.fail("touch /etc/ephemeral-nixos/scripts/install.sh")
 
           with subtest("the installer partitions, encrypts and installs, the passphrase going to disko on stdin"):
+              installer.succeed("install -D -m 0600 ${wifi} /etc/NetworkManager/system-connections/home.nmconnection")
               installer.succeed("ephemeral-install --answers ${answersFile} >&2")
 
           with subtest("settings.json and apps.json have the answers, and the fresh-install copy is read-only"):
@@ -142,6 +153,8 @@ in
               assert installer.succeed("stat -c %a /mnt/persist/etc/nixos-install/flake.nix").strip() == "444"
               assert installer.succeed("stat -c %a /mnt/persist/etc/nixos/flake.nix").strip() == "644"
               installer.succeed("grep -q '^\\$y\\$' /mnt/persist/passwords/${answers.username}")
+              installer.succeed("cmp ${wifi} /mnt/persist/etc/NetworkManager/system-connections/home.nmconnection")
+              assert installer.succeed("stat -c '%a %U' /mnt/persist/etc/NetworkManager/system-connections/home.nmconnection").strip() == "600 root"
 
           with subtest("reinstall with the test backdoor, through the machine's own modules/"):
               installer.succeed(
@@ -164,6 +177,7 @@ in
               target.succeed("btrfs subvolume list / | grep -q root-blank")
               target.succeed("test -s /persist/passwords/${answers.username}")
               target.succeed("command -v glow")
+              target.succeed("cmp ${wifi} /etc/NetworkManager/system-connections/home.nmconnection")
               target.succeed("systemctl is-active --quiet root-reset-check.service")
 
           with subtest("root is wiped on reboot, /persist is kept"):

@@ -51,7 +51,7 @@ func main() {
 	}
 	os.Setenv("NIX_CONFIG", os.Getenv("NIX_CONFIG")+"\nexperimental-features = nix-command flakes\nhttp2 = false\ndownload-attempts = 5\nconnect-timeout = 10\n")
 
-	logPath := filepath.Join(os.TempDir(), "ephemeral-install-ui.log")
+	logPath := uiLogPath()
 	if f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600); err == nil {
 		defer f.Close()
 		uiLog.SetOutput(f)
@@ -85,3 +85,5 @@ func main() {
 		}
 	}
 }
+
+func uiLogPath() string { return filepath.Join(os.TempDir(), "ephemeral-install-ui.log") }

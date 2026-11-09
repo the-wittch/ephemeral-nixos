@@ -1,10 +1,33 @@
 package main
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"errors"
+	"strings"
 
-func (m model) secretErrs() (error, error) {
-	return checkPassphrase(m.secretIn[0].Value(), m.secretIn[1].Value()),
-		checkPassword(m.secretIn[2].Value(), m.secretIn[3].Value())
+	tea "github.com/charmbracelet/bubbletea"
+)
+
+var secretLabels = []string{"Passphrase", "Again", "Password", "Again"}
+
+// what's wrong with one field on its own, so enter can stop there
+func (m model) secretErr(i int) error {
+	v := func(i int) string { return m.secretIn[i].Value() }
+	switch i {
+	case 0:
+		return checkPassphrase(v(0), "")
+	case 1:
+		if v(1) == "" {
+			return errors.New("type the passphrase again")
+		}
+		return checkPassphrase(v(0), v(1))
+	case 2:
+		return checkPassword(v(2), "")
+	default:
+		if v(3) == "" {
+			return errors.New("type the password again")
+		}
+		return checkPassword(v(2), v(3))
+	}
 }
 
 func (m *model) focusSecret() tea.Cmd {
@@ -20,6 +43,7 @@ func (m *model) focusSecret() tea.Cmd {
 }
 
 func (m model) keySecrets(k tea.KeyMsg) (tea.Model, tea.Cmd) {
+	last := len(m.secretIn) - 1
 	switch k.String() {
 	case "up", "shift+tab":
 		if m.secretFocus > 0 {
@@ -27,29 +51,25 @@ func (m model) keySecrets(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.focusSecret()
 	case "down", "tab":
-		if m.secretFocus < len(m.secretIn)-1 {
+		if m.secretFocus < last {
 			m.secretFocus++
 		}
 		return m, m.focusSecret()
 	case "enter":
-		if m.secretFocus < len(m.secretIn)-1 {
+		if err := m.secretErr(m.secretFocus); err != nil {
+			m.note = secretLabels[m.secretFocus] + ": " + err.Error()
+			return m, nil
+		}
+		if m.secretFocus < last {
 			m.secretFocus++
 			return m, m.focusSecret()
 		}
-		pe, we := m.secretErrs()
-		switch {
-		case pe != nil || m.secretIn[1].Value() == "":
-			m.secretFocus = 0
-			if pe == nil {
-				m.secretFocus = 1
+		for i := range m.secretIn {
+			if err := m.secretErr(i); err != nil {
+				m.secretFocus = i
+				m.note = secretLabels[i] + ": " + err.Error()
+				return m, m.focusSecret()
 			}
-			return m, m.focusSecret()
-		case we != nil || m.secretIn[3].Value() == "":
-			m.secretFocus = 2
-			if we == nil {
-				m.secretFocus = 3
-			}
-			return m, m.focusSecret()
 		}
 		m.a.Passphrase, m.a.Password = m.secretIn[0].Value(), m.secretIn[2].Value()
 		return m, m.next()
@@ -61,32 +81,34 @@ func (m model) keySecrets(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m model) viewSecrets(w int) ([]string, string) {
 	out := m.header(w)
-	pe, we := m.secretErrs()
-	field := func(i int, label string) string {
-		l := padRight(label, 14)
-		if i == m.secretFocus {
-			l = sMauve.Render(l)
-		} else {
-			l = sText.Render(l)
-		}
-		return "   " + l + m.secretIn[i].View()
+	help := []string{
+		"type the passphrase; it stays hidden",
+		"type it again to check it",
+		"type the password you'll log in with",
+		"type it again to check it",
 	}
-	status := func(err error, again string) string {
-		switch {
-		case again == "":
-			return ""
-		case err != nil:
-			return "  " + sRed.Render(g.failed+" "+err.Error())
-		default:
-			return "  " + sGreen.Render(g.done+" matches")
+	field := func(i int) []string {
+		var err error
+		// a field is only marked wrong once something's typed in it, and the second copy not while
+		// it's still on its way to matching
+		v := m.secretIn[i].Value()
+		if v != "" {
+			err = m.secretErr(i)
 		}
+		if (i == 1 || i == 3) && i == m.secretFocus && strings.HasPrefix(m.secretIn[i-1].Value(), v) {
+			err = nil
+		}
+		lines := m.field(w, i == m.secretFocus, secretLabels[i], m.secretIn[i].View(), help[i], err)
+		if (i == 1 || i == 3) && v != "" && m.secretErr(i) == nil {
+			lines[0] += "  " + sGreen.Render(g.done+" matches")
+		}
+		return lines
 	}
 	out = append(out, sBold.Render("Disk passphrase")+"  "+sSub.Render("unlocks the disk at every boot"))
-	out = append(out, field(0, "Passphrase"))
-	if v := m.secretIn[0].Value(); v != "" && len(v) < 8 {
-		out = append(out, spaces(17)+sRed.Render(g.failed+" at least 8 characters"))
-	}
-	out = append(out, field(1, "Again")+status(pe, m.secretIn[1].Value()))
+	out = append(out, m.gap()...)
+	out = append(out, field(0)...)
+	out = append(out, field(1)...)
+	out = append(out, m.gap()...)
 	switch {
 	case m.liveLayout == m.a.Layout && m.a.Layout != "us":
 		out = append(out, "   "+sGreen.Render(g.done)+" "+sSub.Render("This screen types with "+m.a.Layout+", like the prompt at boot."))
@@ -94,10 +116,12 @@ func (m model) viewSecrets(w int) ([]string, string) {
 		out = append(out, "   "+sYellow.Render(g.warn+" ")+sSub.Render("This screen can't switch to "+m.a.Layout+", but you'll type it with "+m.a.Layout+" at boot."),
 			"     "+sSub.Render("Use characters that are in the same place on both keyboards."))
 	}
-	out = append(out, "   "+sSub.Render("A few random words make a passphrase that's easy to type and hard to guess."))
+	out = append(out, "   "+sSub.Render("A few random words are easy to type and hard to guess."))
 	out = append(out, "   "+sYellow.Render(g.warn+" ")+sSub.Render("It can't be recovered. Keep it somewhere other than this computer."), "")
+	out = append(out, m.gap()...)
 	out = append(out, sBold.Render("Login password")+"  "+sSub.Render("for "+m.a.Username))
-	out = append(out, field(2, "Password"))
-	out = append(out, field(3, "Again")+status(we, m.secretIn[3].Value()))
-	return out, hint("tab", "next field", "enter", "next step", "esc", "back")
+	out = append(out, m.gap()...)
+	out = append(out, field(2)...)
+	out = append(out, field(3)...)
+	return out, fieldHints(m.secretFocus == len(m.secretIn)-1)
 }

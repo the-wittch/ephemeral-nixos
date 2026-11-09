@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -77,10 +78,13 @@ func locales(lists string) []item {
 	defer f.Close()
 	var items []item
 	sc := bufio.NewScanner(f)
+	// glibc's SUPPORTED has one per line; a NixOS system's is "SUPPORTED-LOCALES=C.UTF-8/UTF-8 en_US.UTF-8/UTF-8"
 	for sc.Scan() {
-		code, _, _ := strings.Cut(strings.TrimSpace(sc.Text()), "/")
-		if strings.HasSuffix(code, ".UTF-8") {
-			items = append(items, item{Code: code})
+		for _, field := range strings.Fields(strings.TrimPrefix(sc.Text(), "SUPPORTED-LOCALES=")) {
+			code, _, _ := strings.Cut(field, "/")
+			if strings.HasSuffix(code, ".UTF-8") {
+				items = append(items, item{Code: code})
+			}
 		}
 	}
 	return items
@@ -158,9 +162,20 @@ func loadCatalog(flakeRoot string) ([]app, error) {
 		}
 		return parseCatalog(b)
 	}
-	ref := "path:" + flakeRoot
-	out, err := exec.Command("nix", "build", "--no-link", "--print-out-paths", ref+"#app-catalog").Output()
+	// on the ISO this is /etc/ephemeral-nixos, a link into the store, and nix won't read a
+	// flake through it in pure evaluation
+	if real, err := filepath.EvalSymlinks(flakeRoot); err == nil {
+		flakeRoot = real
+	}
+	var stderr strings.Builder
+	cmd := exec.Command("nix", "build", "--no-link", "--print-out-paths", "path:"+flakeRoot+"#app-catalog")
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
 	if err != nil {
+		uiLog.Printf("nix build app-catalog: %v\n%s", err, stderr.String())
+		if why := lastError(strings.Split(stderr.String(), "\n")); why != "" {
+			return nil, errors.New(strings.TrimSpace(cleanLine(why)))
+		}
 		return nil, fmt.Errorf("nix build app-catalog: %w", err)
 	}
 	b, err := os.ReadFile(strings.TrimSpace(string(out)))

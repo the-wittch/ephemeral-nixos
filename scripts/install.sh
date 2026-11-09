@@ -282,6 +282,13 @@ if [[ -n $CONTROLD_RESOLVER ]]; then
     printf '%s\n' "$CONTROLD_RESOLVER" >/mnt/persist/etc/controld-resolver
   )
 fi
+# networks joined here with nmtui, so the new system is online at the first login
+connections=(/etc/NetworkManager/system-connections/*.nmconnection)
+if [[ -f ${connections[0]} ]]; then
+  install -d -m 0700 /mnt/persist/etc/NetworkManager/system-connections
+  install -m 0600 -o root -g root "${connections[@]}" /mnt/persist/etc/NetworkManager/system-connections/
+  info "copied ${#connections[@]} network connection(s) from this live system"
+fi
 
 if [[ -n $PASSWORD_HASH ]]; then
   HASH=$PASSWORD_HASH

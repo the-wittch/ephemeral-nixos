@@ -45,19 +45,53 @@ func (m model) View() string {
 	case stDone, stFailed:
 		body, hints = m.viewEnd(w)
 	}
-	if m.note != "" {
-		body = append(body, "", sYellow.Render(g.warn+" ")+sText.Render(m.note))
+	problem := ""
+	if p := m.problem(); p != "" {
+		problem = sRed.Render(g.failed+" ") + sText.Render(truncate(p, w-2))
 	}
-	h := min(m.height-2, 34)
-	if len(body) > h-2 {
-		body = body[:h-2]
+	foot := []string{problem, hints}
+	if m.roomy() {
+		foot = []string{"", problem, "", hints}
 	}
-	for len(body) < h-2 {
+	h := m.bodyRows()
+	if len(body) > h {
+		body = body[:h]
+	}
+	for len(body) < h {
 		body = append(body, "")
 	}
-	body = append(body, "", hints)
+	body = append(body, foot...)
 	content := lipgloss.NewStyle().Width(w).Render(strings.Join(body, "\n"))
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
+}
+
+func (m model) problem() string {
+	switch {
+	case m.note != "":
+		return m.note
+	case m.step == stApps && m.catalogErr != nil:
+		return "Couldn't load the app list: " + m.catalogErr.Error()
+	}
+	return ""
+}
+
+// whether there's height for a blank line between rows; the 24 px console font on a 768 px
+// screen gives 32
+func (m model) roomy() bool { return m.height >= 30 }
+
+// the lines a screen has, above the error line and the keys
+func (m model) bodyRows() int {
+	if m.roomy() {
+		return min(m.height-2, 40) - 4
+	}
+	return m.height - 2 - 2
+}
+
+func (m model) gap() []string {
+	if m.roomy() {
+		return []string{""}
+	}
+	return nil
 }
 
 func hint(pairs ...string) string {
@@ -116,3 +150,30 @@ func truncate(s string, n int) string {
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
+
+const fieldLabel = 14
+
+// A text field: an arrow when it has the cursor, then the label and what's typed. Under it, what
+// to type while it has the cursor, or what's wrong with it. The line is there either way so
+// moving between fields doesn't shift the screen.
+func (m model) field(w int, focused bool, label, input, help string, err error) []string {
+	line := "   " + sText.Render(padRight(label, fieldLabel)) + input
+	if focused {
+		line = sMauve.Render(" "+g.cursor+" "+padRight(label, fieldLabel)) + input
+	}
+	under := ""
+	switch {
+	case err != nil:
+		under = sRed.Render(g.failed + " " + truncate(err.Error(), w-fieldLabel-5))
+	case focused:
+		under = sSub.Render(truncate(help, w-fieldLabel-3))
+	}
+	return []string{line, spaces(3+fieldLabel) + under}
+}
+
+func fieldHints(last bool) string {
+	if last {
+		return hint("type", "to fill it in", "enter", "next step", "↑↓", "move", "esc", "back")
+	}
+	return hint("type", "to fill it in", "enter", "next field", "↑↓", "move", "esc", "back")
+}

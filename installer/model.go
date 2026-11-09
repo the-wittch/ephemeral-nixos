@@ -53,20 +53,21 @@ type model struct {
 	a             answers
 	note          string
 
-	isOnline   *bool
-	uefi       bool
-	memGiB     int
-	disks      []disk
-	diskErr    error
-	gpu        string
-	hasGPU     bool
-	laptop     bool
-	reader     string
-	hasReader  bool
-	configVer  string
-	logo       [][]cell
-	spinFrame  int
-	listCursor map[stepID]int
+	isOnline    *bool
+	onlineRound int
+	uefi        bool
+	memGiB      int
+	disks       []disk
+	diskErr     error
+	gpu         string
+	hasGPU      bool
+	laptop      bool
+	reader      string
+	hasReader   bool
+	configVer   string
+	logo        [][]cell
+	spinFrame   int
+	listCursor  map[stepID]int
 
 	region      []*picker
 	regionFocus int
@@ -111,7 +112,11 @@ type model struct {
 	quitTo string
 }
 
-type onlineMsg bool
+// round counts the checks started after nmtui, so an older round stops instead of running alongside
+type onlineMsg struct {
+	ok    bool
+	round int
+}
 type catalogMsg struct {
 	apps []app
 	err  error
@@ -193,13 +198,13 @@ func newModel(cfg config) model {
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(checkOnline(0), tick())
+	return tea.Batch(checkOnline(0, 0), tick())
 }
 
-func checkOnline(delay time.Duration) tea.Cmd {
+func checkOnline(delay time.Duration, round int) tea.Cmd {
 	return func() tea.Msg {
 		time.Sleep(delay)
-		return onlineMsg(online())
+		return onlineMsg{online(), round}
 	}
 }
 
@@ -313,10 +318,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logView.Height = max(msg.Height-10, 5)
 		return m, nil
 	case onlineMsg:
-		v := bool(msg)
+		if msg.round != m.onlineRound {
+			return m, nil
+		}
+		v := msg.ok
+		was := m.isOnline
 		m.isOnline = &v
-		if !v && m.step == stWelcome {
-			return m, checkOnline(5 * time.Second)
+		if m.step != stWelcome {
+			return m, nil
+		}
+		// offline, the next thing to do is connect; once connected, it's the install
+		changed := was == nil || *was != v
+		switch cur := m.listCursor[stWelcome]; {
+		case changed && !v && cur == 0:
+			m.listCursor[stWelcome] = 1
+		case changed && v && cur == 1:
+			m.listCursor[stWelcome] = 0
+		}
+		if !v {
+			return m, checkOnline(5*time.Second, m.onlineRound)
 		}
 		return m, nil
 	case catalogMsg:
@@ -329,7 +349,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tick()
 	case execDoneMsg:
-		return m, checkOnline(0)
+		m.onlineRound++
+		return m, checkOnline(0, m.onlineRound)
 	case tea.KeyMsg:
 		return m.key(msg)
 	}
@@ -342,6 +363,8 @@ func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.quitTo = "shell"
 		return m, tea.Quit
 	}
+	// an error stays up until the next key, which either fixes it or says it again
+	m.note = ""
 	if k.String() == "esc" && m.step > stWelcome && m.step <= stReview {
 		return m, m.back()
 	}

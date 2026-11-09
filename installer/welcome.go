@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var welcomeItems = []string{"Install", "Set up the network", "Open a shell"}
+var welcomeItems = []string{"Install", "Connect to Wi-Fi", "Open a shell"}
 
 func (m model) keyWelcome(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	cur := m.listCursor[stWelcome]
@@ -51,10 +51,6 @@ func (m model) keyWelcome(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m model) viewWelcome(w int) ([]string, string) {
 	var out []string
-	if m.logo != nil && m.height >= 34 {
-		out = append(out, strings.Split(renderLogo(m.logo), "\n")...)
-		out = append(out, "")
-	}
 	out = append(out, strings.Split(renderWord(), "\n")...)
 	out = append(out, sSub.Render("NixOS on an encrypted disk, with a root that's wiped on every boot"), "")
 
@@ -65,7 +61,7 @@ func (m model) viewWelcome(w int) ([]string, string) {
 	case *m.isOnline:
 		status = sGreen.Render(g.dot) + sText.Render(" Online")
 	default:
-		status = sYellow.Render(g.dot) + sText.Render(" No internet connection yet. Set one up to install.")
+		status = sYellow.Render(g.dot) + sText.Render(" Not connected. Connect to Wi-Fi or plug in a cable.")
 	}
 	var vers []string
 	if m.cfg.version != "" {
@@ -88,10 +84,14 @@ func (m model) viewWelcome(w int) ([]string, string) {
 	out = append(out, sDim.Render(strings.Join(facts, "   ")), "")
 
 	var items []string
+	offline := m.isOnline != nil && !*m.isOnline
 	for i, it := range welcomeItems {
-		if i == m.listCursor[stWelcome] {
+		switch {
+		case i == m.listCursor[stWelcome]:
 			items = append(items, sCursor.Render(" "+g.cursor+" "+it+" "))
-		} else {
+		case i == 0 && offline:
+			items = append(items, " "+sDim.Render(it+" (needs internet)")+" ")
+		default:
 			items = append(items, " "+sText.Render(it)+" ")
 		}
 	}
@@ -100,6 +100,12 @@ func (m model) viewWelcome(w int) ([]string, string) {
 		out = append(out, sYellow.Render("Dry run: nothing is written to any disk."))
 	} else {
 		out = append(out, sSub.Render("Nothing is written to disk until you confirm on the review screen."))
+	}
+	if m.logo != nil {
+		logo := strings.Split(renderLogo(m.logo), "\n")
+		if len(logo)+1+len(out) <= m.bodyRows() {
+			out = append(append(logo, ""), out...)
+		}
 	}
 	return out, hint("enter", "select", "←→", "move", "q", "quit")
 }

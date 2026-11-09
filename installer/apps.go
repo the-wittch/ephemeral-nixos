@@ -46,6 +46,10 @@ func (m model) keyApps(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.next()
 	}
+	if k.String() == "r" && !m.catalogLoading && (m.catalogErr != nil || len(m.catalog) == 0) {
+		m.catalogLoading, m.catalogErr = true, nil
+		return m, loadCatalogCmd(m.cfg)
+	}
 	cats := m.appCategories()
 	if len(cats) == 0 {
 		return m, nil
@@ -85,8 +89,10 @@ func (m model) viewApps(w int) ([]string, string) {
 		return out, hint("enter", "skip", "esc", "back")
 	}
 	if m.catalogErr != nil || len(m.catalog) == 0 {
-		out = append(out, sYellow.Render(g.warn+" ")+sText.Render("Couldn't load the app list. Pick apps after the install with ephemeral-apps."))
-		return out, hint("enter", "next step", "esc", "back")
+		out = append(out, sText.Render("The app list didn't load, so there's nothing to pick here."), "",
+			sSub.Render("Try again, or go on and pick apps after the install with ephemeral-apps."),
+			sSub.Render("The full error is in "+uiLogPath()+"."))
+		return out, hint("r", "try again", "enter", "next step", "esc", "back")
 	}
 	count := 0
 	for _, on := range m.picked {

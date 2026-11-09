@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,6 +47,8 @@ var (
 	tab   = tea.KeyMsg{Type: tea.KeyTab}
 	up    = tea.KeyMsg{Type: tea.KeyUp}
 	down  = tea.KeyMsg{Type: tea.KeyDown}
+	left  = tea.KeyMsg{Type: tea.KeyLeft}
+	right = tea.KeyMsg{Type: tea.KeyRight}
 	space = tea.KeyMsg{Type: tea.KeySpace}
 	ctrlU = tea.KeyMsg{Type: tea.KeyCtrlU}
 )
@@ -85,7 +89,7 @@ func toInstallType(t *testing.T, m model) model {
 func toReviewFromMachine(t *testing.T, m model) model {
 	t.Helper()
 	wantStep(t, m, stMachine)
-	m = press(t, m, enter)
+	m = press(t, m, enter, enter, enter)
 	wantStep(t, m, stSecrets)
 	m = press(t, m, typed("correct horse"), tab, typed("correct horse"), tab, typed("pw"), tab, typed("pw"), enter)
 	wantStep(t, m, stReview)
@@ -207,12 +211,24 @@ func TestInvalidInputStaysPut(t *testing.T) {
 	m = press(t, m, ctrlU, typed("My Laptop"), enter)
 	wantStep(t, m, stMachine)
 	m = press(t, m, ctrlU, typed("my-laptop"), enter)
+	if m.machineFocus != 1 {
+		t.Errorf("enter should move to the next field, got %d", m.machineFocus)
+	}
+	m = press(t, m, enter, enter)
 	wantStep(t, m, stSecrets)
 
 	m = press(t, m, typed("short"), tab, typed("short"), tab, typed("pw"), tab, typed("pw"), enter)
 	wantStep(t, m, stSecrets)
 	if m.secretFocus != 0 {
 		t.Errorf("a short passphrase should send the cursor back to it, got field %d", m.secretFocus)
+	}
+	m = press(t, m, enter)
+	if m.secretFocus != 0 || !strings.Contains(m.problem(), "8 characters") {
+		t.Errorf("enter on a short passphrase should stay on it and say why, got field %d, %q", m.secretFocus, m.problem())
+	}
+	m = press(t, m, ctrlU, typed("long enough"), enter)
+	if m.secretFocus != 1 {
+		t.Errorf("enter on a good passphrase should move on, got field %d", m.secretFocus)
 	}
 }
 
@@ -269,4 +285,90 @@ func waitForEnd(t *testing.T, m model) model {
 		_ = m.View()
 	}
 	return m
+}
+
+func TestOptionFieldsTakeTheCursor(t *testing.T) {
+	m := toInstallType(t, newTestModel(t))
+	m = press(t, m, enter, down, down, space)
+	wantStep(t, m, stOptions)
+	if m.optRow() != optVault || !m.vaultIn.Focused() {
+		t.Fatal("ticking the Pass SSH agent should put the cursor in the vault name")
+	}
+	m = press(t, m, ctrlU, typed("Work keys"), down, space)
+	if m.optRow() != optControlDID || !m.controldIn.Focused() {
+		t.Fatal("ticking Control D should put the cursor in the resolver id")
+	}
+	m = press(t, m, up, up, enter)
+	wantStep(t, m, stOptions)
+	if m.optRow() != optControlDID || m.problem() == "" {
+		t.Fatalf("an empty resolver id should keep the cursor on it and say why, got row %d, %q", m.optRow(), m.problem())
+	}
+	m = press(t, m, typed("abcd1234"), enter)
+	wantStep(t, m, stApps)
+	if m.a.Vault != "Work keys" || m.a.ControlDID != "abcd1234" || m.note != "" {
+		t.Errorf("vault %q, resolver %q, note %q", m.a.Vault, m.a.ControlDID, m.note)
+	}
+}
+
+func TestAppListCanBeRetried(t *testing.T) {
+	m := toInstallType(t, newTestModel(t))
+	m = update(t, m, catalogMsg{err: errors.New("error: unable to download")})
+	m = press(t, m, enter, enter)
+	wantStep(t, m, stApps)
+	if !strings.Contains(m.problem(), "unable to download") {
+		t.Errorf("the reason should show: %q", m.problem())
+	}
+	next, cmd := m.Update(typed("r"))
+	if !next.(model).catalogLoading || cmd == nil {
+		t.Error("r should load the list again")
+	}
+}
+
+func TestWelcomeOfflineOffersWiFi(t *testing.T) {
+	m := newTestModel(t)
+	m.isOnline = nil
+	m = update(t, m, onlineMsg{ok: false})
+	if welcomeItems[m.listCursor[stWelcome]] != "Connect to Wi-Fi" {
+		t.Errorf("offline, the cursor should start on Wi-Fi, got %q", welcomeItems[m.listCursor[stWelcome]])
+	}
+	m = press(t, m, left, enter)
+	wantStep(t, m, stWelcome)
+	if m.problem() == "" {
+		t.Error("installing offline should say why it can't")
+	}
+	m = press(t, m, right)
+	m = update(t, m, onlineMsg{ok: true})
+	if m.listCursor[stWelcome] != 0 {
+		t.Error("once online, the cursor should move to Install")
+	}
+}
+
+func TestSecondCopyIsQuietWhileTyping(t *testing.T) {
+	m := toInstallType(t, newTestModel(t))
+	m = press(t, m, down, enter, enter, enter, enter)
+	wantStep(t, m, stSecrets)
+	m = press(t, m, typed("correct horse"), enter, typed("correct"))
+	if v := m.View(); strings.Contains(v, "matches") || strings.Contains(v, "don't match") {
+		t.Error("half of the second copy is neither a match nor a mistake yet")
+	}
+	m = press(t, m, typed(" horse"))
+	if !strings.Contains(m.View(), "matches") {
+		t.Error("the whole second copy should say it matches")
+	}
+	m = press(t, m, typed("s"))
+	if !strings.Contains(m.View(), "don't match") {
+		t.Error("going past the first copy is a mismatch")
+	}
+}
+
+func TestOnlyTheNewestConnectionCheckCarriesOn(t *testing.T) {
+	m := newTestModel(t)
+	m = update(t, m, onlineMsg{ok: false})
+	m = update(t, m, execDoneMsg{})
+	if _, cmd := m.Update(onlineMsg{ok: false, round: 0}); cmd != nil {
+		t.Error("a check from before nmtui should stop, not start another")
+	}
+	if _, cmd := m.Update(onlineMsg{ok: false, round: 1}); cmd == nil {
+		t.Error("the newest check should keep going while offline")
+	}
 }

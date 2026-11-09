@@ -2,6 +2,12 @@ package main
 
 import tea "github.com/charmbracelet/bubbletea"
 
+var machineFields = []struct{ label, help string }{
+	{"Hostname", "the computer's name on the network, such as my-laptop"},
+	{"Username", "the account you log in with"},
+	{"Swap", "the size of a swap file on the encrypted disk, such as 4G or 8192M"},
+}
+
 func (m model) machineErrs() []error {
 	return []error{
 		checkHostname(m.machineIn[0].Value()),
@@ -23,6 +29,7 @@ func (m *model) focusMachine() tea.Cmd {
 }
 
 func (m model) keyMachine(k tea.KeyMsg) (tea.Model, tea.Cmd) {
+	last := len(m.machineIn) - 1
 	switch k.String() {
 	case "up", "shift+tab":
 		if m.machineFocus > 0 {
@@ -30,14 +37,24 @@ func (m model) keyMachine(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.focusMachine()
 	case "down", "tab":
-		if m.machineFocus < len(m.machineIn)-1 {
+		if m.machineFocus < last {
 			m.machineFocus++
 		}
 		return m, m.focusMachine()
 	case "enter":
-		for i, err := range m.machineErrs() {
+		errs := m.machineErrs()
+		if err := errs[m.machineFocus]; err != nil {
+			m.note = machineFields[m.machineFocus].label + ": " + err.Error()
+			return m, nil
+		}
+		if m.machineFocus < last {
+			m.machineFocus++
+			return m, m.focusMachine()
+		}
+		for i, err := range errs {
 			if err != nil {
 				m.machineFocus = i
+				m.note = machineFields[i].label + ": " + err.Error()
 				return m, m.focusMachine()
 			}
 		}
@@ -51,25 +68,14 @@ func (m model) keyMachine(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m model) viewMachine(w int) ([]string, string) {
 	out := m.header(w)
-	labels := []string{"Hostname", "Username", "Swap"}
-	notes := []string{"", "", "a swap file on the encrypted disk"}
+	out = append(out, sBold.Render("About this computer")+"  "+sSub.Render("all of it can be changed in settings.json later"), "")
 	errs := m.machineErrs()
-	for i, in := range m.machineIn {
-		label := padRight(labels[i], 12)
-		if i == m.machineFocus {
-			label = sMauve.Render(label)
-		} else {
-			label = sText.Render(label)
+	for i, f := range machineFields {
+		var err error
+		if m.machineIn[i].Value() != "" {
+			err = errs[i]
 		}
-		line := "   " + label + in.View()
-		if notes[i] != "" {
-			line += "  " + sDim.Render(notes[i])
-		}
-		out = append(out, line)
-		if errs[i] != nil && in.Value() != "" {
-			out = append(out, spaces(15)+sRed.Render(g.failed+" "+errs[i].Error()))
-		}
+		out = append(out, m.field(w, i == m.machineFocus, f.label, m.machineIn[i].View(), f.help, err)...)
 	}
-	out = append(out, "", sSub.Render("These go into settings.json, which you can change after the install."))
-	return out, hint("tab", "next field", "enter", "next step", "esc", "back")
+	return out, fieldHints(m.machineFocus == len(m.machineIn)-1)
 }
