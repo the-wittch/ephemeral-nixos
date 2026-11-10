@@ -52,7 +52,7 @@ buildGoModule {
       (lib.fileset.fileFilter (f: f.hasExt "go") ./.)
     ];
   };
-  vendorHash = "sha256-4NZ5eEAnaXggxhspYHLRZuvYK6SlOAG62QA0lAgwpbE=";
+  vendorHash = "sha256-SrgBd+Kqtd16g9enhR+Dj53iOpqS8roofuzkX+zY/AE=";
 
   env.CGO_ENABLED = "0";
   ldflags = [ "-X main.version=v${version}" ];

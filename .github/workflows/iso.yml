@@ -49,7 +49,10 @@ jobs:
           set -euo pipefail
           # the release can show up a little after the tag
           for _ in $(seq 1 30); do
-            gh release view "$TAG" >/dev/null 2>&1 && break
+            draft=$(gh release view "$TAG" --json isDraft -q .isDraft 2>/dev/null) && break
             sleep 20
           done
+          # releases are immutable once published, so the ISO goes on while it's still a draft
+          [[ ${draft:-} == true ]] || { echo "::error::$TAG isn't a draft release, so the ISO can't be added"; exit 1; }
           gh release upload "$TAG" out/*.iso SHA256SUMS --clobber
+          gh release edit "$TAG" --draft=false
