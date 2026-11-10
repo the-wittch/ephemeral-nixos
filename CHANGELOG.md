@@ -11,6 +11,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Changed
 
+- New installs get config [v3.11.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
 - `x` ticks options and apps, the same key as in `ephemeral-apps` and `ephemeral-setup`. Space still works.
 
 ## 3.7.3
