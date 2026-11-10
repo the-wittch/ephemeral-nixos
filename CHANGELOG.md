@@ -2,6 +2,17 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.7.4
+
+### Fixed
+
+- Every install since v3.0.0 left `/persist/etc/nixos` readable only by root, so `ephemeral-update` said "no flake at /persist/etc/nixos". The folder is readable by everyone again, like the files in it, and still writable only by root. Config v3.11.0 fixes it on machines that are already installed, when they rebuild.
+- The install test checks that the user can read the installed flake.
+
+### Changed
+
+- `x` ticks options and apps, the same key as in `ephemeral-apps` and `ephemeral-setup`. Space still works.
+
 ## 3.7.3
 
 ### Changed

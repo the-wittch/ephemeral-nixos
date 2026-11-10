@@ -73,7 +73,7 @@ func (m model) keyApps(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else if m.appPane == 1 && m.appIdx < len(apps)-1 {
 			m.appIdx++
 		}
-	case " ":
+	case "x", " ":
 		if m.appPane == 1 && m.appIdx < len(apps) {
 			id := apps[m.appIdx].ID
 			m.picked[id] = !m.picked[id]
@@ -194,7 +194,7 @@ func (m model) viewApps(w int) ([]string, string) {
 			}
 		}
 	}
-	return out, hint("space", "tick", "tab", "switch side", "↑↓", "move", "enter", "next step", "esc", "back")
+	return out, hint("x", "tick", "tab", "switch side", "↑↓", "move", "enter", "next step", "esc", "back")
 }
 
 func appFlags(a app) string {
