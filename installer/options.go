@@ -107,7 +107,7 @@ func (m model) keyOptions(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.controldIn, cmd = m.controldIn.Update(k)
 		return m, cmd
 	}
-	if k.String() != " " {
+	if s := k.String(); s != "x" && s != " " {
 		return m, nil
 	}
 	switch row {
@@ -195,5 +195,5 @@ func (m model) viewOptions(w int) ([]string, string) {
 	case optVault, optControlDID:
 		return out, hint("type", "to fill it in", "↑↓", "move", "enter", "next step", "esc", "back")
 	}
-	return out, hint("space", "tick", "↑↓", "move", "enter", "next step", "esc", "back")
+	return out, hint("x", "tick", "↑↓", "move", "enter", "next step", "esc", "back")
 }

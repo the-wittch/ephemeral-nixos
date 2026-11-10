@@ -310,6 +310,8 @@ chmod 600 "/mnt/persist/passwords/${INSTALL_USERNAME}"
 sync
 
 tar -C "$STAGE" -cf - . | tar -C /mnt/persist/etc/nixos -xf -
+# tar gives it the stage's 0700, which keeps the user from reading their own flake
+chmod 0755 /mnt/persist/etc/nixos
 [[ -f /mnt/persist/etc/nixos/settings.json ]] || die "settings.json missing after copy"
 [[ -f /mnt/persist/etc/nixos/flake.nix ]] || die "flake.nix missing after copy"
 

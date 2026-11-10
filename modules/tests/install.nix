@@ -152,6 +152,7 @@ in
               installer.succeed("cmp /mnt/persist/etc/nixos/flake.lock /mnt/persist/etc/nixos-install/flake.lock")
               assert installer.succeed("stat -c %a /mnt/persist/etc/nixos-install/flake.nix").strip() == "444"
               assert installer.succeed("stat -c %a /mnt/persist/etc/nixos/flake.nix").strip() == "644"
+              assert installer.succeed("stat -c %a /mnt/persist/etc/nixos").strip() == "755"
               installer.succeed("grep -q '^\\$y\\$' /mnt/persist/passwords/${answers.username}")
               installer.succeed("cmp ${wifi} /mnt/persist/etc/NetworkManager/system-connections/home.nmconnection")
               assert installer.succeed("stat -c '%a %U' /mnt/persist/etc/NetworkManager/system-connections/home.nmconnection").strip() == "600 root"
@@ -176,6 +177,7 @@ in
               assert failed == "", f"failed units:\n{failed}"
               target.succeed("btrfs subvolume list / | grep -q root-blank")
               target.succeed("test -s /persist/passwords/${answers.username}")
+              target.succeed("runuser -u ${answers.username} -- test -r /persist/etc/nixos/flake.nix")
               target.succeed("command -v glow")
               # the fixture is only in the installer's store, so check what's in the file
               target.succeed("grep -qx ssid=home /etc/NetworkManager/system-connections/home.nmconnection")

@@ -119,9 +119,9 @@ func TestFullInstallFlow(t *testing.T) {
 	m = toInstallType(t, m)
 	m = press(t, m, enter)
 	wantStep(t, m, stOptions)
-	m = press(t, m, space)
+	m = press(t, m, typed("x"))
 	if !m.a.Extras {
-		t.Error("space should tick extras")
+		t.Error("x should tick extras")
 	}
 	m = press(t, m, enter)
 	wantStep(t, m, stApps)
