@@ -6,6 +6,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Changed
 
+- New installs get config [v3.10.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
 - The installer follows the config's new weekly releases: each Tuesday it moves to the newest one, and if the install test passes, a new installer and ISO are released. New installs start with fixes from that week.
 - Releases are immutable: once published, a release's tag and files can't change. `gh release verify-asset ephemeral-nix-*.iso -R the-wittch/ephemeral-nixos` checks that an ISO is the one the latest release went out with.
 - The Go dependencies get security updates from Dependabot. `golang.org/x/sys` moves to v0.44.0 for GO-2026-5024, which the installer never called.
