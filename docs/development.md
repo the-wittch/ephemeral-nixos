@@ -21,7 +21,9 @@ cp hardware-configuration.example.nix hardware-configuration.nix
 nix build path:.#checks.x86_64-linux.install -L
 ```
 
-Releases mostly run themselves. On the 3rd of each month, `follow config` opens a PR for the newest config release and runs the install test on it. If the test passes, the PR is merged, the next patch is tagged and released, the ISO is built and attested, and a `pin` PR updates the install instructions.
+Releases mostly run themselves. Every Tuesday, the day after the config's weekly release, `follow config` opens a PR for the newest config release and runs the install test on it. If the test passes, the PR is merged, the next patch is tagged and made a draft release, the ISO is built, attested and attached, the release is published, and a `pin` PR updates the install instructions.
+
+Releases are immutable: once published, their tag and files can't change. That's why a release starts as a draft and the ISO workflow publishes it after uploading the ISO; it refuses to upload to a release that's already out. A failed ISO build leaves the draft; `gh workflow run iso.yml -f tag=<tag>` builds it again.
 
 ## The installer screens
 

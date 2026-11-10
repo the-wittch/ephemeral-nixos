@@ -71,7 +71,9 @@ jobs:
           grep -q "^## ${next#v}$" CHANGELOG.md || { echo "CHANGELOG has no ${next#v} entry"; exit 1; }
           config=$(grep -oE 'ephemeral-nixos-config/v[0-9]+\.[0-9]+\.[0-9]+' flake.nix | cut -d/ -f2)
 
-          gh release create "$next" --target "$sha" --title "$next" --notes "New installs get config $config."
+          # a draft makes no tag of its own, and the iso workflow needs one to check out
+          gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$next" -f sha="$sha" --silent
+          gh release create "$next" --draft --verify-tag --title "$next" --notes "New installs get config $config."
           # a tag made with the default token doesn't start the iso workflow
           gh workflow run iso.yml -f tag="$next"
 

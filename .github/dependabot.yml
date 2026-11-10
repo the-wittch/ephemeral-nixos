@@ -7,3 +7,9 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+  # security fixes only: each one needs vendorHash in installer/package.nix updated by hand
+  - package-ecosystem: gomod
+    directory: /installer
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0

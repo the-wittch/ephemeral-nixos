@@ -13,6 +13,9 @@ disk ─ ESP (/boot, 1G)
 
 Machine details (hostname, user, disk, desktop) live in `settings.json`, which is gitignored. The login password hash lives in `/persist/passwords/`, never in the flake.
 
+> [!NOTE]
+> Ephemeral Nix is a solo passion project. I read every issue and get to each one as quickly as I can, but there's one of me, so there's no set response time.
+
 ## Limits
 
 - x86_64 with UEFI, Secure Boot off. See [Hardware](docs/hardware.md) for what's been tested.
@@ -26,11 +29,12 @@ Machine details (hostname, user, disk, desktop) live in `settings.json`, which i
 
 ### From the ISO (easiest)
 
-Download the `.iso` and `SHA256SUMS` from the latest [release](https://github.com/the-wittch/ephemeral-nixos/releases), check it, and write it to a USB stick. From v3.2.4 on, `gh attestation verify` also proves the ISO was built by this repo's CI:
+Download the `.iso` and `SHA256SUMS` from the latest [release](https://github.com/the-wittch/ephemeral-nixos/releases), check it, and write it to a USB stick. From v3.2.4 on, `gh attestation verify` also proves the ISO was built by this repo's CI. From v3.7.3 on, releases can't be changed once they're published, and `gh release verify-asset` proves the ISO is the one the latest release went out with:
 
 ```bash
 sha256sum -c SHA256SUMS
 gh attestation verify ephemeral-nix-*.iso -R the-wittch/ephemeral-nixos
+gh release verify-asset ephemeral-nix-*.iso -R the-wittch/ephemeral-nixos
 sudo dd if=ephemeral-nix-*.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
@@ -60,7 +64,7 @@ curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v3.7.2/s
 sudo env TAG=v3.7.2 EXPECTED_REV=86249a6f1f5be8ee8cdd4c2ae0cafb79192e7f54 bash /tmp/bootstrap-tui.sh
 ```
 
-Release tags are signed with the maintainer's SSH key, and GitHub shows them as Verified. The exception is the [monthly automatic release](docs/development.md), which CI tags and can't sign; the commit check above covers both.
+Release tags are signed, so GitHub shows them as Verified. [Weekly releases](docs/development.md) are tagged by CI and aren't signed. From v3.7.3 on, GitHub signs a record of every release's tag and files instead, which `gh release verify "$TAG" -R the-wittch/ephemeral-nixos` checks. Checking the commit hash as above works for every release.
 
 #### From main
 
