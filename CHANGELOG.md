@@ -10,6 +10,10 @@ Breaking changes are listed first in each release, with what to do about them. R
 - The ISO was published without ever being booted; only the modules it's built from were tested. Each release's ISO is booted to the installer's welcome screen before it goes out.
 - The manual install steps left out the copy in `/persist/etc/nixos-install` that `ephemeral-update --as-installed` needs.
 
+### Changed
+
+- New installs get config [v4.2.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.7.6
 
 ### Fixed
