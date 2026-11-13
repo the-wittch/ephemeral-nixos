@@ -152,9 +152,10 @@ in
               installer.fail("touch /etc/ephemeral-nixos/scripts/install.sh")
 
           with subtest("a config that doesn't evaluate stops the install before the disk is erased"):
-              installer.succeed("printf ephemeral-marker | dd of=/dev/vda bs=1M seek=100 conv=notrunc status=none")
+              # partitioning and formatting both write to the start of the disk
+              before = installer.succeed("dd if=/dev/vda bs=1M count=64 status=none | sha256sum")
               installer.fail("ephemeral-install --answers ${answersBroken} >&2")
-              installer.succeed("dd if=/dev/vda bs=1M skip=100 count=1 status=none | head -c 16 | grep -q ephemeral-marker")
+              assert installer.succeed("dd if=/dev/vda bs=1M count=64 status=none | sha256sum") == before, "the disk changed"
               installer.fail("findmnt /mnt")
               installer.fail("test -e /run/ephemeral-install.state")
 
