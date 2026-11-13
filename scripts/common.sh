@@ -143,10 +143,30 @@ $(lsblk -dpn -o NAME,SIZE,MODEL -e 7,11 2>/dev/null | grep -v '^/dev/zram' | sed
   if disk_in_use "$d" && [[ ${FORCE_DISK:-} != 1 ]]; then
     die "$d is in use (mounted, swap, or an open LUKS, LVM or RAID device), so it may be the disk you booted from. If it's the right disk, close what's open on it: sudo swapoff -a; sudo umount -R /mnt; sudo cryptsetup close <name>. Or set FORCE_DISK=1"
   fi
+  local group
+  if group=$(storage_member "$d") && [[ ${FORCE_DISK:-} != 1 ]]; then
+    die "$d is part of $group. Erasing it removes all of that, on its other disks too, not only on $d. Pick another disk, or set FORCE_DISK=1 if that's what you want"
+  fi
 }
 
 holds_installer_image() {
   lsblk -nro FSTYPE -- "$1" 2>/dev/null | grep -qx iso9660
+}
+
+# disko runs vgremove -f or zpool destroy -f on these, which also wipes the rest of the
+# group or pool on other disks
+storage_member() {
+  local fstypes
+  fstypes=$(lsblk -nro FSTYPE -- "$1" 2>/dev/null) || return 1
+  if grep -qx LVM2_member <<<"$fstypes"; then
+    echo "an LVM volume group"
+  elif grep -qx zfs_member <<<"$fstypes"; then
+    echo "a ZFS pool"
+  elif grep -qE '^[a-z]+_raid_member$' <<<"$fstypes"; then
+    echo "a RAID array"
+  else
+    return 1
+  fi
 }
 
 disk_in_use() {

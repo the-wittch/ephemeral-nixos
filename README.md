@@ -29,7 +29,7 @@ Machine details (hostname, user, disk, desktop) live in `settings.json`, which i
 
 - **Back up** anything on the disk you want to keep. The whole disk is erased.
 - In the firmware settings, **turn off Secure Boot** and boot in **UEFI** mode.
-- **Unplug other disks** you don't mean to install on, especially one with an older Ephemeral Nix install: the new system boots by partition names that one has too, so the installer refuses while it's attached.
+- **Unplug other disks** you don't mean to install on, especially one with an older Ephemeral Nix install: the new system boots by partition names that one has too, so the installer refuses while it's attached. It also refuses a disk that's part of an LVM volume group, ZFS pool or RAID array, since erasing it would break that on the other disks too.
 - **Pick a passphrase you can type at the boot screen.** It uses the keyboard layout you choose in the installer; the installer switches to it before asking, where it can.
 - Have **Wi-Fi or a cable** ready. The installer downloads the system while it installs.
 

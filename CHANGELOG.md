@@ -2,6 +2,14 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.7.7
+
+### Fixed
+
+- Erasing a disk that's part of an LVM volume group or a ZFS pool would have removed the whole group or pool, from its other disks too, even with nothing on it active. Such disks are refused now, RAID members as well, and the disk list marks them. `FORCE_DISK=1` overrides it.
+- The ISO was published without ever being booted; only the modules it's built from were tested. Each release's ISO is booted to the installer's welcome screen before it goes out.
+- The manual install steps left out the copy in `/persist/etc/nixos-install` that `ephemeral-update --as-installed` needs.
+
 ## 3.7.6
 
 ### Fixed
