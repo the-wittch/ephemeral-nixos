@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -34,6 +37,24 @@ func (m *model) resetProgress(started time.Time) {
 	m.logView.SetContent("")
 }
 
+// The disk check refuses a disk with something mounted or open on it, which a failed install
+// leaves behind; install.sh undoes only what it recorded opening.
+func teardown(cfg config) error {
+	if cfg.dryRun {
+		return nil
+	}
+	out, err := exec.Command(filepath.Join(cfg.scriptsDir, "install.sh"), "--teardown").CombinedOutput()
+	if err != nil {
+		uiLog.Printf("install.sh --teardown: %v\n%s", err, out)
+		msg := strings.TrimSpace(string(out))
+		if i := strings.LastIndex(msg, "\n"); i >= 0 {
+			msg = msg[i+1:]
+		}
+		return errors.New(strings.TrimPrefix(msg, "error: "))
+	}
+	return nil
+}
+
 // picks up an install that a quit or crashed run of the screens left going
 func (m *model) reattach() {
 	m.step = stInstalling
@@ -52,7 +73,7 @@ func (m *model) poll() {
 		if s := stepOf(line); s > m.curStep {
 			m.curStep = s
 		}
-		if strings.TrimSpace(line) != "" {
+		if strings.TrimSpace(line) != "" && !isMarker(line) {
 			m.lines = append(m.lines, line)
 		}
 	}
@@ -121,10 +142,18 @@ func (m model) keyEnd(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "Try again":
 			return m.startInstall()
 		case "Change an answer":
+			if err := teardown(m.cfg); err != nil {
+				m.note = "Couldn't close what the last try left open: " + err.Error()
+				return m, nil
+			}
 			m.step = stReview
 			m.stepShown = m.spinFrame
 			return m, m.enter()
 		case "Start over":
+			if err := teardown(m.cfg); err != nil {
+				m.note = "Couldn't close what the last try left open: " + err.Error()
+				return m, nil
+			}
 			fresh := newModel(m.cfg)
 			fresh.width, fresh.height = m.width, m.height
 			fresh.logView.Width, fresh.logView.Height = m.logView.Width, m.logView.Height

@@ -25,6 +25,14 @@ Machine details (hostname, user, disk, desktop) live in `settings.json`, which i
 - The disk unlocks with a passphrase only, no TPM.
 - It's opinionated: Catppuccin, Ghostty and zsh by default. Changing them takes a module of your own ([appearance](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/appearance.md)).
 
+## Before you install
+
+- **Back up** anything on the disk you want to keep. The whole disk is erased.
+- In the firmware settings, **turn off Secure Boot** and boot in **UEFI** mode.
+- **Unplug other disks** you don't mean to install on, especially one with an older Ephemeral Nix install: the new system boots by partition names that one has too, so the installer refuses while it's attached.
+- **Pick a passphrase you can type at the boot screen.** It uses the keyboard layout you choose in the installer; the installer switches to it before asking, where it can.
+- Have **Wi-Fi or a cable** ready. The installer downloads the system while it installs.
+
 ## Install
 
 ### From the ISO (easiest)
@@ -90,19 +98,20 @@ The installer asks for the disk, desktop, keyboard layout, language and timezone
 
 ## After the install
 
-The config is at `/persist/etc/nixos`. Rebuild with `path:`, so Nix can see the gitignored files:
+The config is at `/persist/etc/nixos`. After changing it, rebuild with:
 
 ```bash
-cd /persist/etc/nixos
-sudo nixos-rebuild switch --flake path:.#nixos
+ephemeral-update
 ```
+
+`ephemeral-doctor` checks that everything is as it should be, and says how to fix what isn't.
 
 To see the wipe working: `sudo touch /ephemeral-test`, put a file in `~`, and reboot. The first is gone, the second is still there.
 
-A read-only copy of the config as installed is kept in `/persist/etc/nixos-install`. However far `/persist/etc/nixos` moves on, this gets the fresh-install system back (your files stay):
+A read-only copy of the config as installed is kept in `/persist/etc/nixos-install`. However far `/persist/etc/nixos` moves on, this gets the fresh-install system back, and your files stay:
 
 ```bash
-sudo nixos-rebuild switch --flake path:/persist/etc/nixos-install#nixos
+ephemeral-update --as-installed
 ```
 
 ### Changing it later
@@ -138,4 +147,5 @@ The wallpaper and default user picture come from the [config repo](https://githu
 - [Manual install](docs/manual-install.md): the same steps without the scripts
 - [Hardware](docs/hardware.md): what's required, what's tested and what the installer detects
 - [Working on the installer](docs/development.md): files, CI and the install test
+- [Architecture](ARCHITECTURE.md): how the installer is built, and the rules a change to it is checked against
 - [The config's docs](https://github.com/the-wittch/ephemeral-nixos-config#documentation): everything after the install

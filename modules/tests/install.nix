@@ -21,6 +21,7 @@ let
 
   # typed into the boot prompt below, so the test fails if disko got anything else
   passphrase = "correct horse battery staple";
+  pw = "alice";
 in
 {
   ephemeral.hosts = {
@@ -35,17 +36,28 @@ in
     { pkgs, ... }:
     let
       # what the screens would collect, keyed like settings.json
-      answersFile = pkgs.writeText "answers.json" (
-        builtins.toJSON (
-          answers
-          // {
-            apps = lib.importJSON (fixture + "/apps.json");
-            inherit passphrase;
-            password = "alice";
-            hardwareConfig = "${fixture}/hardware-configuration.nix";
-          }
-        )
-      );
+      answersWith =
+        extra:
+        pkgs.writeText "answers.json" (
+          builtins.toJSON (
+            answers
+            // {
+              inherit passphrase;
+              apps = lib.importJSON (fixture + "/apps.json");
+              confirmDisk = baseNameOf answers.diskDevice;
+              password = pw;
+              hardwareConfig = "${fixture}/hardware-configuration.nix";
+            }
+            // extra
+          )
+        );
+      answersFile = answersWith { };
+      # just isn't in the offline store, so this build fails after disko has opened the disk
+      answersFailing = answersWith { apps = lib.importJSON (fixture + "/apps.json") ++ [ "just" ]; };
+      # a mistake in the config has to stop the install before the disk is touched
+      answersBroken = answersWith {
+        hardwareConfig = pkgs.writeText "broken-hardware-configuration.nix" "{ this is not nix";
+      };
 
       # a network joined with nmtui on the live system
       wifi = pkgs.writeText "home.nmconnection" ''
@@ -138,6 +150,17 @@ in
               installer.wait_until_tty_matches("1", "Not connected")
               installer.succeed("test -x /etc/ephemeral-nixos/scripts/install.sh")
               installer.fail("touch /etc/ephemeral-nixos/scripts/install.sh")
+
+          with subtest("a config that doesn't evaluate stops the install before the disk is erased"):
+              installer.succeed("printf ephemeral-marker | dd of=/dev/vda bs=1M seek=100 conv=notrunc status=none")
+              installer.fail("ephemeral-install --answers ${answersBroken} >&2")
+              installer.succeed("dd if=/dev/vda bs=1M skip=100 count=1 status=none | head -c 16 | grep -q ephemeral-marker")
+              installer.fail("findmnt /mnt")
+              installer.fail("test -e /run/ephemeral-install.state")
+
+          with subtest("an install that fails after partitioning leaves the disk open, and the next one closes it"):
+              installer.fail("ephemeral-install --answers ${answersFailing} >&2")
+              installer.succeed("findmnt /mnt && test -e /dev/mapper/cryptroot && test -s /run/ephemeral-install.state")
 
           with subtest("the installer partitions, encrypts and installs, the passphrase going to disko on stdin"):
               installer.succeed("install -D -m 0600 ${wifi} /etc/NetworkManager/system-connections/home.nmconnection")

@@ -15,10 +15,31 @@ cd "$FLAKE_ROOT"
 command -v nix >/dev/null || die "nix not found"
 command -v lsblk >/dev/null || die "lsblk not found"
 
+# held until this script and everything it started have exited, so a second install can't
+# format the same disk or tear down this one's mounts
+exec 9>/run/ephemeral-install.lock
+flock -n 9 || die "another install is running; ephemeral-install shows its progress"
+
+# in /run, so it only covers this boot; the screens' own folder is emptied at every start
+STATE=/run/ephemeral-install.state
+
+if [[ ${1:-} == --teardown ]]; then
+  teardown
+  exit 0
+fi
+
 LOG=/tmp/ephemeral-install.log
+# the attempt before is often the one worth reporting
+if [[ -s $LOG ]]; then
+  mv -f "$LOG" "$LOG.1"
+fi
 (umask 077 && : >"$LOG")
 exec > >(tee -a "$LOG") 2>&1
 info "a copy of this output goes to $LOG"
+
+STAGE_NAME=prepare
+set -E
+trap on_error ERR
 
 export NIX_CONFIG="${NIX_CONFIG-}
 experimental-features = nix-command flakes
@@ -26,6 +47,8 @@ http2 = false
 download-attempts = 5
 connect-timeout = 10
 "
+
+teardown
 
 INSTALL_HOSTNAME=${INSTALL_HOSTNAME:-nixos}
 INSTALL_USERNAME=${INSTALL_USERNAME:-nixuser}
@@ -43,6 +66,13 @@ if [[ -z ${DISK:-} ]]; then
 fi
 
 validate_disk "$DISK"
+# the screens pass what they saw when the name was typed in; otherwise it's what's there now
+DISK_ID=${DISK_ID:-$(disk_identity "$DISK")}
+check_disk_identity() {
+  [[ $(disk_identity "$DISK") == "$DISK_ID" ]] ||
+    die "$DISK isn't the disk that was chosen any more; a disk was plugged in or out. Nothing was changed; choose the disk again"
+}
+check_disk_identity
 
 if [[ -z ${INSTALL_DESKTOP:-} ]]; then
   echo
@@ -179,15 +209,10 @@ if [[ -n $HARDWARE_CONFIG ]]; then
   [[ -f $HARDWARE_CONFIG ]] || die "HARDWARE_CONFIG is not a file: $HARDWARE_CONFIG"
   HARDWARE_CONFIG=$(realpath "$HARDWARE_CONFIG")
 fi
+validate_swap_fits "$DISK" "$SWAP_SIZE"
+validate_partlabels "$DISK"
 info "desktop=$INSTALL_DESKTOP profile=$PROFILE nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT${APPS:+ apps=$APPS}"
 info "opensnitch=$OPENSNITCH pass-ssh-agent=$PASS_SSH_AGENT${CONTROLD_RESOLVER:+ controld=on}"
-
-info "will erase $DISK"
-lsblk "$DISK" | sed 's/^/    /'
-if [[ ${CONFIRM:-} != YES ]]; then
-  read -r -p "Type YES to continue: " confirm
-  [[ $confirm == YES ]] || die "aborted"
-fi
 
 STAGE=""
 cleanup() {
@@ -249,10 +274,33 @@ fi
 
 [[ -s flake.lock ]] || die "flake.lock is missing; the installer pins a config release"
 
-info "partitioning (LUKS passphrase next)"
-info "the first build downloads nixpkgs and can sit at 0/N for several minutes"
+# copied now: one on a stick at /mnt would be gone once disko has unmounted it
+if [[ -n $HARDWARE_CONFIG ]]; then
+  cp "$HARDWARE_CONFIG" "$STAGE/hardware-configuration.nix"
+fi
+
+# a mistake in the settings or the config would otherwise only show once the disk is erased
+info "checking that the system builds from these settings"
+info "the first time downloads nixpkgs and can sit at 0/N for several minutes"
+nix eval --raw "path:${STAGE}#nixosConfigurations.${FLAKE_ATTR}.config.system.build.toplevel.drvPath" >/dev/null
 DISKO=$(nix build -L --no-link --print-out-paths \
   "path:${STAGE}#nixosConfigurations.${FLAKE_ATTR}.config.system.build.destroyFormatMount")
+
+info "$DISK ($(lsblk -dno SIZE -- "$DISK" | tr -d " ") $(lsblk -dno MODEL -- "$DISK" | sed "s/ *$//")) becomes a 1G boot partition and the rest encrypted, with a $SWAP_SIZE swap file inside."
+info "Everything on it now is erased:"
+lsblk "$DISK" | sed 's/^/    /'
+if [[ ${CONFIRM:-} != YES ]]; then
+  read -r -p "Type $(basename "$DISK") to erase it and install: " confirm
+  [[ $confirm == "$(basename "$DISK")" ]] || die "aborted; nothing was changed"
+fi
+check_disk_identity
+
+stage partition
+info "partitioning (LUKS passphrase next)"
+(
+  umask 077
+  printf '%s\n' "$DISK" >"$STATE"
+)
 "$DISKO/bin/disko-destroy-format-mount" --yes-wipe-all-disks
 
 findmnt /mnt >/dev/null 2>&1 || die "/mnt is not mounted after disko"
@@ -260,9 +308,9 @@ findmnt /mnt/persist >/dev/null 2>&1 || die "/mnt/persist is not mounted after d
 findmnt /mnt/boot >/dev/null 2>&1 || die "/mnt/boot is not mounted after disko"
 btrfs subvolume list /mnt | grep -q 'root-blank' || die "root-blank missing after disko"
 
+stage hardware
 if [[ -n $HARDWARE_CONFIG ]]; then
   info "using $HARDWARE_CONFIG"
-  cp "$HARDWARE_CONFIG" "$STAGE/hardware-configuration.nix"
 elif command -v nixos-generate-config >/dev/null; then
   info "detecting hardware"
   nixos-generate-config --no-filesystems --root /mnt --show-hardware-config >"$STAGE/hardware-configuration.nix" \
@@ -338,6 +386,7 @@ install_system() {
   fi
 }
 
+stage install
 info "installing from /mnt/persist/etc/nixos"
 if ! install_system /mnt/persist/etc/nixos; then
   echo "error: the install failed" >&2
@@ -348,13 +397,16 @@ if ! install_system /mnt/persist/etc/nixos; then
   exit 1
 fi
 
-install -m 600 "$LOG" /mnt/var/log/ephemeral-install.log || true
+install -m 600 "$LOG" /mnt/var/log/ephemeral-install.log ||
+  echo "warning: couldn't keep a copy of this output in the new system; it's still in $LOG" >&2
 
-cat << EOF
+cat <<EOF
 
-done. detach ISO, reboot, unlock LUKS, log in as ${INSTALL_USERNAME}.
-rebuilds: cd /persist/etc/nixos && sudo nixos-rebuild switch --flake path:.#${FLAKE_ATTR}
-change what is installed later: ephemeral-setup
-back to this install: sudo nixos-rebuild switch --flake path:/persist/etc/nixos-install#${FLAKE_ATTR}
+Installed. Remove the USB stick and reboot, unlock the disk, and log in as ${INSTALL_USERNAME}.
+After the first login:
+  ephemeral-doctor   check that everything is as it should be
+  ephemeral-apps     pick more apps
+  ephemeral-update   rebuild after a change, and get new releases
+  ephemeral-help     every command
 
 EOF

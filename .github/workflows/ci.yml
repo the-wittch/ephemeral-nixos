@@ -16,12 +16,31 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - uses: DeterminateSystems/determinate-nix-action@16f94ba7aae399b9f9077c254b6719ec6de7e3e3 # v3.24.2
 
+      # the config repo's scanner, at the release the installer pins; older history has a test
+      # password it would flag, so only the commits being added are scanned
+      - name: secret scan
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          nix run --inputs-from path:. ephemeral#check-no-secrets
+          base=${PR_BASE:-$PUSH_BEFORE}
+          if [[ -n $base ]] && git cat-file -e "$base^{commit}" 2>/dev/null; then
+            nix run --inputs-from path:. ephemeral#check-no-secrets -- --range "$base..HEAD"
+          fi
+
+      - name: workflow lint
+        run: |
+          nix run --inputs-from path:. nixpkgs#actionlint
+          nix run --inputs-from path:. nixpkgs#zizmor -- --offline .github/workflows/
+
       - name: shellcheck
-        run: nix run --inputs-from path:. nixpkgs#shellcheck -- -x -P SCRIPTDIR scripts/*.sh .github/*.sh installer/logo.sh
+        run: nix run --inputs-from path:. nixpkgs#shellcheck -- -x -P SCRIPTDIR scripts/*.sh .github/*.sh installer/logo.sh modules/tests/_scripts.sh
 
       - name: nixfmt
         run: git ls-files -z '*.nix' | xargs -0 nix run --inputs-from path:. nixpkgs#nixfmt -- --check
@@ -39,4 +58,15 @@ jobs:
 
       # the Go tests run while it builds
       - name: installer
-        run: nix build path:.#checks.x86_64-linux.installer -L --no-link
+        run: nix build path:.#checks.x86_64-linux.installer path:.#checks.x86_64-linux.scripts -L --no-link
+
+      # only the Go modules fail it: the standard library comes with nixpkgs' Go, which the
+      # weekly update moves on, so those are shown as warnings
+      - name: govulncheck
+        working-directory: installer
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          nix shell --inputs-from path:.. nixpkgs#go nixpkgs#govulncheck -c govulncheck -format json ./... >"$RUNNER_TEMP/vuln.json"
+          nix run --inputs-from path:.. nixpkgs#jq -- -r '.finding? // empty | select(.trace[0].module == "stdlib") | "::warning::\(.osv) in the Go standard library, fixed in \(.fixed_version)"' "$RUNNER_TEMP/vuln.json" | sort -u
+          nix run --inputs-from path:.. nixpkgs#jq -- -e -s '[.[].finding? // empty | select(.trace[0].module != "stdlib")] | length == 0' "$RUNNER_TEMP/vuln.json"

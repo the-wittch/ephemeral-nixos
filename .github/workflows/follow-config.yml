@@ -5,14 +5,15 @@ on:
     - cron: "0 6 * * 2"
   workflow_dispatch:
 
-permissions:
-  actions: write
-  contents: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   pin:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

@@ -13,7 +13,7 @@ This repo is the installer and nothing else. Its `flake.nix`, shown in the [READ
 | `modules/iso.nix` | the Ephemeral Nix ISO: the installer on the minimal NixOS ISO, in Catppuccin colours. Its live system is `flake.modules.nixos.iso` |
 | `modules/tests/install.nix`, `tests/install/` | the end-to-end test: boots the ISO's live system offline, installs from its read-only copy of the scripts, then boots the disk it wrote |
 
-CI checks the scripts and the machine flake on every pull request. The install test takes a while and only runs when you start it: `gh workflow run install-test.yml --ref <branch>`, or locally:
+CI checks the scripts and the machine flake on every pull request: the secret scan, actionlint and zizmor on the workflows, shellcheck, nixfmt, the Go tests, `govulncheck`, and `scripts`, which runs `common.sh`'s checks and `teardown` against fake `lsblk`, `findmnt` and `cryptsetup`, so what they refuse and what they undo is tested without a disk. The install test takes a while and only runs when you start it: `gh workflow run install-test.yml --ref <branch>`, or locally:
 
 ```bash
 printf '{"username": "alice"}\n' > settings.json
@@ -31,7 +31,7 @@ Releases are immutable: once published, their tag and files can't change. That's
 
 `install.sh` runs in a session of its own, writing to `/run/ephemeral-install/output` and leaving its exit status in `status` there. The screens only follow that file, so quitting them, or a crash, doesn't stop the install, and starting them again picks it back up. Problems in the screens themselves go to `/tmp/ephemeral-install-ui.log`.
 
-`--answers file.json` installs without the screens: the same keys as `settings.json`, plus `passphrase`, `password`, `apps` and optionally `hardwareConfig`. The install test uses it, so every release checks the passphrase handoff: the test unlocks the installed disk with the passphrase from that file.
+`--answers file.json` installs without the screens: the same keys as `settings.json`, plus `passphrase`, `password`, `apps`, `confirmDisk` (the disk's name, such as `vda`, as the screens make you type it) and optionally `hardwareConfig`. The install test uses it, so every release checks the passphrase handoff: the test unlocks the installed disk with the passphrase from that file.
 
 To go through every screen without touching a disk:
 

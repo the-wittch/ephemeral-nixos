@@ -82,7 +82,7 @@ elif [[ $BRANCH != main ]]; then
   info "warning: $BRANCH is not verified (set EXPECTED_REV)"
 fi
 
-info "about to erase $DISK — install.sh will ask you to type YES"
+info "about to erase $DISK; install.sh asks you to type its name first"
 lsblk "$DISK" | sed 's/^/    /'
 
 export DISK
