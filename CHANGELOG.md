@@ -2,6 +2,12 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.7.5
+
+### Changed
+
+- The workflows that pin a new config and release the installer keep their GitHub token out of the repository checkout.
+
 ## 3.7.4
 
 ### Fixed

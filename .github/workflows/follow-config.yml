@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: DeterminateSystems/determinate-nix-action@16f94ba7aae399b9f9077c254b6719ec6de7e3e3 # v3.24.2
       - name: open the PR
         env:
@@ -45,7 +47,10 @@ jobs:
           git switch -c "$branch"
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -am "use config $latest"
-          git push origin "$branch"
+          # the token stays in the environment instead of .git/config
+          # shellcheck disable=SC2016 # the helper expands it when git runs it
+          git -c credential.helper= -c credential.helper='!f() { echo username=x-access-token; printf "password=%s\n" "$GH_TOKEN"; }; f' \
+            push origin "$branch"
           gh pr create --base main --head "$branch" --title "use config $latest" \
             --body "Points new installs at config $latest. If the install test passes, this merges itself and v$next is released."
           # PRs opened with the default token don't trigger CI
