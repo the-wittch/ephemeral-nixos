@@ -50,6 +50,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          persist-credentials: false
       - name: merge, tag and pin
         env:
           GH_TOKEN: ${{ github.token }}
@@ -92,7 +93,10 @@ jobs:
           branch="automation/pin-$next"
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -qam "pin $next"
-          git push origin "HEAD:refs/heads/$branch"
+          # the token stays in the environment instead of .git/config
+          # shellcheck disable=SC2016 # the helper expands it when git runs it
+          git -c credential.helper= -c credential.helper='!f() { echo username=x-access-token; printf "password=%s\n" "$GH_TOKEN"; }; f' \
+            push origin "HEAD:refs/heads/$branch"
           gh pr create --base main --head "$branch" --title "pin $next" \
             --body "Points the install instructions at $next."
           gh workflow run ci.yml --ref "$branch"

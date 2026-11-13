@@ -189,7 +189,6 @@ func newRunDir(dryRun bool) runDir {
 	return runDir{dir, filepath.Join(dir, "output"), filepath.Join(dir, "status"), filepath.Join(dir, "pid")}
 }
 
-// whether an earlier install is still going
 func (r runDir) running() bool {
 	if _, err := os.Stat(r.status); err == nil {
 		return false
