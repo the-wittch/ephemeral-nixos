@@ -13,6 +13,7 @@
 | VM sits at "Booting from Hard Disk" | use UEFI with Secure Boot off, and detach the ISO |
 | the menus crash or show no disks | use `bootstrap.sh` instead |
 | "is in use (mounted, swap, or an open LUKS, LVM or RAID device)" | often the USB stick you booted from, so pick another disk. After a failed install, trying again closes what that attempt left open by itself. If something else has the disk open: `sudo swapoff -a && sudo umount -R /mnt && sudo cryptsetup close cryptroot` |
+| "is part of an LVM volume group", "a ZFS pool" or "a RAID array", or "LVM member", "ZFS member" or "RAID member" in the disk list | that storage can span other disks, and erasing this one removes it from all of them. Pick another disk. If you mean to get rid of it everywhere, set `FORCE_DISK=1` |
 | "holds an installer image" | that's a USB stick with an ISO on it, likely the one you booted from, even when it isn't mounted; pick another disk |
 | "has partitions from an earlier Ephemeral Nix install" | another disk still has the old system on it, with the partition names the new one boots by. Unplug it while you install, or erase it first |
 | "isn't the disk that was chosen any more" | a disk was plugged in or out after you chose, so the name now points somewhere else. Nothing was erased; choose the disk again |

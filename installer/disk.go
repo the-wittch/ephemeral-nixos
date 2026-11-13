@@ -21,7 +21,9 @@ func (m *model) placeDiskCursor() {
 	m.listCursor[stDisk] = cur
 }
 
-func (m model) diskUsable(d disk) bool { return !(d.InUse || d.Installer) || m.cfg.forceDisk }
+func (m model) diskUsable(d disk) bool {
+	return !(d.InUse || d.Installer || d.Member != "") || m.cfg.forceDisk
+}
 
 func (m model) keyDisk(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	cur := m.listCursor[stDisk]
@@ -65,8 +67,10 @@ func (m model) viewDisk(w int) ([]string, string) {
 		switch {
 		case !m.diskUsable(d) && d.Installer:
 			out = append(out, sDim.Render("   "+line+"  installer image"))
-		case !m.diskUsable(d):
+		case !m.diskUsable(d) && d.InUse:
 			out = append(out, sDim.Render("   "+line+"  in use"))
+		case !m.diskUsable(d):
+			out = append(out, sDim.Render("   "+line+"  "+d.Member+" member"))
 		case d.Size < minDiskSize:
 			out = append(out, row(i == cur, w-14, line)+sYellow.Render("  "+g.warn+" small"))
 		default:
@@ -74,7 +78,7 @@ func (m model) viewDisk(w int) ([]string, string) {
 		}
 	}
 	if cur < 0 {
-		out = append(out, "", sYellow.Render(g.warn+" Every disk is in use. Unmount the one to install on, or start with FORCE_DISK=1."))
+		out = append(out, "", sYellow.Render(g.warn+" No disk can be used. Unmount the one to install on, or start with FORCE_DISK=1."))
 		return out, hint("esc", "back")
 	}
 	d := m.disks[cur]

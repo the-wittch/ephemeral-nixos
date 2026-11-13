@@ -25,7 +25,9 @@ type disk struct {
 	Size                    uint64
 	InUse                   bool
 	// an ISO written to it, like the stick this runs from; refused even when it isn't mounted
-	Installer  bool
+	Installer bool
+	// "LVM", "ZFS", "RAID" or empty
+	Member     string
 	Partitions []partition
 }
 
@@ -81,6 +83,23 @@ func hasISO(d lsblkDev) bool {
 	return false
 }
 
+func storageMember(d lsblkDev) string {
+	switch f := str(d.FSType); {
+	case f == "LVM2_member":
+		return "LVM"
+	case f == "zfs_member":
+		return "ZFS"
+	case strings.HasSuffix(f, "_raid_member"):
+		return "RAID"
+	}
+	for _, c := range d.Children {
+		if k := storageMember(c); k != "" {
+			return k
+		}
+	}
+	return ""
+}
+
 // the same command as disk_identity in common.sh, so install.sh can compare the two as they are
 func diskIdentity(path string) (string, error) {
 	out, err := exec.Command("lsblk", "-dbP", "-o", "SERIAL,WWN,SIZE,MODEL", "--", path).Output()
@@ -103,7 +122,7 @@ func parseDisks(data []byte) ([]disk, error) {
 		if d.Type != "disk" || strings.HasPrefix(d.Name, "zram") {
 			continue
 		}
-		dk := disk{Path: d.Path, Name: d.Name, Tran: str(d.Tran), Model: str(d.Model), Size: d.Size, InUse: inUse(d), Installer: hasISO(d)}
+		dk := disk{Path: d.Path, Name: d.Name, Tran: str(d.Tran), Model: str(d.Model), Size: d.Size, InUse: inUse(d), Installer: hasISO(d), Member: storageMember(d)}
 		for _, p := range d.Children {
 			if p.Type != "part" {
 				continue

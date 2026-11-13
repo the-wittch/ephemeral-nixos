@@ -70,6 +70,11 @@ expect "an open LUKS disk is in use" "FAKE_TYPES='disk\npart\ncrypt\n' disk_in_u
 expect "an idle disk isn't in use" "FAKE_MOUNTS='\n\n' disk_in_use /dev/vda" fails
 expect "an installer image is found unmounted" "FAKE_FSTYPES='iso9660\niso9660\n' holds_installer_image /dev/sda" succeeds
 expect "a normal disk holds no installer image" "FAKE_FSTYPES='\nvfat\ncrypto_LUKS\n' holds_installer_image /dev/vda" fails
+expect "an LVM member is found" "[[ \$(FAKE_FSTYPES='\nLVM2_member\n' storage_member /dev/vda) == 'an LVM volume group' ]]" succeeds
+expect "a ZFS member is found" "[[ \$(FAKE_FSTYPES='\nvfat\nzfs_member\n' storage_member /dev/vda) == 'a ZFS pool' ]]" succeeds
+expect "an md RAID member is found" "[[ \$(FAKE_FSTYPES='\nlinux_raid_member\n' storage_member /dev/vda) == 'a RAID array' ]]" succeeds
+expect "a firmware RAID member is found" "FAKE_FSTYPES='isw_raid_member\n' storage_member /dev/vda" succeeds
+expect "a plain disk isn't a member" "FAKE_FSTYPES='\nvfat\ncrypto_LUKS\nntfs\n' storage_member /dev/vda" fails
 
 labels='/dev/vda disk-main-ESP\n/dev/vda disk-main-luks\n'
 expect "the disk's own partition labels are fine" "FAKE_LABELS='$labels' validate_partlabels /dev/vda" succeeds

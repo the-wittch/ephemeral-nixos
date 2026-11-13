@@ -90,6 +90,25 @@ func TestUnmountedInstallerStickIsRefused(t *testing.T) {
 	}
 }
 
+func TestStorageMemberIsRefused(t *testing.T) {
+	for fstype, want := range map[string]string{"LVM2_member": "LVM", "zfs_member": "ZFS", "linux_raid_member": "RAID", "ntfs": ""} {
+		disks, err := parseDisks([]byte(strings.Replace(lsblkSample, `"fstype":"ntfs"`, `"fstype":"`+fstype+`"`, 1)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		d := disks[0]
+		if d.Member != want {
+			t.Errorf("%s: member %q, want %q", fstype, d.Member, want)
+		}
+		if (model{}).diskUsable(d) != (want == "") {
+			t.Errorf("%s: usable %v", fstype, !(want == ""))
+		}
+		if !(model{cfg: config{forceDisk: true}}).diskUsable(d) {
+			t.Errorf("%s: FORCE_DISK doesn't allow it", fstype)
+		}
+	}
+}
+
 func TestStepOf(t *testing.T) {
 	cases := map[string]int{
 		"::stage partition":                                1,
