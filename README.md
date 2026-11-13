@@ -125,7 +125,7 @@ This repo is the installer and nothing else. Its `flake.nix` is the machine flak
 ```nix
 {
   inputs = {
-    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v4.0.0";
+    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v4.2.0";
     # the installer runs nixpkgs tools by name
     nixpkgs.follows = "ephemeral/nixpkgs";
   };
