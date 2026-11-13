@@ -6,6 +6,8 @@
 
 An installer for NixOS on an encrypted btrfs disk where `/` is wiped on every boot. Only `/home` and a short list of system paths survive, on `/persist`. You pick Plasma, GNOME, niri or Umbriel (both with Noctalia) during the install.
 
+More at [ephemeral-nix.sh](https://ephemeral-nix.sh/).
+
 ```
 disk ─ ESP (/boot, 1G)
      └ LUKS2 ─ btrfs: root, root-blank, nix, persist, log, swap
