@@ -6,6 +6,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Changed
 
+- New installs get config [v4.0.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
 - The workflows that pin a new config and release the installer keep their GitHub token out of the repository checkout.
 
 ## 3.7.4
