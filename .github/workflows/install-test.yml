@@ -80,12 +80,12 @@ jobs:
 
           t=${old_tag//./\\.}
           sed -i -E -e "s/$old_rev/$sha/g" -e "s#(TAG=)$t( |\$)#\1$next\2#g" -e "s#(ephemeral-nixos/)$t/#\1$next/#g" \
-            RELEASE README.md INSTALL.md
+            RELEASE README.md
           if ! grep -q "^TAG=$next$" RELEASE || ! grep -q "^COMMIT=$sha$" RELEASE; then
             echo "RELEASE wasn't updated"
             exit 1
           fi
-          if grep -qE "$old_rev|ephemeral-nixos/$t/|TAG=$t( |\$)" RELEASE README.md INSTALL.md; then
+          if grep -qE "$old_rev|ephemeral-nixos/$t/|TAG=$t( |\$)" RELEASE README.md; then
             echo "the old pin is still there"
             exit 1
           fi

@@ -108,6 +108,14 @@ func (m model) keyReview(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.note = "Type " + filepath.Base(m.a.Disk) + " exactly to erase it."
 			return m, nil
 		}
+		if !m.cfg.dryRun {
+			id, err := diskIdentity(m.a.Disk)
+			if err != nil {
+				m.note = "Couldn't read " + m.a.Disk + ": " + err.Error()
+				return m, nil
+			}
+			m.a.DiskID = id
+		}
 		return m.startInstall()
 	}
 	if m.reviewFocus == 1 {
@@ -148,6 +156,7 @@ func (m model) viewReview(w int) ([]string, string) {
 	if !spaced {
 		out = append(out, "")
 	}
+	out = append(out, sSub.Render(truncate(m.a.Disk+" becomes a 1G boot partition and the rest encrypted, with a "+m.a.Swap+" swap file inside.", w)))
 	out = append(out, strings.Split(box.Render(prompt+m.confirmIn.View()), "\n")...)
 	if m.cfg.dryRun {
 		out = append(out, sYellow.Render("Dry run: install.sh won't run."))

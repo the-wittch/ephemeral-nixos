@@ -21,7 +21,7 @@ func (m *model) placeDiskCursor() {
 	m.listCursor[stDisk] = cur
 }
 
-func (m model) diskUsable(d disk) bool { return !d.InUse || m.cfg.forceDisk }
+func (m model) diskUsable(d disk) bool { return !(d.InUse || d.Installer) || m.cfg.forceDisk }
 
 func (m model) keyDisk(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	cur := m.listCursor[stDisk]
@@ -63,6 +63,8 @@ func (m model) viewDisk(w int) ([]string, string) {
 	for i, d := range m.disks {
 		line := padRight(d.Path, 18) + padRight(humanSize(d.Size), 9) + padRight(d.Tran, 7) + truncate(d.Model, 30)
 		switch {
+		case !m.diskUsable(d) && d.Installer:
+			out = append(out, sDim.Render("   "+line+"  installer image"))
 		case !m.diskUsable(d):
 			out = append(out, sDim.Render("   "+line+"  in use"))
 		case d.Size < minDiskSize:
@@ -79,6 +81,9 @@ func (m model) viewDisk(w int) ([]string, string) {
 	if d.Size < minDiskSize {
 		out = append(out, "", sYellow.Render(g.warn+" ")+sText.Render(humanSize(d.Size)+" is tight: a full install with a few apps needs about 32G, and old versions"),
 			sText.Render("  of the system stay until they're cleaned up. It works for a small install."))
+	}
+	if d.Tran == "usb" {
+		out = append(out, "", sYellow.Render(g.warn+" ")+sText.Render("This is a USB drive. Make sure it isn't one you meant to keep, such as a backup."))
 	}
 	out = append(out, "", sSub.Render("On "+d.Path+" now"))
 	if len(d.Partitions) == 0 {

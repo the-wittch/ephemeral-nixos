@@ -17,7 +17,8 @@ Every question can be answered ahead of time, so only the LUKS passphrase is typ
 | `SWAP_SIZE`, `TIMEZONE` | e.g. `16G`, `Europe/Berlin` |
 | `PASSWORD_HASH` | the login password as a hash, from `mkpasswd -m yescrypt` |
 | `HARDWARE_CONFIG` | a `hardware-configuration.nix` to use instead of detecting one |
-| `CONFIRM` | `YES` skips the "erase this disk" question |
-| `FORCE_DISK` | `1` allows a disk that's in use (mounted, swap, or an open LUKS, LVM or RAID device); normally refused |
+| `CONFIRM` | `YES` skips the question that has you type the disk's name before it's erased |
+| `ALLOW_SAME_PARTLABELS` | `1` installs while another disk has partitions from an earlier Ephemeral Nix install. They have the same labels the new system boots by, so it may start the old one; normally refused |
+| `FORCE_DISK` | `1` allows a disk that's in use (mounted, swap, or an open LUKS, LVM or RAID device) or holds an installer image; normally refused |
 
 Pass them with `sudo env`, as in the README's install commands. Plain `sudo VAR=...` usually drops them.

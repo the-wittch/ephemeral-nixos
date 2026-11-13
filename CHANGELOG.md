@@ -2,6 +2,34 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.7.6
+
+### Fixed
+
+- After an install failed past partitioning, a network drop during the download for example, "Try again" stopped at once with "is in use", because the failed attempt had left the disk mounted and unlocked. Choosing another disk failed too, since the old one still held the name `cryptroot`. The installer now records what it opens and closes exactly that before the next attempt, from "Try again", "Change an answer" or "Start over". Anything it didn't open is still refused, as before.
+- The install test makes an install fail after partitioning, then checks that the next one on the same disk succeeds.
+- The troubleshooting page quoted an old error message, and its fix left LUKS open.
+- A disk could be erased under a name that had moved to another disk since you chose it, when a disk was plugged in or out in between. The installer now checks it's still the same disk, by its serial number, size and model, right before erasing, and stops if it isn't.
+- The system was only built from your settings after the disk was erased, so a mistake in them cost the old disk for nothing. It's checked first now, before anything is erased.
+- The USB stick the installer runs from could be picked when it wasn't mounted, as after booting with `copytoram`. A disk with an installer image on it is refused now whether or not it's mounted.
+- A second disk from an earlier Ephemeral Nix install has the same partition names the new system boots by, so the new install could start the old system. The installer refuses while one is attached; `ALLOW_SAME_PARTLABELS=1` overrides it.
+- A swap file too big for the disk only failed partway through formatting. It's checked before anything is erased.
+- A hardware configuration file kept on a stick mounted at `/mnt` was lost when the disk was mounted there, after the erase. It's copied first.
+- Running `ephemeral-install --answers` while an install was going started a second one on the same disk. Only one runs at a time now.
+- Trying again replaced the log of the failed attempt. The one before is kept as `/tmp/ephemeral-install.log.1`.
+- An install that was killed, or ran out of memory, left the welcome screen with no sign of it. The screen says so now.
+
+### Changed
+
+- The plain prompts ask you to type the disk's name before erasing it, as the screens do, in place of `YES`. `ephemeral-install --answers` needs `"confirmDisk"` naming the disk, for the same reason.
+- An error says how far the install got: nothing changed yet, the disk half formatted, or the disk formatted and mounted at `/mnt`.
+- Choosing a USB drive shows a warning, so a backup disk isn't erased by mistake.
+- CI scans for secrets, lints the workflows with actionlint and zizmor, checks the Go dependencies with `govulncheck`, and tests `common.sh`'s checks and `teardown` against fake disk commands. The install test also checks that a config that doesn't evaluate leaves the disk untouched.
+- The workflows ask for their permissions per job.
+- The installer's errors say what to type instead, such as "swap is a size like 4G or 8192M, not 4GB", and a disk name that doesn't exist lists the disks there are.
+- Before erasing, the installer says what the disk becomes: a 1G boot partition and the rest encrypted, with the swap file inside. At the end it points to `ephemeral-doctor`, `ephemeral-apps`, `ephemeral-update` and `ephemeral-help`.
+- The README starts with what to do before installing, and `INSTALL.md`, which repeated it, is gone.
+
 ## 3.7.5
 
 ### Changed

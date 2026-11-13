@@ -26,20 +26,23 @@ var installSteps = []string{
 
 // which step a line of install.sh output starts, or -1
 func stepOf(line string) int {
-	switch {
-	case strings.HasPrefix(line, "==> partitioning"):
+	switch line {
+	case "::stage partition":
 		return 1
-	case strings.HasPrefix(line, "==> detecting hardware"),
-		strings.HasPrefix(line, "==> using "),
-		strings.HasPrefix(line, "==> warning: no nixos-generate-config"):
+	case "::stage hardware":
 		return 2
-	case strings.HasPrefix(line, "==> installing from"):
+	case "::stage install":
 		return 3
-	case strings.HasPrefix(line, "installing the boot loader"):
+	}
+	// nixos-install's own output, so the one step install.sh can't mark itself
+	if strings.HasPrefix(line, "installing the boot loader") {
 		return 4
 	}
 	return -1
 }
+
+// the ::stage lines are for stepOf, not for reading
+func isMarker(line string) bool { return strings.HasPrefix(line, "::stage ") }
 
 var ansiRe = regexp.MustCompile(`\x1b\[[0-9;?]*[A-Za-z]|\r`)
 
@@ -70,6 +73,10 @@ type answers struct {
 	Passphrase  string   `json:"passphrase"`
 	Password    string   `json:"password"`
 	Hardware    string   `json:"hardwareConfig"`
+	// --answers has to name the disk again, as the screens make you type it
+	ConfirmDisk string `json:"confirmDisk"`
+	// what the disk was when its name was typed in, so install.sh can tell if it's changed since
+	DiskID string `json:"-"`
 }
 
 func defaultAnswers() answers {
@@ -156,6 +163,9 @@ func (a answers) env(hash string) []string {
 	if a.Hardware != "" {
 		env = append(env, "HARDWARE_CONFIG="+a.Hardware)
 	}
+	if a.DiskID != "" {
+		env = append(env, "DISK_ID="+a.DiskID)
+	}
 	return env
 }
 
@@ -198,6 +208,17 @@ func (r runDir) running() bool {
 		return false
 	}
 	return syscall.Kill(pid, 0) == nil
+}
+
+// started, gone, and never wrote its status: killed, or out of memory
+func (r runDir) died() bool {
+	if _, err := os.Stat(r.pid); err != nil {
+		return false
+	}
+	if _, err := os.Stat(r.status); err == nil {
+		return false
+	}
+	return !r.running()
 }
 
 func (r runDir) finished() (code int, done bool) {
@@ -300,9 +321,23 @@ func (f *follower) next() []string {
 	return lines
 }
 
+func headlessReady(r runDir, a answers) error {
+	if r.running() {
+		return errors.New("an install is already running; ephemeral-install without --answers shows it")
+	}
+	if a.ConfirmDisk != filepath.Base(a.Disk) {
+		return fmt.Errorf("the answers erase %s, so they need \"confirmDisk\": %q", a.Disk, filepath.Base(a.Disk))
+	}
+	return nil
+}
+
 // --answers: no screens, the output on stdout, install.sh's exit status as ours
 func runHeadless(cfg config, a answers) int {
 	r := newRunDir(cfg.dryRun)
+	if err := headlessReady(r, a); err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
 	if err := launch(cfg, r, a); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
@@ -335,11 +370,15 @@ if [ -z "$one" ] || [ "$one" != "$two" ]; then
 fi
 for line in \
   "==> a copy of this output goes to /tmp/ephemeral-install.log" \
+  "==> checking that the system builds from these settings" \
+  "==> the first time downloads nixpkgs and can sit at 0/N for several minutes" \
+  "::stage partition" \
   "==> partitioning (LUKS passphrase next)" \
-  "==> the first build downloads nixpkgs and can sit at 0/N for several minutes" \
   "+ cryptsetup -q luksFormat --type luks2 --pbkdf argon2id /dev/disk/by-partlabel/disk-main-luks" \
   "+ mkfs.btrfs /dev/mapper/cryptroot -L nixos -f" \
+  "::stage hardware" \
   "==> detecting hardware" \
+  "::stage install" \
   "==> installing from /mnt/persist/etc/nixos" \
   "copying path '/nix/store/...-linux-6.18.58' from 'https://cache.nixos.org'..." \
   "building '/nix/store/...-nixos-system-nixos.drv'..." \

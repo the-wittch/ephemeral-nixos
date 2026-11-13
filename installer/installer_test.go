@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -68,14 +69,33 @@ func TestParseDisks(t *testing.T) {
 	if p := disks[0].Partitions; len(p) != 2 || p[0].Label != "EFI" || p[1].Label != "Windows" {
 		t.Errorf("partitions: %+v", p)
 	}
+	for _, d := range disks {
+		if d.Installer != (d.Path == "/dev/sda") {
+			t.Errorf("%s installer image: got %v", d.Path, d.Installer)
+		}
+	}
+}
+
+// booted with copytoram, the stick has nothing mounted, but it still can't be picked
+func TestUnmountedInstallerStickIsRefused(t *testing.T) {
+	disks, err := parseDisks([]byte(strings.ReplaceAll(lsblkSample, `["/iso"]`, `[null]`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := model{}
+	for _, d := range disks {
+		if d.Path == "/dev/sda" && m.diskUsable(d) {
+			t.Error("the unmounted installer stick can be picked")
+		}
+	}
 }
 
 func TestStepOf(t *testing.T) {
 	cases := map[string]int{
-		"==> partitioning (LUKS passphrase next)":          1,
-		"==> detecting hardware":                           2,
-		"==> using /tmp/hw.nix":                            2,
-		"==> installing from /mnt/persist/etc/nixos":       3,
+		"::stage partition":                                1,
+		"::stage hardware":                                 2,
+		"::stage install":                                  3,
+		"==> partitioning (LUKS passphrase next)":          -1,
 		"installing the boot loader...":                    4,
 		"copying path '/nix/store/x' from 'https://cache'": -1,
 	}
@@ -164,7 +184,7 @@ func TestHeadlessDryRun(t *testing.T) {
 	t.Setenv("TMPDIR", t.TempDir())
 	dryRunPause = time.Millisecond
 	a := defaultAnswers()
-	a.Disk, a.Passphrase, a.Password = "/dev/vda", "correct horse", "pw"
+	a.Disk, a.ConfirmDisk, a.Passphrase, a.Password = "/dev/vda", "vda", "correct horse", "pw"
 	if code := runHeadless(config{dryRun: true}, a); code != 0 {
 		t.Errorf("dry run exited %d", code)
 	}
@@ -178,8 +198,43 @@ func TestDryRunNeedsThePassphrase(t *testing.T) {
 	t.Setenv("TMPDIR", t.TempDir())
 	dryRunPause = time.Millisecond
 	a := defaultAnswers()
-	a.Disk, a.Password = "/dev/vda", "pw"
+	a.Disk, a.ConfirmDisk, a.Password = "/dev/vda", "vda", "pw"
 	if code := runHeadless(config{dryRun: true}, a); code != 3 {
 		t.Errorf("an empty passphrase should reach the script empty and fail it, got %d", code)
+	}
+}
+
+func TestHeadlessNeedsTheDiskNamed(t *testing.T) {
+	r := runDir{dir: t.TempDir()}
+	r.pid, r.status = filepath.Join(r.dir, "pid"), filepath.Join(r.dir, "status")
+	if err := headlessReady(r, answers{Disk: "/dev/vda"}); err == nil {
+		t.Error("answers without confirmDisk were accepted")
+	}
+	if err := headlessReady(r, answers{Disk: "/dev/vda", ConfirmDisk: "sda"}); err == nil {
+		t.Error("confirmDisk naming another disk was accepted")
+	}
+	if err := headlessReady(r, answers{Disk: "/dev/vda", ConfirmDisk: "vda"}); err != nil {
+		t.Errorf("confirmDisk vda for /dev/vda: %v", err)
+	}
+	os.WriteFile(r.pid, []byte(strconv.Itoa(os.Getpid())), 0o600)
+	if err := headlessReady(r, answers{Disk: "/dev/vda", ConfirmDisk: "vda"}); err == nil {
+		t.Error("a second install started while one was running")
+	}
+}
+
+func TestDied(t *testing.T) {
+	r := runDir{dir: t.TempDir()}
+	r.pid, r.status = filepath.Join(r.dir, "pid"), filepath.Join(r.dir, "status")
+	if r.died() {
+		t.Error("died with nothing started")
+	}
+	// a pid no process has
+	os.WriteFile(r.pid, []byte("2147483646"), 0o600)
+	if !r.died() {
+		t.Error("an install that's gone without a status didn't count as died")
+	}
+	os.WriteFile(r.status, []byte("1\n"), 0o600)
+	if r.died() {
+		t.Error("an install that wrote its status counted as died")
 	}
 }

@@ -162,6 +162,8 @@ func newModel(cfg config) model {
 	}
 	if m.run.running() {
 		m.reattach()
+	} else if m.run.died() {
+		m.note = "The last install stopped without finishing. Its output is in /tmp/ephemeral-install.log."
 	}
 	m.gpu, m.hasGPU = nvidiaGPU()
 	if m.hasGPU {

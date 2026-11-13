@@ -9,6 +9,7 @@ Bug reports and pull requests are welcome. This is a personal project, so replie
 
 ## Pull requests
 
+- Read [ARCHITECTURE.md](ARCHITECTURE.md) first. A change that breaks one of its rules needs a reason in the pull request.
 - This repo only holds the installer, the ISO and the install test. Changes to the installed system go to the config repo.
 - Add a line to `CHANGELOG.md` under the next version.
 - Run the checks in [Working on the installer](docs/development.md). For changes to the scripts, also run the install test: `gh workflow run install-test.yml --ref <branch>`, or locally.

@@ -24,7 +24,9 @@ type disk struct {
 	Path, Name, Tran, Model string
 	Size                    uint64
 	InUse                   bool
-	Partitions              []partition
+	// an ISO written to it, like the stick this runs from; refused even when it isn't mounted
+	Installer  bool
+	Partitions []partition
 }
 
 type lsblkDev struct {
@@ -66,6 +68,28 @@ func inUse(d lsblkDev) bool {
 	return false
 }
 
+// booted with copytoram, the installer stick isn't mounted, so in use alone misses it
+func hasISO(d lsblkDev) bool {
+	if str(d.FSType) == "iso9660" {
+		return true
+	}
+	for _, c := range d.Children {
+		if hasISO(c) {
+			return true
+		}
+	}
+	return false
+}
+
+// the same command as disk_identity in common.sh, so install.sh can compare the two as they are
+func diskIdentity(path string) (string, error) {
+	out, err := exec.Command("lsblk", "-dbP", "-o", "SERIAL,WWN,SIZE,MODEL", "--", path).Output()
+	if err != nil {
+		return "", fmt.Errorf("lsblk: %w", err)
+	}
+	return strings.TrimRight(string(out), "\n"), nil
+}
+
 func parseDisks(data []byte) ([]disk, error) {
 	var out struct {
 		Devices []lsblkDev `json:"blockdevices"`
@@ -79,7 +103,7 @@ func parseDisks(data []byte) ([]disk, error) {
 		if d.Type != "disk" || strings.HasPrefix(d.Name, "zram") {
 			continue
 		}
-		dk := disk{Path: d.Path, Name: d.Name, Tran: str(d.Tran), Model: str(d.Model), Size: d.Size, InUse: inUse(d)}
+		dk := disk{Path: d.Path, Name: d.Name, Tran: str(d.Tran), Model: str(d.Model), Size: d.Size, InUse: inUse(d), Installer: hasISO(d)}
 		for _, p := range d.Children {
 			if p.Type != "part" {
 				continue
