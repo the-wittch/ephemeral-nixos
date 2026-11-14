@@ -60,6 +60,10 @@ for v in 4GB '4 G' -1G; do expect "swap '$v' refused" "validate_swap '$v'" fails
 for v in 'x$(reboot)' 'a"b' 'a`b`' 'a\b' ''; do expect "vault '$v' refused" "validate_vault '$v'" fails; done
 expect "vault with a space" "validate_vault 'Work keys'" succeeds
 for v in 'id;rm' 'a b'; do expect "Control D id '$v' refused" "validate_controld '$v'" fails; done
+for v in none cloudflare quad9 adguard custom; do expect "DNS $v" "validate_dns $v" succeeds; done
+for v in google '' 'quad9;reboot'; do expect "DNS '$v' refused" "validate_dns '$v'" fails; done
+expect "own DNS servers" "validate_custom_dns '194.242.2.2#dns.mullvad.net  2a07:e340::2#dns.mullvad.net'" succeeds
+for v in '' 194.242.2.2 '1.2.3.4;reboot#a.b' '*'; do expect "own DNS '$v' refused" "validate_custom_dns '$v'" fails; done
 expect "apps with a quote refused" "validate_apps 'glow \"x'" fails
 expect "layout us,de" "validate_keyboard us,de ''" succeeds
 expect "layout 'us de' refused" "validate_keyboard 'us de' ''" fails

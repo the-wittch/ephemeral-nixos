@@ -65,6 +65,8 @@ type answers struct {
 	Vault       string   `json:"passSshVault"`
 	ControlD    bool     `json:"-"`
 	ControlDID  string   `json:"controldResolver"`
+	DNS         string   `json:"encryptedDns"`
+	CustomDNS   []string `json:"customDns"`
 	Fingerprint bool     `json:"fingerprint"`
 	Apps        []string `json:"apps"`
 	Hostname    string   `json:"hostname"`
@@ -82,7 +84,7 @@ type answers struct {
 func defaultAnswers() answers {
 	return answers{
 		Desktop: "plasma", Nvidia: "none", Layout: "us", Locale: "en_US.UTF-8", Timezone: "UTC",
-		Profile: "full", OpenSnitch: true, Vault: "Personal",
+		Profile: "full", OpenSnitch: true, Vault: "Personal", DNS: "none",
 		Hostname: "nixos", Username: "nixuser", Swap: "4G",
 	}
 }
@@ -125,6 +127,13 @@ func (a answers) check() error {
 	if a.ControlD {
 		add("controldResolver", checkControlD(a.ControlDID))
 	}
+	add("encryptedDns", checkDNS(a.DNS))
+	if a.DNS == "custom" {
+		add("customDns", checkCustomDNS(strings.Join(a.CustomDNS, " ")))
+	}
+	if a.ControlD && a.DNS != "none" {
+		add("encryptedDns", errors.New("can't be on together with Control D"))
+	}
 	return errors.Join(errs...)
 }
 
@@ -154,6 +163,8 @@ func (a answers) env(hash string) []string {
 		"PASS_SSH_AGENT="+boolStr(a.PassAgent && a.Profile == "full"),
 		"PASS_SSH_VAULT="+vault,
 		"CONTROLD_RESOLVER="+controld,
+		"ENCRYPTED_DNS="+a.DNS,
+		"CUSTOM_DNS="+strings.Join(a.CustomDNS, " "),
 		"APPS="+strings.Join(a.Apps, " "),
 		"FINGERPRINT="+boolStr(a.Fingerprint),
 		"SWAP_SIZE="+a.Swap,

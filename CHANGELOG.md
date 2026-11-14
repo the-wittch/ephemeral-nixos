@@ -2,6 +2,12 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.8.0
+
+### Added
+
+- The full install asks where DNS goes: the network's own DNS, as before, or DNS over TLS to Cloudflare, Quad9, AdGuard, Control D, or servers you give under "Other", as `address#name`. It replaces the Control D checkbox; ← and → change it. Unattended installs set it with `ENCRYPTED_DNS` and `CUSTOM_DNS`, and `encryptedDns` and `customDns` in `--answers`. The small install picks it later with `ephemeral-setup`.
+
 ## 3.7.7
 
 ### Fixed

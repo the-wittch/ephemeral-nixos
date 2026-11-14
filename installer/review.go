@@ -43,8 +43,11 @@ func (m model) reviewLines() []reviewLine {
 		if m.a.PassAgent {
 			opts = append(opts, "Pass SSH agent ("+m.a.Vault+")")
 		}
-		if m.a.ControlD {
-			opts = append(opts, "Control D")
+		switch i := m.a.dnsChoice(); {
+		case m.a.DNS == "custom":
+			opts = append(opts, "DNS over TLS to "+strings.Join(m.a.CustomDNS, ", "))
+		case i > 0:
+			opts = append(opts, dnsChoices[i].label+" DNS")
 		}
 		if m.a.Fingerprint {
 			opts = append(opts, "fingerprint login")

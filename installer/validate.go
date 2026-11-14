@@ -102,3 +102,38 @@ func checkPassword(s, again string) error {
 }
 
 func isControl(r rune) bool { return r < 0x20 || r == 0x7f }
+
+// the same order as the options screen shows them; controld goes in useControlD, not encryptedDns
+var dnsChoices = []struct{ key, label, desc string }{
+	{"none", "The network's DNS", "not encrypted: whatever the network hands out"},
+	{"cloudflare", "Cloudflare", "DNS over TLS, no filtering"},
+	{"quad9", "Quad9", "DNS over TLS, blocks known malware domains"},
+	{"adguard", "AdGuard", "DNS over TLS, blocks ads and trackers"},
+	{"controld", "Control D", "DNS over TLS to your own Control D resolver"},
+	{"custom", "Other", "DNS over TLS to servers you give, such as Mullvad or one at home"},
+}
+
+func checkDNS(s string) error {
+	for _, c := range dnsChoices {
+		if c.key == s && s != "controld" {
+			return nil
+		}
+	}
+	return fmt.Errorf("none, cloudflare, quad9 or adguard")
+}
+
+// address#name; the name is what the server's certificate is checked against
+var customDNSRe = regexp.MustCompile(`^[0-9A-Fa-f.:]+#[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$`)
+
+func checkCustomDNS(s string) error {
+	servers := strings.Fields(s)
+	if len(servers) == 0 {
+		return fmt.Errorf("at least one server, as address#name")
+	}
+	for _, sv := range servers {
+		if !customDNSRe.MatchString(sv) {
+			return fmt.Errorf("%s isn't address#name, such as 194.242.2.2#dns.mullvad.net", sv)
+		}
+	}
+	return nil
+}

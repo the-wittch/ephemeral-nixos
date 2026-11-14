@@ -51,6 +51,24 @@ validate_controld() {
   [[ -z $1 || $1 =~ ^[A-Za-z0-9_-]+$ ]] || die "a Control D resolver id is letters, digits, - and _, as in your Control D dashboard, so not $1"
 }
 
+validate_dns() {
+  case $1 in
+    none | cloudflare | quad9 | adguard | custom) ;;
+    *) die "ENCRYPTED_DNS is none, cloudflare, quad9, adguard or custom, not $1" ;;
+  esac
+}
+
+# address#name, the name being what the server's certificate is checked against
+validate_custom_dns() {
+  local s list
+  read -ra list <<<"$1"
+  ((${#list[@]})) || die "ENCRYPTED_DNS=custom needs servers in CUSTOM_DNS, as address#name, e.g. 194.242.2.2#dns.mullvad.net"
+  for s in "${list[@]}"; do
+    [[ $s =~ ^[0-9A-Fa-f.:]+#[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] ||
+      die "$s in CUSTOM_DNS isn't address#name, such as 194.242.2.2#dns.mullvad.net"
+  done
+}
+
 validate_apps() {
   [[ $1 =~ ^[A-Za-z0-9._+\ -]*$ ]] || die "APPS has to be app names separated by commas or spaces (got: $1)"
 }

@@ -163,7 +163,13 @@ if [[ $PROFILE == full ]]; then
   if [[ $PASS_SSH_AGENT == true && -z ${PASS_SSH_VAULT:-} ]]; then
     read -r -p "Proton Pass vault with your SSH keys [Personal]: " PASS_SSH_VAULT
   fi
-  if [[ -z ${CONTROLD_RESOLVER+x} ]]; then
+  if [[ -z ${ENCRYPTED_DNS:-} ]]; then
+    read -r -p "Encrypted DNS: none (the network's), cloudflare, quad9, adguard or custom [none]: " ENCRYPTED_DNS
+  fi
+  if [[ ${ENCRYPTED_DNS:-} == custom && -z ${CUSTOM_DNS:-} ]]; then
+    read -r -p "Servers as address#name, separated by spaces: " CUSTOM_DNS
+  fi
+  if [[ -z ${CONTROLD_RESOLVER+x} && ${ENCRYPTED_DNS:-none} == none ]]; then
     read -r -p "Control D resolver id (empty for none): " CONTROLD_RESOLVER
   fi
 fi
@@ -172,6 +178,8 @@ OPENSNITCH=${OPENSNITCH:-true}
 PASS_SSH_AGENT=${PASS_SSH_AGENT:-false}
 PASS_SSH_VAULT=${PASS_SSH_VAULT:-Personal}
 CONTROLD_RESOLVER=${CONTROLD_RESOLVER:-}
+ENCRYPTED_DNS=${ENCRYPTED_DNS:-none}
+CUSTOM_DNS=${CUSTOM_DNS:-}
 APPS=${APPS:-}
 APPS=${APPS//,/ }
 validate_apps "$APPS"
@@ -180,11 +188,20 @@ validate_bool OPENSNITCH "$OPENSNITCH"
 validate_bool PASS_SSH_AGENT "$PASS_SSH_AGENT"
 validate_vault "$PASS_SSH_VAULT"
 validate_controld "$CONTROLD_RESOLVER"
+validate_dns "$ENCRYPTED_DNS"
+if [[ $ENCRYPTED_DNS == custom ]]; then
+  validate_custom_dns "$CUSTOM_DNS"
+else
+  CUSTOM_DNS=
+fi
 if [[ $PROFILE == minimal ]]; then
   EXTRAS=false
   PASS_SSH_AGENT=false
   CONTROLD_RESOLVER=
   APPS=
+fi
+if [[ -n $CONTROLD_RESOLVER && $ENCRYPTED_DNS != none ]]; then
+  die "pick one of Control D and ENCRYPTED_DNS=$ENCRYPTED_DNS; DNS can only go to one of them"
 fi
 
 LAPTOP=false
@@ -212,7 +229,7 @@ fi
 validate_swap_fits "$DISK" "$SWAP_SIZE"
 validate_partlabels "$DISK"
 info "desktop=$INSTALL_DESKTOP profile=$PROFILE nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT${APPS:+ apps=$APPS}"
-info "opensnitch=$OPENSNITCH pass-ssh-agent=$PASS_SSH_AGENT${CONTROLD_RESOLVER:+ controld=on}"
+info "opensnitch=$OPENSNITCH pass-ssh-agent=$PASS_SSH_AGENT${CONTROLD_RESOLVER:+ controld=on} dns=$ENCRYPTED_DNS"
 
 STAGE=""
 cleanup() {
@@ -238,7 +255,7 @@ cd "$STAGE"
 S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
   S_SWAP=$SWAP_SIZE S_TZ=$TIMEZONE S_DESKTOP=$INSTALL_DESKTOP S_NVIDIA=$NVIDIA_DRIVER \
   S_KB=$KEYBOARD_LAYOUT S_KBV=$KEYBOARD_VARIANT S_LOCALE=$LOCALE S_LAPTOP=$LAPTOP S_FP=$FINGERPRINT S_EXTRAS=$EXTRAS \
-  S_PROFILE=$PROFILE S_OPENSNITCH=$OPENSNITCH S_AGENT=$PASS_SSH_AGENT S_VAULT=$PASS_SSH_VAULT S_CONTROLD=$CONTROLD_RESOLVER \
+  S_PROFILE=$PROFILE S_OPENSNITCH=$OPENSNITCH S_AGENT=$PASS_SSH_AGENT S_VAULT=$PASS_SSH_VAULT S_CONTROLD=$CONTROLD_RESOLVER S_DNS=$ENCRYPTED_DNS S_CUSTOMDNS=$CUSTOM_DNS \
   nix eval --impure --raw --expr '
     let
       e = builtins.getEnv;
@@ -261,7 +278,15 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
         [ "useControlD" (e "S_CONTROLD" != "") ]
         [ "usePassSshAgent" (e "S_AGENT" == "true") ]
       ]
-      ++ (if e "S_AGENT" == "true" then [ [ "passSshVault" (e "S_VAULT") ] ] else [ ]);
+      ++ (if e "S_AGENT" == "true" then [ [ "passSshVault" (e "S_VAULT") ] ] else [ ])
+      # only written when set, so the installer also works with a config release from before it
+      ++ (if e "S_DNS" != "none" then [ [ "encryptedDns" (e "S_DNS") ] ] else [ ])
+      ++ (
+        if e "S_DNS" == "custom" then
+          [ [ "customDns" (builtins.filter (s: builtins.isString s && s != "") (builtins.split " +" (e "S_CUSTOMDNS"))) ] ]
+        else
+          [ ]
+      );
       line = f: "  ${builtins.toJSON (builtins.elemAt f 0)}: ${builtins.toJSON (builtins.elemAt f 1)}";
     in
     "{\n" + builtins.concatStringsSep ",\n" (map line fields) + "\n}\n"
