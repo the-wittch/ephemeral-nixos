@@ -295,11 +295,15 @@ func TestOptionFieldsTakeTheCursor(t *testing.T) {
 	if m.optRow() != optVault || !m.vaultIn.Focused() {
 		t.Fatal("ticking the Pass SSH agent should put the cursor in the vault name")
 	}
-	m = press(t, m, ctrlU, typed("Work keys"), down, space)
-	if m.optRow() != optControlDID || !m.controldIn.Focused() {
-		t.Fatal("ticking Control D should put the cursor in the resolver id")
+	m = press(t, m, ctrlU, typed("Work keys"), down, left, left)
+	if m.optRow() != optDNS || !m.a.ControlD {
+		t.Fatal("two left from the network's DNS should be Control D")
 	}
-	m = press(t, m, up, up, enter)
+	m = press(t, m, down)
+	if m.optRow() != optControlDID || !m.controldIn.Focused() {
+		t.Fatal("Control D should have a resolver id field below it")
+	}
+	m = press(t, m, up, up, up, enter)
 	wantStep(t, m, stOptions)
 	if m.optRow() != optControlDID || m.problem() == "" {
 		t.Fatalf("an empty resolver id should keep the cursor on it and say why, got row %d, %q", m.optRow(), m.problem())
@@ -425,5 +429,60 @@ func TestEffects(t *testing.T) {
 	m = update(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
 	if strings.Contains(m.View(), "┌") {
 		t.Error("80x24 has no room for the frame")
+	}
+}
+
+func TestDNSChoiceCycles(t *testing.T) {
+	m := toInstallType(t, newTestModel(t))
+	m = press(t, m, enter)
+	wantStep(t, m, stOptions)
+	m = press(t, m, down, down, down)
+	if m.optRow() != optDNS || m.a.DNS != "none" || m.a.ControlD {
+		t.Fatalf("the DNS row should start on the network's DNS, got row %d, %q", m.optRow(), m.a.DNS)
+	}
+	for _, want := range []string{"cloudflare", "quad9", "adguard"} {
+		m = press(t, m, right)
+		if m.a.DNS != want || m.a.ControlD {
+			t.Fatalf("want %s, got %q, Control D %v", want, m.a.DNS, m.a.ControlD)
+		}
+	}
+	m = press(t, m, right)
+	if !m.a.ControlD || m.a.DNS != "none" {
+		t.Fatalf("after AdGuard comes Control D, got %q, Control D %v", m.a.DNS, m.a.ControlD)
+	}
+	m = press(t, m, space)
+	if m.a.ControlD || m.a.DNS != "custom" {
+		t.Fatalf("after Control D comes Other, got %q, Control D %v", m.a.DNS, m.a.ControlD)
+	}
+	m = press(t, m, right)
+	if m.a.ControlD || m.a.DNS != "none" {
+		t.Fatalf("after Other it wraps to the network's DNS, got %q, Control D %v", m.a.DNS, m.a.ControlD)
+	}
+	m = press(t, m, right, right, enter)
+	wantStep(t, m, stApps)
+	if m.a.DNS != "quad9" {
+		t.Errorf("got %q", m.a.DNS)
+	}
+}
+
+func TestOwnDNSServersAreChecked(t *testing.T) {
+	m := toInstallType(t, newTestModel(t))
+	m = press(t, m, enter, down, down, down, left)
+	if m.optRow() != optDNS || m.a.DNS != "custom" {
+		t.Fatalf("left from the network's DNS should wrap round to Other, got %q", m.a.DNS)
+	}
+	m = press(t, m, down)
+	if m.optRow() != optCustomDNS || !m.customDNSIn.Focused() {
+		t.Fatal("Other should have a servers field below it")
+	}
+	m = press(t, m, typed("194.242.2.2"), enter)
+	wantStep(t, m, stOptions)
+	if m.optRow() != optCustomDNS || m.problem() == "" {
+		t.Fatalf("a server without #name should keep the cursor on the field and say why, got %q", m.problem())
+	}
+	m = press(t, m, typed("#dns.mullvad.net 2a07:e340::2#dns.mullvad.net"), enter)
+	wantStep(t, m, stApps)
+	if len(m.a.CustomDNS) != 2 || m.a.CustomDNS[0] != "194.242.2.2#dns.mullvad.net" {
+		t.Errorf("servers: %q", m.a.CustomDNS)
 	}
 }

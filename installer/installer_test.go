@@ -176,6 +176,25 @@ func TestReadAnswers(t *testing.T) {
 		t.Errorf("answers: %+v", a)
 	}
 
+	if a.DNS != "none" {
+		t.Errorf("encryptedDns should default to none, got %q", a.DNS)
+	}
+	both := filepath.Join(dir, "both.json")
+	os.WriteFile(both, []byte(`{"diskDevice":"/dev/vda","passphrase":"correct horse","password":"pw","controldResolver":"abcd1234","encryptedDns":"quad9"}`), 0o600)
+	if _, err := readAnswers(both); err == nil || !strings.Contains(err.Error(), "Control D") {
+		t.Errorf("Control D and encryptedDns together should be refused, got %v", err)
+	}
+	noServers := filepath.Join(dir, "noservers.json")
+	os.WriteFile(noServers, []byte(`{"diskDevice":"/dev/vda","passphrase":"correct horse","password":"pw","encryptedDns":"custom","customDns":["194.242.2.2"]}`), 0o600)
+	if _, err := readAnswers(noServers); err == nil || !strings.Contains(err.Error(), "customDns") {
+		t.Errorf("a custom server without #name should be refused, got %v", err)
+	}
+	unknown := filepath.Join(dir, "unknown.json")
+	os.WriteFile(unknown, []byte(`{"diskDevice":"/dev/vda","passphrase":"correct horse","password":"pw","encryptedDns":"google"}`), 0o600)
+	if _, err := readAnswers(unknown); err == nil || !strings.Contains(err.Error(), "encryptedDns") {
+		t.Errorf("an unknown provider should be refused, got %v", err)
+	}
+
 	bad := filepath.Join(dir, "bad.json")
 	os.WriteFile(bad, []byte(`{"hostname":"My Laptop","diskDevice":"/dev/vda","passphrase":"short","password":"pw"}`), 0o600)
 	_, err = readAnswers(bad)

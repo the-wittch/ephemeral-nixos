@@ -77,9 +77,10 @@ type model struct {
 	regionFocus int
 	regionErr   string
 
-	optFocus   int
-	vaultIn    textinput.Model
-	controldIn textinput.Model
+	optFocus    int
+	vaultIn     textinput.Model
+	controldIn  textinput.Model
+	customDNSIn textinput.Model
 
 	catalog        []app
 	catalogErr     error
@@ -192,6 +193,9 @@ func newModel(cfg config) model {
 
 	m.vaultIn = newInput(m.a.Vault, "Personal")
 	m.controldIn = newInput("", "abcd1234")
+	m.customDNSIn = newInput("", "194.242.2.2#dns.mullvad.net")
+	// room for four servers, IPv4 and IPv6 for two providers
+	m.customDNSIn.CharLimit = 256
 	m.machineIn = []textinput.Model{
 		newInput(m.a.Hostname, "nixos"),
 		newInput(m.a.Username, "nixuser"),
@@ -304,6 +308,7 @@ func (m *model) enter() tea.Cmd {
 		m.optFocus = 0
 		m.vaultIn.Blur()
 		m.controldIn.Blur()
+		m.customDNSIn.Blur()
 	case stMachine:
 		m.machineFocus = 0
 		return m.focusMachine()
