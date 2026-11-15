@@ -15,7 +15,7 @@ Every question can be answered ahead of time, so only the LUKS passphrase is typ
 | `ENCRYPTED_DNS` | `none` (the network's DNS, the default), `cloudflare`, `quad9` or `adguard`: DNS over TLS to that provider. `custom` uses `CUSTOM_DNS` |
 | `CUSTOM_DNS` | your own DNS over TLS servers for `custom`, as `address#name` separated by spaces, e.g. `194.242.2.2#dns.mullvad.net` |
 | `CONTROLD_RESOLVER` | your Control D resolver id; empty for none. Can't be set together with `ENCRYPTED_DNS` |
-| `APPS` | apps from the `ephemeral-apps` catalog, e.g. `obsidian,glow`; empty for none |
+| `APPS` | apps from the `ephemeral-apps` catalog, e.g. `obsidian,glow`, on top of the ones ticked by default; `-name` leaves out a default, e.g. `-vlc` |
 | `SWAP_SIZE`, `TIMEZONE` | e.g. `16G`, `Europe/Berlin` |
 | `PASSWORD_HASH` | the login password as a hash, from `mkpasswd -m yescrypt` |
 | `HARDWARE_CONFIG` | a `hardware-configuration.nix` to use instead of detecting one |

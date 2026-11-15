@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -484,5 +485,39 @@ func TestOwnDNSServersAreChecked(t *testing.T) {
 	wantStep(t, m, stApps)
 	if len(m.a.CustomDNS) != 2 || m.a.CustomDNS[0] != "194.242.2.2#dns.mullvad.net" {
 		t.Errorf("servers: %q", m.a.CustomDNS)
+	}
+}
+
+func TestAppDefaultsAndDesktops(t *testing.T) {
+	m := newTestModel(t)
+	m = update(t, m, catalogMsg{apps: []app{
+		{ID: "firefox", Label: "Firefox", Category: "Browsers", Default: true},
+		{ID: "tweaks", Label: "GNOME Tweaks", Category: "Utilities", Desktops: []string{"gnome"}, Default: true},
+		{ID: "discover", Label: "Discover", Category: "Utilities", Desktops: []string{"plasma"}},
+		{ID: "zed", Label: "Zed", Category: "Development"},
+	}})
+	m = toInstallType(t, m)
+	m = press(t, m, enter, enter)
+	wantStep(t, m, stApps)
+	if m.a.Desktop != "plasma" {
+		t.Fatalf("the test expects plasma, got %q", m.a.Desktop)
+	}
+	for _, a := range m.appsIn("Utilities") {
+		if a.ID == "tweaks" {
+			t.Error("a GNOME app is offered on Plasma")
+		}
+	}
+
+	m = press(t, m, enter)
+	if !slices.Equal(m.a.Apps, []string{"firefox"}) {
+		t.Errorf("untouched, only the default for this desktop should be picked: %v", m.a.Apps)
+	}
+
+	m = press(t, m, esc)
+	wantStep(t, m, stApps)
+	// Browsers comes first, and Firefox is its only app
+	m = press(t, m, tab, space, enter)
+	if !slices.Equal(m.a.Apps, []string{"-firefox"}) {
+		t.Errorf("an unticked default should be saved as -firefox: %v", m.a.Apps)
 	}
 }

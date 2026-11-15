@@ -120,22 +120,25 @@ func defaultFirst(items []item, code string) []item {
 
 type app struct {
 	ID, Label, Category, Description, Warn string
-	Flatpak, Unfree                        bool
+	Flatpak, Unfree, Default               bool
+	Desktops                               []string
 }
 
 var categoryOrder = []string{
 	"Browsers", "Communication", "Office", "Media", "Graphics", "Gaming",
-	"Development", "Security", "Terminal", "Utilities", "System", "Virtualization",
+	"Development", "Security", "Terminal", "Utilities", "Fonts", "System", "Virtualization",
 }
 
 func parseCatalog(data []byte) ([]app, error) {
 	var raw map[string]struct {
-		Label       string  `json:"label"`
-		Category    string  `json:"category"`
-		Description string  `json:"description"`
-		Flatpak     *string `json:"flatpak"`
-		Warn        *string `json:"warn"`
-		Unfree      bool    `json:"unfree"`
+		Label       string   `json:"label"`
+		Category    string   `json:"category"`
+		Description string   `json:"description"`
+		Flatpak     *string  `json:"flatpak"`
+		Warn        *string  `json:"warn"`
+		Unfree      bool     `json:"unfree"`
+		Default     bool     `json:"default"`
+		Desktops    []string `json:"desktops"`
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, err
@@ -145,6 +148,7 @@ func parseCatalog(data []byte) ([]app, error) {
 		apps = append(apps, app{
 			ID: id, Label: a.Label, Category: a.Category, Description: a.Description,
 			Flatpak: a.Flatpak != nil, Unfree: a.Unfree, Warn: str(a.Warn),
+			Default: a.Default, Desktops: a.Desktops,
 		})
 	}
 	sort.Slice(apps, func(i, j int) bool {

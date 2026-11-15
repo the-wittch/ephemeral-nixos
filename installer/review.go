@@ -58,14 +58,16 @@ func (m model) reviewLines() []reviewLine {
 		}
 		lines = append(lines, reviewLine{"INSTALL", v, stOptions, false})
 		apps := "none"
-		if len(m.a.Apps) > 0 {
-			var names []string
-			for _, a := range m.catalog {
-				if m.picked[a.ID] {
-					names = append(names, a.Label)
-				}
+		var names []string
+		for _, a := range m.catalog {
+			if m.offered(a) && m.picked[a.ID] {
+				names = append(names, a.Label)
 			}
+		}
+		if len(names) > 0 {
 			apps = strings.Join(names, ", ")
+		} else if len(m.catalog) == 0 {
+			apps = "the defaults, such as Firefox"
 		}
 		lines = append(lines, reviewLine{"APPS", apps, stApps, false})
 	} else {

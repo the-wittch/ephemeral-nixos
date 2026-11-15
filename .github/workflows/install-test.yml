@@ -43,8 +43,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       actions: write
+      checks: read
       contents: write
       pull-requests: write
+      statuses: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -59,6 +61,8 @@ jobs:
           set -euo pipefail
           pr=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number')
           [[ -n $pr ]] || { echo "no open PR for $BRANCH"; exit 1; }
+          # follow-config starts ci.yml beside this test, and main won't take the PR until it passes
+          gh pr checks "$pr" --required --watch --fail-fast --interval 30
           gh pr merge "$pr" --squash --delete-branch
           sha=$(gh pr view "$pr" --json mergeCommit -q .mergeCommit.oid)
           git fetch -q origin main

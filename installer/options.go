@@ -192,7 +192,7 @@ func (m model) viewOptions(w int) ([]string, string) {
 		indent := 4
 		switch r {
 		case optExtras:
-			head, desc = check(m.a.Extras)+sText.Render("Extras"), "Steam, VS Code, Brave, VLC, atuin, comma and more"
+			head, desc = check(m.a.Extras)+sText.Render("Extras"), "shell tools: atuin, fzf, bat, fastfetch, comma and more"
 		case optOpenSnitch:
 			head, desc = check(m.a.OpenSnitch)+sText.Render("OpenSnitch"), "asks before a program connects to the internet"
 		case optPassAgent:

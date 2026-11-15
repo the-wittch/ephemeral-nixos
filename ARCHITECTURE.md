@@ -6,7 +6,7 @@ A change that breaks one of these rules needs a reason, written in the pull requ
 
 ## What it is
 
-The installer has no NixOS modules of its own. `flake.nix` is the machine flake that gets installed, pinned to a release of the config. This repo adds only the ISO, the installer's screens, `install.sh` and the install test.
+The installer adds no NixOS modules to the machines it installs. `flake.nix` is the machine flake that gets installed, pinned to a release of the config. This repo adds only the ISO, the installer's screens, `install.sh` and the install test.
 
 | piece | what it does |
 |---|---|
@@ -20,10 +20,9 @@ The installer has no NixOS modules of its own. `flake.nix` is the machine flake 
 
 `install.sh` runs in this order, and `::stage` lines tell the screens which stage is running:
 
-1. **prepare:** check the answers and the disk, write the machine's flake to a temporary folder, evaluate the whole system, build the partitioning script. Nothing outside `/tmp` is written.
-2. **confirm:** show what the disk becomes, and have the disk's name typed.
-3. **partition:** record the disk in `/run/ephemeral-install.state`, then partition, encrypt and mount it.
-4. **hardware**, then **install:** detect the hardware, write the secrets and the flake to `/persist`, install the system and the boot loader.
+1. **prepare:** check the answers and the disk, write the machine's flake to a temporary folder, evaluate the whole system, build the partitioning script. Nothing outside `/tmp` is written. At the end it shows what the disk becomes and has the disk's name typed.
+2. **partition:** record the disk in `/run/ephemeral-install.state`, then partition, encrypt and mount it.
+3. **hardware**, then **install:** detect the hardware, write the secrets and the flake to `/persist`, install the system and the boot loader.
 
 ## Rules for anything that touches a disk
 
