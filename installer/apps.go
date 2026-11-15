@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -9,10 +10,32 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// apps for another desktop than the one picked aren't shown
+func (m model) offered(a app) bool {
+	return len(a.Desktops) == 0 || slices.Contains(a.Desktops, m.a.Desktop)
+}
+
+// what goes to apps.json: the ticked apps, and -<name> for each default that was unticked
+func (m model) appChoices() []string {
+	var out []string
+	for _, a := range m.catalog {
+		switch {
+		case !m.offered(a):
+		case m.picked[a.ID]:
+			out = append(out, a.ID)
+		case a.Default:
+			out = append(out, "-"+a.ID)
+		}
+	}
+	return out
+}
+
 func (m model) appCategories() []string {
 	seen := map[string]bool{}
 	for _, a := range m.catalog {
-		seen[a.Category] = true
+		if m.offered(a) {
+			seen[a.Category] = true
+		}
 	}
 	var out []string
 	for _, c := range categoryOrder {
@@ -30,7 +53,7 @@ func (m model) appCategories() []string {
 func (m model) appsIn(cat string) []app {
 	var out []app
 	for _, a := range m.catalog {
-		if a.Category == cat {
+		if a.Category == cat && m.offered(a) {
 			out = append(out, a)
 		}
 	}
@@ -39,12 +62,7 @@ func (m model) appsIn(cat string) []app {
 
 func (m model) keyApps(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if k.String() == "enter" {
-		m.a.Apps = nil
-		for _, a := range m.catalog {
-			if m.picked[a.ID] {
-				m.a.Apps = append(m.a.Apps, a.ID)
-			}
-		}
+		m.a.Apps = m.appChoices()
 		return m, m.next()
 	}
 	if k.String() == "r" && !m.catalogLoading && (m.catalogErr != nil || len(m.catalog) == 0) {
@@ -96,15 +114,15 @@ func (m model) viewApps(w int) ([]string, string) {
 		return out, hint("r", "try again", "enter", "next step", "esc", "back")
 	}
 	count := 0
-	for _, on := range m.picked {
-		if on {
+	for _, a := range m.catalog {
+		if m.offered(a) && m.picked[a.ID] {
 			count++
 		}
 	}
 	cats := m.appCategories()
 	// on a short screen the categories and the panel come first; each category shows its own count
 	if len(out)+2+len(cats)+appPanel <= m.bodyRows() {
-		intro := sSub.Render("Optional. Everything here can be added later with ephemeral-apps.")
+		intro := sSub.Render("Some are ticked to start with. Change any of them later with ephemeral-apps.")
 		picked := sMauve.Render(fmt.Sprintf("%d picked", count))
 		out = append(out, intro+spaces(max(w-lipgloss.Width(intro)-lipgloss.Width(picked), 2))+picked, "")
 	}
@@ -139,7 +157,6 @@ func (m model) viewApps(w int) ([]string, string) {
 	}
 	labelW = min(labelW, 20) + 2
 
-	// the list gets the rows the header and the panel don't use
 	rows := max(m.bodyRows()-len(out)-appPanel, 3)
 	start, end := 0, len(apps)
 	if len(apps) > rows {

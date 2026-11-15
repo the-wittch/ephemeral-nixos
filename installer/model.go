@@ -354,6 +354,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case catalogMsg:
 		m.catalog, m.catalogErr, m.catalogLoading = msg.apps, msg.err, false
+		for _, a := range m.catalog {
+			if _, seen := m.picked[a.ID]; a.Default && !seen {
+				m.picked[a.ID] = true
+			}
+		}
 		return m, nil
 	case tickMsg:
 		m.spinFrame++

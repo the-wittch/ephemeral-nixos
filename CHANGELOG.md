@@ -2,6 +2,18 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.9.0
+
+### Added
+
+- The app list starts with an everyday set ticked: Firefox, VLC, 7-Zip, Syncthing Tray, htop, ripgrep, dig and the WireGuard tools, plus GNOME Tweaks and Extension Manager on GNOME or Discover and Partition Manager on Plasma. Untick any of them, and they're left out.
+- The app list only shows apps for the desktop you picked.
+- Unattended installs take `-name` in `APPS` to leave out an app that's ticked by default.
+
+### Changed
+
+- The extras option is now only the shell tools (atuin, fzf, bat, fastfetch, comma and more). Steam, VS Code, Brave and the other apps it used to bring are picked one by one from the app list instead, along with the new Fonts category of Nerd Fonts.
+
 ## 3.8.1
 
 ### Changed

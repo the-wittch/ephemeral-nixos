@@ -146,7 +146,7 @@ validate_profile "$PROFILE"
 
 if [[ $PROFILE == full ]]; then
   if [[ -z ${EXTRAS:-} ]]; then
-    read -r -p "Install extra apps and tools (Steam, VS Code, Brave, VLC, atuin, comma and more)? [y/N]: " ex
+    read -r -p "Install extra shell tools (atuin, fzf, bat, fastfetch, comma and more)? [y/N]: " ex
     EXTRAS=false
     [[ ${ex:-n} =~ ^[Yy] ]] && EXTRAS=true
   fi
