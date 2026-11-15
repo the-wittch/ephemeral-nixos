@@ -12,6 +12,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Changed
 
+- New installs get config [v4.5.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
 - The extras option is now only the shell tools (atuin, fzf, bat, fastfetch, comma and more). Steam, VS Code, Brave and the other apps it used to bring are picked one by one from the app list instead, along with the new Fonts category of Nerd Fonts.
 
 ## 3.8.1
