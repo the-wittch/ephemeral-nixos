@@ -64,6 +64,7 @@ type model struct {
 	laptop      bool
 	reader      string
 	hasReader   bool
+	setupMode   bool
 	configVer   string
 	logo        [][]cell
 	spinFrame   int
@@ -172,6 +173,7 @@ func newModel(cfg config) model {
 	}
 	m.reader, m.hasReader = fingerprintReader()
 	m.a.Fingerprint = m.hasReader
+	m.setupMode = setupMode()
 
 	layouts, variants := []item{{Code: "us", Desc: "English (US)"}}, []item{{Code: "", Desc: "default"}}
 	if rules, ok := xkbRules(cfg.listsDir); ok {

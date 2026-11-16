@@ -17,6 +17,7 @@ const (
 	optControlDID
 	optCustomDNS
 	optFingerprint
+	optSecureBoot
 )
 
 func (m model) optRows() []optRow {
@@ -34,7 +35,7 @@ func (m model) optRows() []optRow {
 	if m.hasReader {
 		rows = append(rows, optFingerprint)
 	}
-	return rows
+	return append(rows, optSecureBoot)
 }
 
 // which of dnsChoices the answers are on
@@ -170,6 +171,8 @@ func (m model) keyOptions(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case optFingerprint:
 		m.a.Fingerprint = !m.a.Fingerprint
+	case optSecureBoot:
+		m.a.SecureBoot = !m.a.SecureBoot
 	}
 	return m, nil
 }
@@ -220,6 +223,12 @@ func (m model) viewOptions(w int) ([]string, string) {
 			}
 		case optFingerprint:
 			head, desc = check(m.a.Fingerprint)+sText.Render("Fingerprint"), "log in and use sudo with "+m.reader
+		case optSecureBoot:
+			desc = "own keys; the firmware isn't in Setup Mode, so they go in later"
+			if m.setupMode {
+				desc = "own keys, put in the firmware now; turn it on there after installing"
+			}
+			head = check(m.a.SecureBoot) + sText.Render("Secure Boot")
 		}
 		if focused && (r == optVault || r == optControlDID || r == optCustomDNS) {
 			desc = "type " + desc

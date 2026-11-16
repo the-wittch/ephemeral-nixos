@@ -466,6 +466,35 @@ func TestDNSChoiceCycles(t *testing.T) {
 	}
 }
 
+func TestSecureBootIsOfferedLast(t *testing.T) {
+	m := toInstallType(t, newTestModel(t))
+	m = press(t, m, enter)
+	wantStep(t, m, stOptions)
+	if rows := m.optRows(); rows[len(rows)-1] != optSecureBoot || m.a.SecureBoot {
+		t.Fatalf("Secure Boot should be the last row and start off, got %v, on: %v", rows, m.a.SecureBoot)
+	}
+	for range m.optRows() {
+		if m.optRow() == optSecureBoot {
+			break
+		}
+		m = press(t, m, down)
+	}
+	m = press(t, m, space)
+	if !m.a.SecureBoot {
+		t.Fatal("space didn't tick Secure Boot")
+	}
+	if !slices.Contains(m.a.env("$y$hash"), "SECURE_BOOT=true") {
+		t.Error("install.sh isn't told about Secure Boot")
+	}
+	for mode, want := range map[bool]string{false: "isn't in Setup Mode", true: "put in the firmware now"} {
+		m.setupMode = mode
+		lines, _ := m.viewOptions(100)
+		if !strings.Contains(strings.Join(lines, "\n"), want) {
+			t.Errorf("with Setup Mode %v the row should say %q", mode, want)
+		}
+	}
+}
+
 func TestOwnDNSServersAreChecked(t *testing.T) {
 	m := toInstallType(t, newTestModel(t))
 	m = press(t, m, enter, down, down, down, left)

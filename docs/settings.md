@@ -1,6 +1,6 @@
 # settings.json and unfree packages
 
-### settings.json
+## settings.json
 
 The installer writes your answers, for example:
 
@@ -30,12 +30,19 @@ The config's [`settings.example.json`](https://github.com/the-wittch/ephemeral-n
 
 Apps picked during the install go in `apps.json`, next to it, the same file `ephemeral-apps` writes.
 
-### Unfree packages
+## Unfree packages
 
-Nothing unfree builds unless it's listed by name, next to the package that needs it:
+Nothing unfree builds unless it's listed by name. Apps from `ephemeral-apps` list their own. For anything else, list it in the module that installs it, such as `/persist/etc/nixos/modules/terraform.nix`:
 
 ```nix
-ephemeral.unfreePackages = [ "steam" "steam-unwrapped" ];
+{
+  flake.modules.nixos.pc =
+    { pkgs, ... }:
+    {
+      environment.systemPackages = [ pkgs.terraform ];
+      ephemeral.unfreePackages = [ "terraform" ];
+    };
+}
 ```
 
-A package that isn't listed fails the build and tells you the name to add.
+A package that isn't listed fails the build, and the error names it: the name to add is the one before the version.

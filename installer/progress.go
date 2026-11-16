@@ -247,6 +247,13 @@ func (m model) viewEnd(w int) ([]string, string) {
 			user = "the user you picked"
 		}
 		out = append(out, "   "+sText.Render("At boot, unlock the disk with your passphrase, then log in as "+user+"."), "")
+		if m.a.SecureBoot {
+			sb := []string{"Secure Boot: the firmware wasn't in Setup Mode, so it doesn't have this", "machine's keys yet. The config's security notes say how to put them in."}
+			if m.setupMode && !setupMode() {
+				sb = []string{"Secure Boot: this machine's keys are in the firmware. At the reboot, turn", "Secure Boot on in the firmware settings, and set a firmware password."}
+			}
+			out = append(out, "   "+sText.Render(sb[0]), "   "+sText.Render(sb[1]), "")
+		}
 		out = append(out, sSub.Render("After the first login"))
 		for _, c := range [][2]string{
 			{"ephemeral-apps", "pick more apps"},

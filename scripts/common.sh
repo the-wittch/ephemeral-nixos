@@ -3,6 +3,16 @@
 die() { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 
+# bootstrap.sh and bootstrap-tui.sh set the same before there's a clone to read this from
+set_nix_config() {
+  export NIX_CONFIG="${NIX_CONFIG-}
+experimental-features = nix-command flakes
+http2 = false
+download-attempts = 5
+connect-timeout = 10
+"
+}
+
 validate_hostname() {
   [[ $1 =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]] \
     || die "the hostname can only have letters, digits and hyphens, and can't start or end with a hyphen, so not $1. Try something like my-laptop"
@@ -220,6 +230,11 @@ validate_swap_fits() {
   swap_bytes=$(numfmt --from=iec -- "$swap") || die "can't read the swap size $swap"
   ((size - swap_bytes >= 9 * 1024 ** 3)) ||
     die "a $swap swap file leaves too little of $disk ($(numfmt --to=iec -- "$size")) for the system; make it smaller"
+}
+
+# the firmware only takes new Secure Boot keys in Setup Mode
+setup_mode() {
+  [[ $(od -An -tu1 -j4 -N1 /sys/firmware/efi/efivars/SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c 2>/dev/null | tr -d ' ') == 1 ]]
 }
 
 validate_flake_attr() {

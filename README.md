@@ -20,7 +20,7 @@ Machine details (hostname, user, disk, desktop) live in `settings.json`, which i
 
 ## Limits
 
-- x86_64 with UEFI, Secure Boot off for the install. It can be [turned on](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/security.md#secure-boot) afterwards. See [Hardware](docs/hardware.md) for what's been tested.
+- x86_64 with UEFI, Secure Boot off for the install. The installer can [set it up](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/security.md#secure-boot) with keys made on the machine. See [Hardware](docs/hardware.md) for what's been tested.
 - Installing wipes the whole disk, and reinstalling wipes it again, `/persist` included. Make a [backup](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/backup.md) first. No dual boot.
 - One user per machine.
 - Suspend works; hibernation doesn't.
@@ -30,7 +30,7 @@ Machine details (hostname, user, disk, desktop) live in `settings.json`, which i
 ## Before you install
 
 - **Back up** anything on the disk you want to keep. The whole disk is erased.
-- In the firmware settings, **turn off Secure Boot** and boot in **UEFI** mode.
+- In the firmware settings, **turn off Secure Boot** and boot in **UEFI** mode. To have the installer set up Secure Boot, also put the firmware in Setup Mode, ideally by deleting only the platform key (PK).
 - **Unplug other disks** you don't mean to install on, especially one with an older Ephemeral Nix install: the new system boots by partition names that one has too, so the installer refuses while it's attached. It also refuses a disk that's part of an LVM volume group, ZFS pool or RAID array, since erasing it would break that on the other disks too.
 - **Pick a passphrase you can type at the boot screen.** It uses the keyboard layout you choose in the installer; the installer switches to it before asking, where it can.
 - Have **Wi-Fi or a cable** ready. The installer downloads the system while it installs.
@@ -94,7 +94,7 @@ Use `sudo env VAR=...`. Plain `sudo VAR=...` usually drops the variables.
 
 Without the menus, it doesn't ask for the hostname, user, swap size or timezone, and it skips the app list, so you get the apps ticked by default. It uses `nixos`, `nixuser`, `4G` and `UTC` unless you set them, as in [Unattended installs](docs/unattended.md).
 
-The installer asks for the disk, desktop, keyboard layout, language and timezone (type to search the list), hostname, user and swap size, then a LUKS passphrase and a login password. With a non-US layout it switches the console to that layout before the passphrase, so you type it the way you will at boot; where it can't, it says so. It asks what to install: the full system, or a small install (a plain desktop, finished later with `ephemeral-setup`). For the full system it asks about the extra shell tools (atuin, fzf, bat, fastfetch and more), OpenSnitch, the Proton Pass SSH agent, and where DNS goes: the network's own, or encrypted to Cloudflare, Quad9, AdGuard, Control D or servers you name. Then it offers the same apps as `ephemeral-apps`, with Firefox, VLC and a few tools ticked to start with and Steam, VS Code, Brave and Nerd Fonts there to pick. It turns on the laptop extras when it finds a battery, and asks about fingerprint login when it finds a reader. If it finds an NVIDIA card, it shows its name and asks whether to install the drivers: `open` for RTX 20 / GTX 16 series and newer, `legacy` for GTX 900 / 10 series, or `none`. The driver is compiled during the install, which adds a few minutes. It detects the rest of your hardware once the disk is mounted. When it's done, remove the ISO and reboot.
+The installer asks for the disk, desktop, keyboard layout, language and timezone (type to search the list), hostname, user and swap size, then a LUKS passphrase and a login password. With a non-US layout it switches the console to that layout before the passphrase, so you type it the way you will at boot; where it can't, it says so. It asks what to install: the full system, or a small install (a plain desktop, finished later with `ephemeral-setup`). For the full system it asks about the extra shell tools (atuin, fzf, bat, fastfetch and more), OpenSnitch, the Proton Pass SSH agent, and where DNS goes: the network's own, or encrypted to Cloudflare, Quad9, AdGuard, Control D or servers you name. Then it offers the same apps as `ephemeral-apps`, with Firefox, VLC and a few tools ticked to start with and Steam, VS Code, Brave and Nerd Fonts there to pick. It turns on the laptop extras when it finds a battery, and asks about fingerprint login when it finds a reader. The last option is Secure Boot with keys made on the machine; with the firmware in Setup Mode, they go into it during the install. If it finds an NVIDIA card, it shows its name and asks whether to install the drivers: `open` for RTX 20 / GTX 16 series and newer, `legacy` for GTX 900 / 10 series, or `none`. The driver is compiled during the install, which adds a few minutes. It detects the rest of your hardware once the disk is mounted. When it's done, remove the ISO and reboot.
 
 **VMs:** UEFI with Secure Boot off and a VirtIO disk (`/dev/vda`). 64 GB of disk and 8 GB of RAM is plenty. The boot splash can look odd on virtual GPUs; unlocking still works.
 
