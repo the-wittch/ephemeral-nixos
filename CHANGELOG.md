@@ -12,6 +12,10 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 - The release after an install test could take the version of an installer release made since its pull request was opened. It stops before merging now.
 
+### Changed
+
+- New installs get config [v4.10.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.9.4
 
 ### Changed
