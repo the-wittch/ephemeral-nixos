@@ -19,6 +19,10 @@ Breaking changes are listed first in each release, with what to do about them. R
 - The install test checks that neither the passphrase nor the password is in the install logs, on the installed disk or in its store.
 - The screens and `install.sh` are tested against the same validation cases, in `installer/testdata/validation.json`, so they can't drift apart on what they accept.
 
+### Changed
+
+- New installs get config [v4.6.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.9.0
 
 ### Added
