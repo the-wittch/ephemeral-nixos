@@ -2,6 +2,16 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.9.5
+
+### Added
+
+- Secure Boot is the last of the options: the machine gets keys of its own, and with the firmware in Setup Mode they go into it during the install. The end of the install says whether they did, and what's left to do in the firmware. Unattended installs take `SECURE_BOOT=true`, or `"secureBoot": true` with `--answers`. The install test does it on firmware in Setup Mode.
+
+### Fixed
+
+- The release after an install test could take the version of an installer release made since its pull request was opened. It stops before merging now.
+
 ## 3.9.4
 
 ### Changed

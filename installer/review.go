@@ -52,6 +52,9 @@ func (m model) reviewLines() []reviewLine {
 		if m.a.Fingerprint {
 			opts = append(opts, "fingerprint login")
 		}
+		if m.a.SecureBoot {
+			opts = append(opts, "Secure Boot")
+		}
 		v := "Full"
 		if len(opts) > 0 {
 			v += ", with " + strings.Join(opts, ", ")

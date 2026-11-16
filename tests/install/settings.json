@@ -13,6 +13,7 @@
   "extras": false,
   "laptop": false,
   "fingerprint": false,
+  "secureBoot": true,
   "useOpenSnitch": true,
   "useControlD": false,
   "usePassSshAgent": false

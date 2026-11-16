@@ -14,12 +14,7 @@ require_uefi
 FLAKE_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 [[ -x $SCRIPT_DIR/install.sh ]] || die "install.sh missing or not executable"
 
-export NIX_CONFIG="${NIX_CONFIG-}
-experimental-features = nix-command flakes
-http2 = false
-download-attempts = 5
-connect-timeout = 10
-"
+set_nix_config
 
 fallback_plain() {
   info "$1, so using the plain prompts"

@@ -164,9 +164,18 @@ in
               installer.fail("ephemeral-install --answers ${answersFailing} >&2")
               installer.succeed("findmnt /mnt && test -e /dev/mapper/cryptroot && test -s /run/ephemeral-install.state")
 
+          def setup_mode():
+              return installer.succeed("od -An -tu1 -j4 -N1 /sys/firmware/efi/efivars/SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c").strip()
+
           with subtest("the installer partitions, encrypts and installs, the passphrase going to disko on stdin"):
+              assert setup_mode() == "1", "the installer VM's firmware isn't in Setup Mode"
               installer.succeed("install -D -m 0600 ${wifi} /etc/NetworkManager/system-connections/home.nmconnection")
               installer.succeed("ephemeral-install --answers ${answersFile} >&2")
+
+          # the config checks Limine's signature during the install, so the install passing covers that
+          with subtest("with secureBoot, the keys are made on /persist and put in the firmware"):
+              installer.succeed("test -s /mnt/persist/var/lib/sbctl/keys/db/db.pem")
+              assert setup_mode() == "0", "the keys weren't enrolled"
 
           with subtest("settings.json and apps.json have the answers, and the fresh-install copy is read-only"):
               got = json.loads(installer.succeed("cat /mnt/persist/etc/nixos/settings.json"))

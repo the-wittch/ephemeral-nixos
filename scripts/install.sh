@@ -52,12 +52,7 @@ STAGE_NAME=prepare
 set -E
 trap on_error ERR
 
-export NIX_CONFIG="${NIX_CONFIG-}
-experimental-features = nix-command flakes
-http2 = false
-download-attempts = 5
-connect-timeout = 10
-"
+set_nix_config
 
 teardown
 
@@ -225,6 +220,14 @@ if [[ -z ${FINGERPRINT:-} ]]; then
   fi
 fi
 [[ $FINGERPRINT == true || $FINGERPRINT == false ]] || die "FINGERPRINT must be true or false"
+if [[ -z ${SECURE_BOOT:-} ]]; then
+  read -r -p "Secure Boot with keys made on this machine? [y/N]: " sb
+  SECURE_BOOT=false
+  [[ ${sb:-n} =~ ^[Yy] ]] && SECURE_BOOT=true
+fi
+validate_bool SECURE_BOOT "$SECURE_BOOT"
+SETUP_MODE_BEFORE=false
+setup_mode && SETUP_MODE_BEFORE=true
 validate_hostname "$INSTALL_HOSTNAME"
 validate_username "$INSTALL_USERNAME"
 validate_swap "$SWAP_SIZE"
@@ -240,7 +243,7 @@ fi
 validate_swap_fits "$DISK" "$SWAP_SIZE"
 validate_partlabels "$DISK"
 info "desktop=$INSTALL_DESKTOP profile=$PROFILE nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT${APPS:+ apps=$APPS}"
-info "opensnitch=$OPENSNITCH pass-ssh-agent=$PASS_SSH_AGENT${CONTROLD_RESOLVER:+ controld=on} dns=$ENCRYPTED_DNS"
+info "opensnitch=$OPENSNITCH pass-ssh-agent=$PASS_SSH_AGENT${CONTROLD_RESOLVER:+ controld=on} dns=$ENCRYPTED_DNS secure-boot=$SECURE_BOOT"
 
 STAGE=""
 cleanup() {
@@ -267,6 +270,7 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
   S_SWAP=$SWAP_SIZE S_TZ=$TIMEZONE S_DESKTOP=$INSTALL_DESKTOP S_NVIDIA=$NVIDIA_DRIVER \
   S_KB=$KEYBOARD_LAYOUT S_KBV=$KEYBOARD_VARIANT S_LOCALE=$LOCALE S_LAPTOP=$LAPTOP S_FP=$FINGERPRINT S_EXTRAS=$EXTRAS \
   S_PROFILE=$PROFILE S_OPENSNITCH=$OPENSNITCH S_AGENT=$PASS_SSH_AGENT S_VAULT=$PASS_SSH_VAULT S_CONTROLD=$CONTROLD_RESOLVER S_DNS=$ENCRYPTED_DNS S_CUSTOMDNS=$CUSTOM_DNS \
+  S_SB=$SECURE_BOOT \
   nix eval --impure --raw --expr '
     let
       e = builtins.getEnv;
@@ -297,7 +301,8 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
           [ [ "customDns" (builtins.filter (s: builtins.isString s && s != "") (builtins.split " +" (e "S_CUSTOMDNS"))) ] ]
         else
           [ ]
-      );
+      )
+      ++ (if e "S_SB" == "true" then [ [ "secureBoot" true ] ] else [ ]);
       line = f: "  ${builtins.toJSON (builtins.elemAt f 0)}: ${builtins.toJSON (builtins.elemAt f 1)}";
     in
     "{\n" + builtins.concatStringsSep ",\n" (map line fields) + "\n}\n"
@@ -452,3 +457,13 @@ After the first login:
   ephemeral-help     every command
 
 EOF
+if [[ $SECURE_BOOT == true ]]; then
+  if [[ $SETUP_MODE_BEFORE == true ]] && ! setup_mode; then
+    echo "Secure Boot: this machine's keys are in the firmware. At the reboot, turn Secure Boot on in"
+    echo "the firmware settings, and set a firmware password."
+  else
+    echo "Secure Boot: the keys are made, but the firmware wasn't in Setup Mode, so it doesn't have them."
+    echo "Put it in Setup Mode, run ephemeral-update, then turn Secure Boot on (the config's security notes)."
+  fi
+  echo
+fi

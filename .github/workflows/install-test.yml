@@ -61,6 +61,14 @@ jobs:
           set -euo pipefail
           pr=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number')
           [[ -n $pr ]] || { echo "no open PR for $BRANCH"; exit 1; }
+          # the PR's CHANGELOG entry is for the release after the one in its RELEASE, so a release
+          # since it was opened would take the same version
+          base=$(git show "origin/$BRANCH:RELEASE" | sed -n 's/^TAG=//p')
+          newest=$(git ls-remote --tags --refs origin 'v*.*.*' | sed 's#.*refs/tags/##' | sort -V | tail -n 1)
+          if [[ $newest != "$base" ]]; then
+            echo "::error::$newest came out after this PR was opened from $base. Close it; follow config opens a new one."
+            exit 1
+          fi
           # follow-config starts ci.yml beside this test, and main won't take the PR until it passes
           gh pr checks "$pr" --required --watch --fail-fast --interval 30
           gh pr merge "$pr" --squash --delete-branch

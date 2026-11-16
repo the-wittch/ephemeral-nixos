@@ -69,6 +69,7 @@ type answers struct {
 	DNS         string   `json:"encryptedDns"`
 	CustomDNS   []string `json:"customDns"`
 	Fingerprint bool     `json:"fingerprint"`
+	SecureBoot  bool     `json:"secureBoot"`
 	Apps        []string `json:"apps"`
 	Hostname    string   `json:"hostname"`
 	Username    string   `json:"username"`
@@ -192,6 +193,7 @@ func (a answers) env(hash string) []string {
 		"CUSTOM_DNS="+strings.Join(a.CustomDNS, " "),
 		"APPS="+strings.Join(a.Apps, " "),
 		"FINGERPRINT="+boolStr(a.Fingerprint),
+		"SECURE_BOOT="+boolStr(a.SecureBoot),
 		"SWAP_SIZE="+a.Swap,
 		"PASSWORD_HASH="+hash,
 		"FLAKE_ATTR=nixos",

@@ -230,6 +230,12 @@ func fingerprintReader() (string, bool) {
 	return "", false
 }
 
+// the firmware only takes new Secure Boot keys in Setup Mode
+func setupMode() bool {
+	b, err := os.ReadFile("/sys/firmware/efi/efivars/SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c")
+	return err == nil && len(b) == 5 && b[4] == 1
+}
+
 func memoryGiB() int {
 	f, err := os.Open("/proc/meminfo")
 	if err != nil {
