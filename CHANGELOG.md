@@ -2,6 +2,12 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.9.2
+
+### Changed
+
+- New installs get config [v4.7.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.9.1
 
 ### Fixed
