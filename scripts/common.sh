@@ -10,7 +10,7 @@ validate_hostname() {
 
 validate_username() {
   [[ $1 =~ ^[a-z_][a-z0-9_-]*$ && ${#1} -le 32 ]] \
-    || die "the username has to be lowercase letters, digits, - and _, start with a letter, and be at most 32 long, so not $1. Try something like alice"
+    || die "the username has to be lowercase letters, digits, - and _, start with a letter or _, and be at most 32 long, so not $1. Try something like alice"
 }
 
 validate_swap() {

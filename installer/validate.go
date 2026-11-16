@@ -27,7 +27,7 @@ func checkHostname(s string) error {
 
 func checkUsername(s string) error {
 	if !usernameRe.MatchString(s) || len(s) > 32 {
-		return fmt.Errorf("lowercase letters, digits, _ and -, starting with a letter, up to 32")
+		return fmt.Errorf("lowercase letters, digits, _ and -, starting with a letter or _, up to 32")
 	}
 	return nil
 }

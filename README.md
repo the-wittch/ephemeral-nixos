@@ -20,7 +20,7 @@ Machine details (hostname, user, disk, desktop) live in `settings.json`, which i
 
 ## Limits
 
-- x86_64 with UEFI, Secure Boot off. See [Hardware](docs/hardware.md) for what's been tested.
+- x86_64 with UEFI, Secure Boot off for the install. It can be [turned on](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/security.md#secure-boot) afterwards. See [Hardware](docs/hardware.md) for what's been tested.
 - Installing wipes the whole disk, and reinstalling wipes it again, `/persist` included. Make a [backup](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/backup.md) first. No dual boot.
 - One user per machine.
 - Suspend works; hibernation doesn't.

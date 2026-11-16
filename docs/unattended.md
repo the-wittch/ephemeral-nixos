@@ -25,4 +25,24 @@ Every question can be answered ahead of time, so only the LUKS passphrase is typ
 
 Pass them with `sudo env`, as in the README's install commands. Plain `sudo VAR=...` usually drops them.
 
-The screens and `--answers` ignore `FORCE_DISK`, `ALLOW_SAME_PARTLABELS` and `HARDWARE_CONFIG` from the environment they were started in; set them for `install.sh` or `bootstrap.sh` instead. In `--answers`, `hardwareConfig` does what `HARDWARE_CONFIG` does.
+## From the ISO
+
+`ephemeral-install --answers answers.json` installs from a file, without the screens:
+
+```json
+{
+  "diskDevice": "/dev/nvme0n1",
+  "confirmDisk": "nvme0n1",
+  "desktop": "gnome",
+  "hostname": "my-laptop",
+  "username": "alice",
+  "timeZone": "Europe/Berlin",
+  "passphrase": "the LUKS passphrase",
+  "password": "the login password",
+  "apps": ["obsidian"]
+}
+```
+
+It takes the keys of [`settings.json`](settings.md), plus `passphrase`, `password`, `apps`, `controldResolver`, `hardwareConfig` (a path, like `HARDWARE_CONFIG`) and `confirmDisk`, the disk's name as the screens make you type it. Keys left out get the screens' defaults: Plasma, `us`, `en_US.UTF-8`, `UTC`, the full system with OpenSnitch, `nixos`, `nixuser` and 4G of swap. The file holds both secrets in plain text, so `chmod 600` it and delete it afterwards; the installer warns when others can read it.
+
+The screens and `--answers` ignore `FORCE_DISK`, `ALLOW_SAME_PARTLABELS` and `HARDWARE_CONFIG` from the environment they were started in; set them for `install.sh` or `bootstrap.sh` instead.

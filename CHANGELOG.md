@@ -2,6 +2,16 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.9.3
+
+### Fixed
+
+- The username error said it had to start with a letter, but one starting with `_` was always accepted. The message says so now.
+
+### Added
+
+- [Unattended installs](docs/unattended.md) describes the `--answers` file, with an example and its defaults.
+
 ## 3.9.2
 
 ### Changed
