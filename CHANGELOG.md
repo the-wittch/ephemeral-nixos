@@ -12,6 +12,10 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 - [Unattended installs](docs/unattended.md) describes the `--answers` file, with an example and its defaults.
 
+### Changed
+
+- New installs get config [v4.8.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.9.2
 
 ### Changed
