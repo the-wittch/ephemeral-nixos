@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -102,6 +103,15 @@ func readAnswers(path string) (answers, error) {
 	return a, a.check()
 }
 
+// the file holds the passphrase and the password in plain text
+func answersFileWarning(path string) string {
+	fi, err := os.Stat(path)
+	if err != nil || fi.Mode().Perm()&0o077 == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s holds the passphrase and password, and other users can read it; chmod 600 it, and delete it once the install is done", path)
+}
+
 func (a answers) check() error {
 	var errs []error
 	add := func(field string, err error) {
@@ -137,6 +147,21 @@ func (a answers) check() error {
 	return errors.Join(errs...)
 }
 
+// install.sh honours these from its environment; the screens and --answers never show them, so
+// they don't pass them on from the environment the installer was started in
+var overrides = []string{"FORCE_DISK", "ALLOW_SAME_PARTLABELS", "HARDWARE_CONFIG", "DISK_ID", "PASSPHRASE_FD"}
+
+func inheritedEnv() []string {
+	var out []string
+	for _, kv := range os.Environ() {
+		key, _, _ := strings.Cut(kv, "=")
+		if !slices.Contains(overrides, key) {
+			out = append(out, kv)
+		}
+	}
+	return out
+}
+
 func (a answers) env(hash string) []string {
 	vault := a.Vault
 	if !a.PassAgent {
@@ -146,7 +171,7 @@ func (a answers) env(hash string) []string {
 	if a.ControlD {
 		controld = a.ControlDID
 	}
-	env := append(os.Environ(),
+	env := append(inheritedEnv(),
 		"DISK="+a.Disk,
 		"CONFIRM=YES",
 		"INSTALL_HOSTNAME="+a.Hostname,
@@ -244,9 +269,10 @@ func (r runDir) finished() (code int, done bool) {
 	return code, true
 }
 
-// Starts install.sh. disko asks for the passphrase twice on stdin when it formats, so it goes
-// in that way, through a pipe filled and closed before the start: never in the environment or
-// on a command line.
+// Starts install.sh. The passphrase goes on file descriptor 3, through a pipe filled and closed
+// before the start: never in the environment or on a command line. install.sh reads it at once
+// and closes it, and its standard input is empty, so nothing it runs can read the passphrase,
+// and a question it asks by mistake ends the install instead of taking the passphrase as the answer.
 func launch(cfg config, r runDir, a answers) error {
 	if err := os.RemoveAll(r.dir); err != nil {
 		return err
@@ -274,7 +300,7 @@ func launch(cfg config, r runDir, a answers) error {
 	if err != nil {
 		return err
 	}
-	_, err = io.WriteString(pw, a.Passphrase+"\n"+a.Passphrase+"\n")
+	_, err = io.WriteString(pw, a.Passphrase+"\n")
 	pw.Close()
 	if err != nil {
 		pr.Close()
@@ -288,7 +314,9 @@ func launch(cfg config, r runDir, a answers) error {
 	if cfg.dryRun {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("DRY_RUN_PAUSE=%.3f", dryRunPause.Seconds()))
 	}
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = pr, out, out
+	cmd.Env = append(cmd.Env, "PASSPHRASE_FD=3")
+	cmd.ExtraFiles = []*os.File{pr}
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, out, out
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
 		return err
@@ -371,12 +399,16 @@ func runHeadless(cfg config, a answers) int {
 var dryRunPause = 700 * time.Millisecond
 
 // --dry-run runs this in place of install.sh, the same way: detached, with the passphrase on
-// stdin. It prints what install.sh would and touches nothing.
+// file descriptor 3 and nothing on stdin. It prints what install.sh would and touches nothing.
 const pretendInstall = `#!/bin/sh
-read -r one
-read -r two
-if [ -z "$one" ] || [ "$one" != "$two" ]; then
-  echo "error: the passphrase didn't arrive twice on stdin"
+if read -r anything; then
+  echo "error: something arrived on stdin, which has to be empty"
+  exit 4
+fi
+read -r one <&3
+exec 3<&-
+if [ -z "$one" ] || [ "$PASSPHRASE_FD" != 3 ]; then
+  echo "error: the passphrase didn't arrive on file descriptor 3"
   exit 3
 fi
 for line in \

@@ -29,11 +29,11 @@ Before the ISO is attached, `.github/iso-boot.sh` boots it in QEMU with UEFI and
 
 ## The installer screens
 
-`installer/` asks the questions, checks the answers with the same rules as `common.sh`, and runs `install.sh` with them, so the disk work stays in one place. The disk passphrase goes to `install.sh` on standard input, the way disko asks for it, and the login password only as a yescrypt hash in `PASSWORD_HASH`, so neither is in the environment or the log in plain text.
+`installer/` asks the questions, checks the answers with the same rules as `common.sh` (both are tested against `installer/testdata/validation.json`), and runs `install.sh` with them, so the disk work stays in one place. The disk passphrase goes to `install.sh` on file descriptor 3 (`PASSPHRASE_FD=3`), which it reads and closes before running anything, so only disko gets it, and the login password only as a yescrypt hash in `PASSWORD_HASH`, so neither is in the environment or the log in plain text.
 
 `install.sh` runs in a session of its own, writing to `/run/ephemeral-install/output` and leaving its exit status in `status` there. The screens only follow that file, so quitting them, or a crash, doesn't stop the install, and starting them again picks it back up. Problems in the screens themselves go to `/tmp/ephemeral-install-ui.log`.
 
-`--answers file.json` installs without the screens: the same keys as `settings.json`, plus `passphrase`, `password`, `apps`, `controldResolver`, `confirmDisk` (the disk's name, such as `vda`, as the screens make you type it) and optionally `hardwareConfig`. The install test uses it, so every release checks the passphrase handoff: the test unlocks the installed disk with the passphrase from that file.
+`--answers file.json` installs without the screens, and warns when other users can read the file. Neither it nor the screens pass on `FORCE_DISK`, `ALLOW_SAME_PARTLABELS` or `HARDWARE_CONFIG` from the environment they were started in; those are for `install.sh` and `bootstrap.sh` run directly. The answers take the same keys as `settings.json`, plus `passphrase`, `password`, `apps`, `controldResolver`, `confirmDisk` (the disk's name, such as `vda`, as the screens make you type it) and optionally `hardwareConfig`. The install test uses it, so every release checks the passphrase handoff: the test unlocks the installed disk with the passphrase from that file.
 
 To go through every screen without touching a disk:
 
@@ -41,7 +41,7 @@ To go through every screen without touching a disk:
 nix run path:.#installer -- --dry-run
 ```
 
-Run it in a terminal of at least 80×24. Under `TERM=linux` it uses only characters the console fonts have; elsewhere it uses a few more. With at least 30 rows and 90 columns it draws a frame. `--no-effects`, `EPHEMERAL_NO_EFFECTS=1` or `e` on the welcome screen turns off the animations; the variable doesn't get through the ISO's `sudo` wrapper, the flag does. For a dry run with made-up hardware, point `EPHEMERAL_LSBLK_JSON` at a file in the format of `lsblk -J -b -o NAME,PATH,TYPE,SIZE,TRAN,MODEL,MOUNTPOINTS,FSTYPE,LABEL,PARTLABEL`; `EPHEMERAL_DRY_RUN_FAIL=1` ends the pretend install with an error. A dry run starts a pretend `install.sh` the same way as the real one, detached and with the passphrase on stdin, so everything but the disk work gets exercised.
+Run it in a terminal of at least 80×24. Under `TERM=linux` it uses only characters the console fonts have; elsewhere it uses a few more. With at least 30 rows and 90 columns it draws a frame. `--no-effects`, `EPHEMERAL_NO_EFFECTS=1` or `e` on the welcome screen turns off the animations; the variable doesn't get through the ISO's `sudo` wrapper, the flag does. For a dry run with made-up hardware, point `EPHEMERAL_LSBLK_JSON` at a file in the format of `lsblk -J -b -o NAME,PATH,TYPE,SIZE,TRAN,MODEL,MOUNTPOINTS,FSTYPE,LABEL,PARTLABEL`; `EPHEMERAL_DRY_RUN_FAIL=1` ends the pretend install with an error. A dry run starts a pretend `install.sh` the same way as the real one, detached, with the passphrase on file descriptor 3 and nothing on stdin, so everything but the disk work gets exercised.
 
 Each screen has a file of its own with its keys and what it draws (`disk.go`, `review.go` and so on), and `model.go` moves between them. `nav_test.go` goes through the screens with key presses: going back, the steps that get skipped, changing an answer from the review, the typed disk name, and leaving an install running and picking it up again.
 

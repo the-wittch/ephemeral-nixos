@@ -1,6 +1,6 @@
 # Ephemeral Nix
 
-[![CI](https://github.com/the-wittch/ephemeral-nixos/actions/workflows/ci.yml/badge.svg)](https://github.com/the-wittch/ephemeral-nixos/actions/workflows/ci.yml)
+[![CI](https://github.com/the-wittch/ephemeral-nixos/actions/workflows/ci.yml/badge.svg)](https://github.com/the-wittch/ephemeral-nixos/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/the-wittch/ephemeral-nixos)](https://github.com/the-wittch/ephemeral-nixos/releases/latest)
 
 <img width="1920" height="1080" alt="The Ephemeral Nix wallpaper: a neon NixOS snowflake breaking up into pixels above EPHEMERAL NIX" src="docs/images/wallpaper.png" />
 
@@ -39,11 +39,11 @@ Machine details (hostname, user, disk, desktop) live in `settings.json`, which i
 
 ### From the ISO (easiest)
 
-Download the `.iso` and `SHA256SUMS` from the latest [release](https://github.com/the-wittch/ephemeral-nixos/releases), check it, and write it to a USB stick. From v3.2.4 on, `gh attestation verify` also proves the ISO was built by this repo's CI. From v3.7.3 on, releases can't be changed once they're published, and `gh release verify-asset` proves the ISO is the one the latest release went out with:
+Download the `.iso` and `SHA256SUMS` from the latest [release](https://github.com/the-wittch/ephemeral-nixos/releases), check it, and write it to a USB stick. Each check proves something different. The checksum only catches a damaged download, since it comes from the same release as the ISO. From v3.2.4 on, `gh attestation verify` proves the ISO was built by this repo's ISO workflow, and from which commit. From v3.7.3 on, releases can't be changed once they're published, and `gh release verify-asset` proves the ISO is the one the release went out with. None of them says whether that commit is one to trust: the attestation names the commit, so compare it with `COMMIT` in [`RELEASE`](./RELEASE) on the release's tag to tie the ISO to source you can read.
 
 ```bash
 sha256sum -c SHA256SUMS
-gh attestation verify ephemeral-nix-*.iso -R the-wittch/ephemeral-nixos
+gh attestation verify ephemeral-nix-*.iso -R the-wittch/ephemeral-nixos --signer-workflow the-wittch/ephemeral-nixos/.github/workflows/iso.yml
 gh release verify-asset ephemeral-nix-*.iso -R the-wittch/ephemeral-nixos
 sudo dd if=ephemeral-nix-*.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```

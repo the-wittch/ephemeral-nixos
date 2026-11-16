@@ -1,0 +1,34 @@
+{
+  "hostname": {
+    "ok": ["nixos", "my-laptop", "a"],
+    "bad": ["-start", "end-", "has space", "a.b", "", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
+  },
+  "username": {
+    "ok": ["alice", "_build-2"],
+    "bad": ["Alice", "1alice", "a b", "a;b", "", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
+  },
+  "swap": {
+    "ok": ["4G", "8192M", "16"],
+    "bad": ["4GB", "4 G", "-1G", ""]
+  },
+  "timezone": {
+    "ok": ["UTC", "Europe/Berlin", "America/New_York", "Etc/GMT+5"],
+    "bad": ["Europe/Berlin;reboot", "a b", "../etc", ""]
+  },
+  "vault": {
+    "ok": ["Personal", "ossecrets", "My Vault"],
+    "bad": ["x$(reboot)", "a\"b", "a`b`", "a\\b", "a\nb", ""]
+  },
+  "controld": {
+    "ok": ["abcd1234", "a_b-c"],
+    "bad": ["a b", "x;y", "a.b", "x$(reboot)"]
+  },
+  "dns": {
+    "ok": ["none", "cloudflare", "quad9", "adguard", "custom"],
+    "bad": ["controld", "google", ""]
+  },
+  "customDns": {
+    "ok": ["194.242.2.2#dns.mullvad.net", "2a07:e340::2#dns.mullvad.net 9.9.9.9#dns.quad9.net"],
+    "bad": ["194.242.2.2", "1.1.1.1#-bad", "x#$(reboot)", "1.1.1.1#a;b", ""]
+  }
+}

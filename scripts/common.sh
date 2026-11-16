@@ -193,9 +193,12 @@ disk_in_use() {
 }
 
 # A name like /dev/sdb goes to whichever disk shows up second, so a disk plugged in or out
-# between choosing and erasing can change what it points at. These don't change.
+# between choosing and erasing can change what it points at. These don't change; the physical
+# path tells apart two of the same model that report no serial. installer/system.go builds the
+# same line, and install.sh compares the two as text.
 disk_identity() {
-  lsblk -dbP -o SERIAL,WWN,SIZE,MODEL -- "$1"
+  printf '%s ID_PATH="%s"\n' "$(lsblk -dbP -o SERIAL,WWN,SIZE,MODEL -- "$1")" \
+    "$(udevadm info --query=property --property=ID_PATH --value --name="$1" 2>/dev/null || true)"
 }
 
 # The new system finds its partitions by these labels, so another disk that has them, from an

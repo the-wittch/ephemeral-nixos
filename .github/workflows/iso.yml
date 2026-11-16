@@ -1,4 +1,4 @@
-name: iso
+name: ISO
 
 on:
   push:

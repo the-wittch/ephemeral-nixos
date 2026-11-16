@@ -28,13 +28,13 @@ The installer adds no NixOS modules to the machines it installs. `flake.nix` is 
 
 1. **Nothing is erased before everything that can be checked has been checked**: the answers, that the disk is a whole disk, not in use, not the installer stick, not part of an LVM volume group, ZFS pool or RAID array that erasing it would remove from other disks, with no other disk carrying this layout's partition names, room for the swap file, and that the system evaluates.
 2. **The disk is erased only after its name has been typed** in the screens or the plain prompts, or given as `confirmDisk` with `--answers`. `CONFIRM=YES` for unattended installs is the only exception, and it's documented.
-3. **What gets erased is the disk that was confirmed.** Its serial, WWN, size and model are recorded when it's confirmed, and checked again right before erasing.
+3. **What gets erased is the disk that was confirmed.** Its serial, WWN, size, model and physical path are recorded when it's confirmed, and checked again right before erasing.
 4. **Only one install runs at a time.** `install.sh` holds a lock for as long as it and everything it started are running.
 5. **The installer only undoes what it recorded opening.** `teardown` closes the swap file, the mount and `cryptroot` from an earlier attempt on the recorded disk, and refuses anything else.
 6. **No check is weakened to make installing easier.** An override, such as `FORCE_DISK` or `ALLOW_SAME_PARTLABELS`, is explicit, named after what it allows, and documented.
 7. **A failure says how far the install got**: nothing changed yet, the disk half formatted, or the disk formatted and mounted at `/mnt`. Trying again starts over safely from any of them.
 8. **Logs are kept.** The attempt before is kept as `.1`, and a log never holds the passphrase or the password.
-9. **The passphrase goes to the partitioning only on standard input, and the password only as a hash.**
+9. **The passphrase goes to `install.sh` only on its own file descriptor, which is read and closed before anything else runs, and from there only to disko; the password goes only as a hash.** `install.sh`'s standard input is empty in the screens, so a question it asks by mistake stops the install instead of taking the passphrase as its answer.
 
 ## Tests
 

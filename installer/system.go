@@ -100,13 +100,19 @@ func storageMember(d lsblkDev) string {
 	return ""
 }
 
-// the same command as disk_identity in common.sh, so install.sh can compare the two as they are
+// the same commands as disk_identity in common.sh, so install.sh can compare the two as they are
 func diskIdentity(path string) (string, error) {
 	out, err := exec.Command("lsblk", "-dbP", "-o", "SERIAL,WWN,SIZE,MODEL", "--", path).Output()
 	if err != nil {
 		return "", fmt.Errorf("lsblk: %w", err)
 	}
-	return strings.TrimRight(string(out), "\n"), nil
+	// no physical path for some virtual disks; empty is what common.sh gets then too
+	idPath, _ := exec.Command("udevadm", "info", "--query=property", "--property=ID_PATH", "--value", "--name="+path).Output()
+	return formatIdentity(string(out), string(idPath)), nil
+}
+
+func formatIdentity(lsblk, idPath string) string {
+	return strings.TrimRight(lsblk, "\n") + ` ID_PATH="` + strings.TrimRight(idPath, "\n") + `"`
 }
 
 func parseDisks(data []byte) ([]disk, error) {

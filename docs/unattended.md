@@ -24,3 +24,5 @@ Every question can be answered ahead of time, so only the LUKS passphrase is typ
 | `FORCE_DISK` | `1` allows a disk that's in use (mounted, swap, or an open LUKS, LVM or RAID device), holds an installer image, or is part of an LVM volume group, ZFS pool or RAID array; normally refused |
 
 Pass them with `sudo env`, as in the README's install commands. Plain `sudo VAR=...` usually drops them.
+
+The screens and `--answers` ignore `FORCE_DISK`, `ALLOW_SAME_PARTLABELS` and `HARDWARE_CONFIG` from the environment they were started in; set them for `install.sh` or `bootstrap.sh` instead. In `--answers`, `hardwareConfig` does what `HARDWARE_CONFIG` does.
