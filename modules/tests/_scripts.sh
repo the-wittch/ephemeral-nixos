@@ -23,7 +23,9 @@ case "$*" in
   *MOUNTPOINTS*) printf "%b" "${FAKE_MOUNTS:-}" ;;
   *-nro\ TYPE*) printf "%b" "${FAKE_TYPES:-disk\n}" ;;
   *-nlpo\ NAME*) printf "/dev/vda\n/dev/vda1\n/dev/vda2\n" ;;
+  *-dbP*) echo "SERIAL=\"\" WWN=\"\" SIZE=\"68719476736\" MODEL=\"Same Disk\"" ;;
 esac'
+fake udevadm 'echo "${FAKE_ID_PATH:-}"'
 fake realpath 'echo "$1"'
 fake swapon 'printf "%b" "${FAKE_SWAPS:-}"'
 fake swapoff 'echo "swapoff $*" >>"$CALLS"'
@@ -50,6 +52,28 @@ expect() {
   fi
 }
 called() { grep -qxF -- "$1" "$CALLS"; }
+
+# the same cases as the installer's Go tests, so the screens and install.sh agree
+declare -A validator=(
+  [hostname]=validate_hostname [username]=validate_username [swap]=validate_swap
+  [timezone]=validate_timezone [vault]=validate_vault [controld]=validate_controld
+  [dns]=validate_dns [customDns]=validate_custom_dns
+)
+while IFS=$'\t' read -r key want value; do
+  fn=${validator[$key]:-}
+  if [[ -z $fn ]]; then
+    echo "FAIL: no validator for $key in installer/testdata/validation.json" >&2
+    failures=$((failures + 1))
+    continue
+  fi
+  V=$(base64 -d <<<"$value") expect "$key $(printf %q "$(base64 -d <<<"$value")") ($want)" "$fn \"\$V\"" "$want"
+done < <(jq -r 'to_entries[] | .key as $k | (.value.ok[] | [$k, "succeeds", @base64]), (.value.bad[] | [$k, "fails", @base64]) | @tsv' "$VALIDATION")
+
+# matches formatIdentity in installer/system.go, which builds the same line
+expect "disk identity has the physical path" \
+  "[[ \$(FAKE_ID_PATH=pci-0000:00:14.0-usb-0:2:1.0-scsi-0:0:0:0 disk_identity /dev/sdb) == 'SERIAL=\"\" WWN=\"\" SIZE=\"68719476736\" MODEL=\"Same Disk\" ID_PATH=\"pci-0000:00:14.0-usb-0:2:1.0-scsi-0:0:0:0\"' ]]" succeeds
+expect "two disks of the same model with no serial tell apart by where they're plugged in" \
+  "[[ \$(FAKE_ID_PATH=pci-a disk_identity /dev/sdb) != \$(FAKE_ID_PATH=pci-b disk_identity /dev/sdb) ]]" succeeds
 
 for v in nixos my-laptop a; do expect "hostname $v" "validate_hostname '$v'" succeeds; done
 for v in -start 'has space' 'a.b' "$(printf 'x%.0s' {1..64})"; do expect "hostname '$v' refused" "validate_hostname '$v'" fails; done

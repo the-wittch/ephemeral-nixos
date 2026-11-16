@@ -11,8 +11,10 @@
               coreutils
               gawk
               gnugrep
+              jq
             ];
             COMMON = ../../scripts/common.sh;
+            VALIDATION = ../../installer/testdata/validation.json;
           }
           ''
             bash ${./_scripts.sh}

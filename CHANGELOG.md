@@ -2,6 +2,23 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.9.1
+
+### Fixed
+
+- The screens passed `FORCE_DISK`, `ALLOW_SAME_PARTLABELS` and `HARDWARE_CONFIG` on to `install.sh` from the environment they were started in, without showing them, so a disk check could be skipped with nothing on screen. They're ignored there now; unattended installs that run `install.sh` or `bootstrap.sh` directly still use them.
+- The passphrase was `install.sh`'s whole standard input, so a question it asked by mistake during a screens install would have taken the passphrase as its answer, and could have printed it in the log. It now arrives on its own file descriptor, which `install.sh` reads and closes before running anything, and only disko gets it.
+- Two disks of the same model that report no serial number looked the same to the check made just before erasing. The check now includes where each is plugged in.
+- The installer can't leave the passphrase in a core dump: it turns off core dumps for itself when it starts.
+- A passphrase or password given in an `--answers` file could contain a newline or other control characters. disko reads the passphrase a line at a time, so the install stopped after the disk had already been erased. Both are refused before anything starts now.
+
+### Added
+
+- `--answers` warns when other users can read the file, since it holds the passphrase and password.
+- The README's `gh attestation verify` names the ISO workflow, and says what each check proves.
+- The install test checks that neither the passphrase nor the password is in the install logs, on the installed disk or in its store.
+- The screens and `install.sh` are tested against the same validation cases, in `installer/testdata/validation.json`, so they can't drift apart on what they accept.
+
 ## 3.9.0
 
 ### Added

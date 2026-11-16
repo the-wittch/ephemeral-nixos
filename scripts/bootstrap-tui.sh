@@ -21,7 +21,7 @@ fi
 [[ $EUID -eq 0 ]] || die "need root (sudo bash …/bootstrap-tui.sh)"
 
 if [[ ! -t 0 || ! -t 1 ]]; then
-  die "no TTY — download the script and run it, or use bootstrap.sh as a fallback"
+  die "no terminal: download the script and run it, or use bootstrap.sh instead"
 fi
 
 [[ -d /sys/firmware/efi ]] \

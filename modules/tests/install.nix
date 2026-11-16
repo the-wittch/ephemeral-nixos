@@ -19,9 +19,10 @@ let
     in
     lib.unique (lib.concatMap collect (lib.attrValues inputs));
 
-  # typed into the boot prompt below, so the test fails if disko got anything else
-  passphrase = "correct horse battery staple";
-  pw = "alice";
+  # typed into the boot prompt below, so the test fails if disko got anything else; like pw, a
+  # string found nowhere else, so finding it anywhere means it leaked
+  passphrase = "install-test-passphrase-Hv3k";
+  pw = "install-test-password-q7Zr";
 in
 {
   ephemeral.hosts = {
@@ -180,6 +181,14 @@ in
               installer.succeed("grep -q '^\\$y\\$' /mnt/persist/passwords/${answers.username}")
               installer.succeed("cmp ${wifi} /mnt/persist/etc/NetworkManager/system-connections/home.nmconnection")
               assert installer.succeed("stat -c '%a %U' /mnt/persist/etc/NetworkManager/system-connections/home.nmconnection").strip() == "600 root"
+
+          with subtest("the passphrase and password aren't in the logs, the config or the installed store"):
+              for secret in ["${passphrase}", "${pw}"]:
+                  found = installer.execute(
+                      f"grep -rIlF -- '{secret}' /tmp/ephemeral-install.log* /tmp/ephemeral-install-ui.log"
+                      " /run/ephemeral-install /mnt/var/log /mnt/persist /mnt/nix/store 2>/dev/null"
+                  )[1].strip()
+                  assert found == "", f"{secret!r} was written to:\n{found}"
 
           with subtest("reinstall with the test backdoor, through the machine's own modules/"):
               installer.succeed(

@@ -28,6 +28,17 @@ if [[ ${1:-} == --teardown ]]; then
   exit 0
 fi
 
+# The screens send the passphrase on its own descriptor. It's read before anything else runs
+# and closed, so nothing this starts inherits it; it only goes to disko, when disko asks.
+passphrase=
+if [[ -n ${PASSPHRASE_FD:-} ]]; then
+  [[ $PASSPHRASE_FD == 3 ]] || die "PASSPHRASE_FD has to be 3"
+  IFS= read -r passphrase <&3 || die "no passphrase arrived on file descriptor 3"
+  exec 3<&-
+  unset PASSPHRASE_FD
+  [[ -n $passphrase ]] || die "the passphrase that arrived is empty"
+fi
+
 LOG=/tmp/ephemeral-install.log
 # the attempt before is often the one worth reporting
 if [[ -s $LOG ]]; then
@@ -326,7 +337,13 @@ info "partitioning (LUKS passphrase next)"
   umask 077
   printf '%s\n' "$DISK" >"$STATE"
 )
-"$DISKO/bin/disko-destroy-format-mount" --yes-wipe-all-disks
+if [[ -n $passphrase ]]; then
+  # disko asks twice when it formats; printf is a builtin, so the passphrase isn't on a command line
+  printf '%s\n%s\n' "$passphrase" "$passphrase" | "$DISKO/bin/disko-destroy-format-mount" --yes-wipe-all-disks
+  passphrase=
+else
+  "$DISKO/bin/disko-destroy-format-mount" --yes-wipe-all-disks
+fi
 
 findmnt /mnt >/dev/null 2>&1 || die "/mnt is not mounted after disko"
 findmnt /mnt/persist >/dev/null 2>&1 || die "/mnt/persist is not mounted after disko"

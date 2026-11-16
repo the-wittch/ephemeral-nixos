@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -17,7 +18,20 @@ var version = ""
 // what went wrong in the screens themselves; install.sh keeps its own log
 var uiLog = log.New(io.Discard, "", log.LstdFlags)
 
+// The passphrase and password are Go strings, which can't be wiped, so a core dump would hold
+// them. Not dumpable also keeps other processes from attaching to read them.
+func noCoreDumps() error {
+	const prSetDumpable = 4
+	if _, _, errno := syscall.RawSyscall(syscall.SYS_PRCTL, prSetDumpable, 0, 0); errno != 0 {
+		return errno
+	}
+	return nil
+}
+
 func main() {
+	if err := noCoreDumps(); err != nil {
+		fmt.Fprintln(os.Stderr, "warning: couldn't turn off core dumps:", err)
+	}
 	exe, _ := os.Executable()
 	share := filepath.Join(filepath.Dir(exe), "..", "share")
 	defaultScripts := "/etc/ephemeral-nixos/scripts"
@@ -64,6 +78,9 @@ func main() {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error:", err)
 			os.Exit(2)
+		}
+		if w := answersFileWarning(answersFile); w != "" {
+			fmt.Fprintln(os.Stderr, "warning:", w)
 		}
 		os.Exit(runHeadless(cfg, a))
 	}

@@ -81,10 +81,13 @@ func checkControlD(s string) error {
 	return nil
 }
 
+// disko reads them a line at a time, so a newline would split one in two
 func checkPassphrase(s, again string) error {
 	switch {
 	case len(s) < 8:
 		return fmt.Errorf("at least 8 characters")
+	case strings.IndexFunc(s, isControl) >= 0:
+		return fmt.Errorf("no newlines, tabs or other control characters")
 	case again != "" && s != again:
 		return fmt.Errorf("the two don't match")
 	}
@@ -95,6 +98,8 @@ func checkPassword(s, again string) error {
 	switch {
 	case s == "":
 		return fmt.Errorf("can't be empty")
+	case strings.IndexFunc(s, isControl) >= 0:
+		return fmt.Errorf("no newlines, tabs or other control characters")
 	case again != "" && s != again:
 		return fmt.Errorf("the two don't match")
 	}
