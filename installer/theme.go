@@ -7,7 +7,7 @@ import (
 )
 
 // Catppuccin Mocha. The ANSI numbers are the slots of the ISO's console palette (modules/iso.nix),
-// so the plain console shows the same colors, just fewer of them.
+// so the plain console shows the same colours, just fewer of them.
 var (
 	cText    = lipgloss.CompleteColor{TrueColor: "#cdd6f4", ANSI256: "189", ANSI: "7"}
 	cSub     = lipgloss.CompleteColor{TrueColor: "#a6adc8", ANSI256: "146", ANSI: "15"}

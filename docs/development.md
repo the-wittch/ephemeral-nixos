@@ -33,7 +33,7 @@ Before the ISO is attached, `.github/iso-boot.sh` boots it in QEMU with UEFI and
 
 `install.sh` runs in a session of its own, writing to `/run/ephemeral-install/output` and leaving its exit status in `status` there. The screens only follow that file, so quitting them, or a crash, doesn't stop the install, and starting them again picks it back up. Problems in the screens themselves go to `/tmp/ephemeral-install-ui.log`.
 
-`--answers file.json` installs without the screens, and warns when other users can read the file. Neither it nor the screens pass on `FORCE_DISK`, `ALLOW_SAME_PARTLABELS` or `HARDWARE_CONFIG` from the environment they were started in; those are for `install.sh` and `bootstrap.sh` run directly. The answers take the same keys as `settings.json`, plus `passphrase`, `password`, `apps`, `controldResolver`, `confirmDisk` (the disk's name, such as `vda`, as the screens make you type it) and optionally `hardwareConfig`. The install test uses it, so every release checks the passphrase handoff: the test unlocks the installed disk with the passphrase from that file.
+`--answers file.json` installs without the screens; [Unattended installs](unattended.md#from-the-iso) has the format. Neither it nor the screens pass on `FORCE_DISK`, `ALLOW_SAME_PARTLABELS` or `HARDWARE_CONFIG` from the environment they were started in, because the screens never show them. The install test uses it, so every release checks the passphrase handoff: the test unlocks the installed disk with the passphrase from that file.
 
 To go through every screen without touching a disk:
 

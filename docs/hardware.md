@@ -3,7 +3,7 @@
 ## Required
 
 - An x86_64 PC that boots in UEFI mode. The installer stops on legacy BIOS boots.
-- Secure Boot turned off in the firmware settings.
+- Secure Boot turned off in the firmware settings while installing. It can be [turned on](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/security.md#secure-boot) afterwards.
 - One whole disk for the system. It's erased; there's no dual boot.
 - Enough RAM to build the system. The install test runs with 6 GB; less hasn't been tried.
 
