@@ -16,6 +16,8 @@ permissions:
 jobs:
   flake-check:
     runs-on: ubuntu-latest
+    # it usually takes 2 minutes
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -43,7 +45,7 @@ jobs:
           nix run --inputs-from path:. nixpkgs#zizmor -- --offline .github/workflows/
 
       - name: shellcheck
-        run: nix run --inputs-from path:. nixpkgs#shellcheck -- -x -P SCRIPTDIR scripts/*.sh .github/*.sh installer/logo.sh modules/tests/_scripts.sh
+        run: git ls-files -z "*.sh" | xargs -0 nix run --inputs-from path:. nixpkgs#shellcheck -- -x -P SCRIPTDIR
 
       - name: nixfmt
         run: git ls-files -z '*.nix' | xargs -0 nix run --inputs-from path:. nixpkgs#nixfmt -- --check
@@ -52,6 +54,11 @@ jobs:
         run: |
           printf '{"username": "alice", "desktop": "gnome", "profile": "minimal"}\n' > settings.json
           cp hardware-configuration.example.nix hardware-configuration.nix
+
+      # the installer's checks read the config's contract while evaluating, which --no-build
+      # can't build for them
+      - name: the config's settings contract
+        run: nix build path:.#settings-contract --no-write-lock-file --no-link
 
       - name: nix flake check
         run: nix flake check path:. --no-write-lock-file --no-build

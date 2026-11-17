@@ -22,7 +22,7 @@ jobs:
       contents: write
       id-token: write
       attestations: write
-    timeout-minutes: 90
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,6 +37,8 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - uses: DeterminateSystems/determinate-nix-action@16f94ba7aae399b9f9077c254b6719ec6de7e3e3 # v3.24.2
       - name: build
+        # 4 minutes with everything cached, far longer when the ISO has to be built from nothing
+        timeout-minutes: 45
         env:
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
@@ -50,6 +52,8 @@ jobs:
           cd out && sha256sum ./*.iso > "$GITHUB_WORKSPACE/SHA256SUMS"
       # the install test never boots the image itself
       - name: boot it
+        # it usually takes a minute
+        timeout-minutes: 10
         run: nix shell --inputs-from path:. nixpkgs#qemu_kvm nixpkgs#socat nixpkgs#imagemagick_light nixpkgs#tesseract4 -c "$GITHUB_WORKSPACE/.github/iso-boot.sh" out/*.iso
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         if: ${{ !inputs.boot_test_only }}

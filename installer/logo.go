@@ -10,7 +10,7 @@ import (
 	"github.com/muesli/termenv"
 )
 
-// logo.txt is the wallpaper's snowflake as truecolor characters (see logo.sh).
+// The logo is the wallpaper's snowflake as truecolor characters, the config's welcome-logo package.
 // Each cell is "\e[38;2;R;G;Bm" and a character.
 var cellRe = regexp.MustCompile(`\x1b\[38;2;(\d+);(\d+);(\d+)m(.)|\x1b\[0m|(.)`)
 

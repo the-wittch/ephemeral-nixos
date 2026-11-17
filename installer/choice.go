@@ -4,28 +4,11 @@ import tea "github.com/charmbracelet/bubbletea"
 
 type choice struct{ value, label, desc, tag string }
 
+// the setting each menu step asks for
+var stepSetting = map[stepID]string{stDesktop: "desktop", stGraphics: "nvidia", stType: "profile"}
+
 func (m model) choices(s stepID) []choice {
-	switch s {
-	case stDesktop:
-		return []choice{
-			{"plasma", "Plasma", "KDE Plasma 6, tiling with Krohnkite, colors from the wallpaper", ""},
-			{"gnome", "GNOME", "GNOME", ""},
-			{"niri", "niri", "scrolling tiles, with the Noctalia shell", ""},
-			{"umbriel", "Umbriel", "a new compositor, with the Noctalia shell", "may change"},
-		}
-	case stGraphics:
-		return []choice{
-			{"open", "open", "RTX 20 / GTX 16 series and newer", ""},
-			{"legacy", "legacy", "GTX 900 / GTX 10 series", ""},
-			{"none", "none", "keep the open-source nouveau driver", ""},
-		}
-	case stType:
-		return []choice{
-			{"full", "Full", "dotfiles, the theme, snapshots, OpenSnitch, Syncthing, Podman, Flatpak, and the options on the next screen", ""},
-			{"minimal", "Small", "a plain desktop now; run ephemeral-setup for the rest later", ""},
-		}
-	}
-	return nil
+	return rules.menus[stepSetting[s]]
 }
 
 func (m *model) answerFor(s stepID) *string {

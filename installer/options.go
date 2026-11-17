@@ -40,8 +40,8 @@ func (m model) optRows() []optRow {
 
 // which of dnsChoices the answers are on
 func (a answers) dnsChoice() int {
-	for i, c := range dnsChoices {
-		if c.key == "controld" && a.ControlD || c.key == a.DNS && !a.ControlD {
+	for i, c := range dnsChoices() {
+		if c.value == "controld" && a.ControlD || c.value == a.DNS && !a.ControlD {
 			return i
 		}
 	}
@@ -49,8 +49,8 @@ func (a answers) dnsChoice() int {
 }
 
 func (a *answers) setDNS(i int) {
-	n := len(dnsChoices)
-	key := dnsChoices[((i%n)+n)%n].key
+	n := len(dnsChoices())
+	key := dnsChoices()[((i%n)+n)%n].value
 	a.ControlD = key == "controld"
 	a.DNS = key
 	if a.ControlD {
@@ -207,7 +207,7 @@ func (m model) viewOptions(w int) ([]string, string) {
 				err = ve
 			}
 		case optDNS:
-			c := dnsChoices[m.a.dnsChoice()]
+			c := dnsChoices()[m.a.dnsChoice()]
 			head, desc = sText.Render(padRight("DNS", 13))+sMauve.Render("< ")+sText.Render(c.label)+sMauve.Render(" >"), c.desc
 		case optControlDID:
 			indent = 8

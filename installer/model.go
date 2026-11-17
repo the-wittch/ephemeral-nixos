@@ -167,11 +167,11 @@ func newModel(cfg config) model {
 	} else if m.run.died() {
 		m.note = "The last install stopped without finishing. Its output is in /tmp/ephemeral-install.log."
 	}
-	m.gpu, m.hasGPU = nvidiaGPU()
+	m.gpu, m.hasGPU = nvidiaGPU(cfg.scriptsDir)
 	if m.hasGPU {
 		m.a.Nvidia = "open"
 	}
-	m.reader, m.hasReader = fingerprintReader()
+	m.reader, m.hasReader = fingerprintReader(cfg.scriptsDir)
 	m.a.Fingerprint = m.hasReader
 	m.setupMode = setupMode()
 

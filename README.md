@@ -24,7 +24,7 @@ Machine details (hostname, user, disk, desktop) live in `settings.json`, which i
 - Installing wipes the whole disk, and reinstalling wipes it again, `/persist` included. Make a [backup](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/backup.md) first. No dual boot.
 - One user per machine.
 - Suspend works; hibernation doesn't.
-- The disk unlocks with a passphrase only, no TPM.
+- The disk unlocks with a passphrase. Once Secure Boot is on, the config can add the TPM and a PIN ([TPM unlock](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/security.md#tpm-unlock)).
 - It's opinionated: Catppuccin, Ghostty and zsh by default. Changing them takes a module of your own ([appearance](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/appearance.md)).
 
 ## Before you install
@@ -127,7 +127,7 @@ This repo is the installer and nothing else. Its `flake.nix` is the machine flak
 ```nix
 {
   inputs = {
-    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v4.10.0";
+    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v4.11.0";
     # the installer runs nixpkgs tools by name
     nixpkgs.follows = "ephemeral/nixpkgs";
   };

@@ -1,0 +1,10 @@
+# USB vendor ids of fingerprint reader makers, offered for login and sudo when one is plugged in
+27c6 Goodix
+06cb Synaptics
+138a Validity
+04f3 Elan
+1c7a Egis
+2808 FocalTech
+08ff AuthenTec
+147e UPEK
+10a5 FPC

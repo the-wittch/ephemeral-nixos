@@ -73,6 +73,8 @@ in
     {
       checks.install = pkgs.testers.runNixOSTest {
         name = "install";
+        # the whole CI step usually takes 18 minutes, building included
+        globalTimeout = 1800;
         # the installer profile sets nixpkgs.overlays
         node.pkgsReadOnly = false;
 

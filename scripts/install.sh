@@ -80,46 +80,59 @@ check_disk_identity() {
 }
 check_disk_identity
 
+# Asks for one of a setting's values, from the menu the pinned config release has for it, by
+# number, value or name; the first is the default. Sets REPLY.
+ask_menu() {
+  local key=$1 question=$2 answer v label desc tag i
+  local -a values=() labels=()
+  # the screens pass theirs; otherwise the one from the release flake.lock pins
+  [[ -n ${EPHEMERAL_CONTRACT:-} ]] ||
+    EPHEMERAL_CONTRACT=$(nix build --no-link --print-out-paths "path:$FLAKE_ROOT#settings-contract")
+  echo
+  # shellcheck disable=SC2016 # the ${...} are Nix's
+  while IFS=$'\t' read -r v label desc tag; do
+    values+=("$v")
+    labels+=("$label")
+    printf '  %d) %-8s — %s%s\n' "${#values[@]}" "$label" "$desc" "${tag:+ ($tag)}"
+  done < <(S_CONTRACT=$EPHEMERAL_CONTRACT S_KEY=$key nix eval --impure --raw --expr '
+    let
+      menu = (builtins.fromJSON (builtins.readFile (builtins.getEnv "S_CONTRACT"))).choices.${builtins.getEnv "S_KEY"};
+      line = c: "${c.value}\t${c.label}\t${c.description}\t${c.tag or ""}\n";
+    in
+    # Control D is asked for on its own
+    builtins.concatStringsSep "" (map line (builtins.filter (c: !(c.useControlD or false)) menu))
+  ')
+  ((${#values[@]})) || die "couldn't read the $key menu from the config release"
+  echo
+  read -r -p "$question [1]: " answer
+  answer=${answer:-1}
+  for i in "${!values[@]}"; do
+    if [[ $answer == "$((i + 1))" || ${answer,,} == "${values[i]}" || ${answer,,} == "${labels[i],,}" ]]; then
+      REPLY=${values[i]}
+      return 0
+    fi
+  done
+  die "$answer isn't one of the choices"
+}
+
 if [[ -z ${INSTALL_DESKTOP:-} ]]; then
   echo
   info "desktop environment:"
-  echo "  1) plasma  — KDE Plasma 6"
-  echo "  2) gnome   — GNOME"
-  echo "  3) niri    — niri + Noctalia shell"
-  echo "  4) umbriel — Umbriel + Noctalia shell (new, may change between releases)"
-  echo
-  read -r -p "Choice [1]: " desk_choice
-  case ${desk_choice:-1} in
-    1 | plasma | Plasma | kde | KDE) INSTALL_DESKTOP=plasma ;;
-    2 | gnome | Gnome | GNOME) INSTALL_DESKTOP=gnome ;;
-    3 | niri | Niri) INSTALL_DESKTOP=niri ;;
-    4 | umbriel | Umbriel) INSTALL_DESKTOP=umbriel ;;
-    *) die "invalid desktop choice: ${desk_choice}" ;;
-  esac
+  ask_menu desktop "Choice"
+  INSTALL_DESKTOP=$REPLY
 fi
 
-validate_desktop "$INSTALL_DESKTOP"
 
 if [[ -z ${NVIDIA_DRIVER:-} ]]; then
   if gpu=$(nvidia_gpu); then
     echo
     info "found: $gpu"
-    echo "  1) open    — RTX 20 / GTX 16 series and newer"
-    echo "  2) legacy  — GTX 900 / GTX 10 series"
-    echo "  3) none    — keep the open-source nouveau driver"
-    echo
-    read -r -p "Install NVIDIA drivers? [1]: " nv_choice
-    case ${nv_choice:-1} in
-      1 | open) NVIDIA_DRIVER=open ;;
-      2 | legacy) NVIDIA_DRIVER=legacy ;;
-      3 | none) NVIDIA_DRIVER=none ;;
-      *) die "invalid choice: ${nv_choice}" ;;
-    esac
+    ask_menu nvidia "Install NVIDIA drivers?"
+    NVIDIA_DRIVER=$REPLY
   else
     NVIDIA_DRIVER=none
   fi
 fi
-validate_nvidia "$NVIDIA_DRIVER"
 
 if [[ -z ${KEYBOARD_LAYOUT:-} ]]; then
   read -r -p "Keyboard layout [us]: " KEYBOARD_LAYOUT
@@ -127,28 +140,18 @@ if [[ -z ${KEYBOARD_LAYOUT:-} ]]; then
   read -r -p "Keyboard variant (empty for the default): " KEYBOARD_VARIANT
 fi
 KEYBOARD_VARIANT=${KEYBOARD_VARIANT:-}
-validate_keyboard "$KEYBOARD_LAYOUT" "$KEYBOARD_VARIANT"
 warn_luks_layout "$KEYBOARD_LAYOUT"
 if [[ -z ${LOCALE:-} ]]; then
   read -r -p "Language [en_US.UTF-8]: " LOCALE
   LOCALE=${LOCALE:-en_US.UTF-8}
 fi
-validate_locale "$LOCALE"
 
 if [[ -z ${PROFILE:-} ]]; then
   echo
   info "what to install:"
-  echo "  1) full   — everything below, with the options you pick"
-  echo "  2) small  — a plain desktop now; the rest later with ephemeral-setup"
-  echo
-  read -r -p "Choice [1]: " profile_choice
-  case ${profile_choice:-1} in
-    1 | full) PROFILE=full ;;
-    2 | small | minimal) PROFILE=minimal ;;
-    *) die "invalid choice: ${profile_choice}" ;;
-  esac
+  ask_menu profile "Choice"
+  PROFILE=$REPLY
 fi
-validate_profile "$PROFILE"
 
 if [[ $PROFILE == full ]]; then
   if [[ -z ${EXTRAS:-} ]]; then
@@ -170,7 +173,9 @@ if [[ $PROFILE == full ]]; then
     read -r -p "Proton Pass vault with your SSH keys [Personal]: " PASS_SSH_VAULT
   fi
   if [[ -z ${ENCRYPTED_DNS:-} ]]; then
-    read -r -p "Encrypted DNS: none (the network's), cloudflare, quad9, adguard or custom [none]: " ENCRYPTED_DNS
+    info "DNS:"
+    ask_menu encryptedDns "Choice"
+    ENCRYPTED_DNS=$REPLY
   fi
   if [[ ${ENCRYPTED_DNS:-} == custom && -z ${CUSTOM_DNS:-} ]]; then
     read -r -p "Servers as address#name, separated by spaces: " CUSTOM_DNS
@@ -192,14 +197,7 @@ validate_apps "$APPS"
 validate_bool EXTRAS "$EXTRAS"
 validate_bool OPENSNITCH "$OPENSNITCH"
 validate_bool PASS_SSH_AGENT "$PASS_SSH_AGENT"
-validate_vault "$PASS_SSH_VAULT"
-validate_controld "$CONTROLD_RESOLVER"
-validate_dns "$ENCRYPTED_DNS"
-if [[ $ENCRYPTED_DNS == custom ]]; then
-  validate_custom_dns "$CUSTOM_DNS"
-else
-  CUSTOM_DNS=
-fi
+[[ $ENCRYPTED_DNS == custom ]] || CUSTOM_DNS=
 if [[ $PROFILE == minimal ]]; then
   EXTRAS=false
   PASS_SSH_AGENT=false
@@ -228,10 +226,6 @@ fi
 validate_bool SECURE_BOOT "$SECURE_BOOT"
 SETUP_MODE_BEFORE=false
 setup_mode && SETUP_MODE_BEFORE=true
-validate_hostname "$INSTALL_HOSTNAME"
-validate_username "$INSTALL_USERNAME"
-validate_swap "$SWAP_SIZE"
-validate_timezone "$TIMEZONE"
 validate_flake_attr "$FLAKE_ATTR"
 if [[ -n $PASSWORD_HASH ]]; then
   [[ $PASSWORD_HASH == '$'* && $PASSWORD_HASH != *[[:space:]:]* ]] || die "PASSWORD_HASH must be a crypt hash, e.g. from mkpasswd -m yescrypt"
@@ -320,7 +314,20 @@ if [[ -n $HARDWARE_CONFIG ]]; then
   cp "$HARDWARE_CONFIG" "$STAGE/hardware-configuration.nix"
 fi
 
-# a mistake in the settings or the config would otherwise only show once the disk is erased
+# The config's rules, from the release this pins, so the installer keeps no copy of them. An
+# answer they refuse stops here, in seconds, with the error naming the setting.
+info "checking the answers against the config's rules"
+nix eval --json "path:${STAGE}#settings.${FLAKE_ATTR}" >/dev/null
+# the Control D id goes in its own file, not in settings.json
+if [[ -n $CONTROLD_RESOLVER ]]; then
+  contract=$(nix build --no-link --print-out-paths "path:${STAGE}#settings-contract")
+  S_ID=$CONTROLD_RESOLVER S_CONTRACT=$contract nix eval --impure --raw --expr '
+    let rule = (builtins.fromJSON (builtins.readFile (builtins.getEnv "S_CONTRACT"))).rules.controldResolver;
+    in if builtins.match rule (builtins.getEnv "S_ID") != null then "ok" else "no"
+  ' | grep -qx ok || die "the Control D resolver id is only letters, digits, - and _, as in your Control D dashboard; the one given has something else in it"
+fi
+
+# a mistake in the config would otherwise only show once the disk is erased
 info "checking that the system builds from these settings"
 info "the first time downloads nixpkgs and can sit at 0/N for several minutes"
 nix eval --raw "path:${STAGE}#nixosConfigurations.${FLAKE_ATTR}.config.system.build.toplevel.drvPath" >/dev/null

@@ -2,81 +2,92 @@ package main
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 )
 
-// The same rules as scripts/common.sh, so nothing passes here that install.sh would refuse.
-var (
-	hostnameRe = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$`)
-	usernameRe = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
-	swapRe     = regexp.MustCompile(`^[0-9]+[KMGT]?$`)
-	timezoneRe = regexp.MustCompile(`^[A-Za-z0-9_/+-]+$`)
-	layoutRe   = regexp.MustCompile(`^[a-z]{2,3}(,[a-z]{2,3})*$`)
-	variantRe  = regexp.MustCompile(`^[a-z0-9_-]*(,[a-z0-9_-]*)*$`)
-	localeRe   = regexp.MustCompile(`^[A-Za-z_]+\.UTF-8$`)
-	controldRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
-)
+// The rules are the config's, from the contract; only what to say when an answer breaks one is
+// the installer's.
 
 func checkHostname(s string) error {
-	if !hostnameRe.MatchString(s) {
-		return fmt.Errorf("letters, digits and hyphens only, such as my-laptop")
+	if !rules.allows("hostname", s) {
+		return fmt.Errorf("letters, digits, _ and hyphens, starting and ending with a letter or digit, such as my-laptop")
 	}
 	return nil
 }
 
 func checkUsername(s string) error {
-	if !usernameRe.MatchString(s) || len(s) > 32 {
+	if !rules.allows("username", s) {
 		return fmt.Errorf("lowercase letters, digits, _ and -, starting with a letter or _, up to 32")
 	}
 	return nil
 }
 
 func checkSwap(s string) error {
-	if !swapRe.MatchString(s) {
+	if !rules.allows("swapSize", s) {
 		return fmt.Errorf("a size such as 4G or 8192M")
 	}
 	return nil
 }
 
 func checkTimezone(s string) error {
-	if !timezoneRe.MatchString(s) {
+	if !rules.allows("timeZone", s) {
 		return fmt.Errorf("a zone such as Europe/Berlin")
 	}
 	return nil
 }
 
 func checkLayout(s string) error {
-	if !layoutRe.MatchString(s) {
+	if !rules.allows("keyboardLayout", s) {
 		return fmt.Errorf("a layout code such as us, de or us,de")
 	}
 	return nil
 }
 
 func checkVariant(s string) error {
-	if !variantRe.MatchString(s) {
+	if !rules.allows("keyboardVariant", s) {
 		return fmt.Errorf("a variant code such as nodeadkeys, or nothing")
 	}
 	return nil
 }
 
 func checkLocale(s string) error {
-	if !localeRe.MatchString(s) {
+	if !rules.allows("locale", s) {
 		return fmt.Errorf("a language such as en_US.UTF-8")
 	}
 	return nil
 }
 
 func checkVault(s string) error {
-	if s == "" || strings.ContainsAny(s, "\"$`\\") || strings.IndexFunc(s, isControl) >= 0 {
+	if !rules.allows("passSshVault", s) {
 		return fmt.Errorf("a vault name without quotes, $, backticks or backslashes")
 	}
 	return nil
 }
 
 func checkControlD(s string) error {
-	if !controldRe.MatchString(s) {
+	if !rules.allows("controldResolver", s) {
 		return fmt.Errorf("the resolver id from the Control D dashboard, such as abcd1234")
+	}
+	return nil
+}
+
+func checkDesktop(s string) error {
+	if !rules.allows("desktop", s) {
+		return fmt.Errorf("one of %s", strings.Join(rules.values["desktop"], ", "))
+	}
+	return nil
+}
+
+func checkNvidia(s string) error {
+	if !rules.allows("nvidia", s) {
+		return fmt.Errorf("one of %s", strings.Join(rules.values["nvidia"], ", "))
+	}
+	return nil
+}
+
+func checkProfile(s string) error {
+	if !rules.allows("profile", s) {
+		return fmt.Errorf("one of %s", strings.Join(rules.values["profile"], ", "))
 	}
 	return nil
 }
@@ -108,27 +119,16 @@ func checkPassword(s, again string) error {
 
 func isControl(r rune) bool { return r < 0x20 || r == 0x7f }
 
-// the same order as the options screen shows them; controld goes in useControlD, not encryptedDns
-var dnsChoices = []struct{ key, label, desc string }{
-	{"none", "The network's DNS", "not encrypted: whatever the network hands out"},
-	{"cloudflare", "Cloudflare", "DNS over TLS, no filtering"},
-	{"quad9", "Quad9", "DNS over TLS, blocks known malware domains"},
-	{"adguard", "AdGuard", "DNS over TLS, blocks ads and trackers"},
-	{"controld", "Control D", "DNS over TLS to your own Control D resolver"},
-	{"custom", "Other", "DNS over TLS to servers you give, such as Mullvad or one at home"},
-}
+// The DNS menu, in the order the options screen shows it. Control D goes in useControlD, not in
+// encryptedDns.
+func dnsChoices() []choice { return rules.menus["encryptedDns"] }
 
 func checkDNS(s string) error {
-	for _, c := range dnsChoices {
-		if c.key == s && s != "controld" {
-			return nil
-		}
+	if !rules.allows("encryptedDns", s) {
+		return fmt.Errorf("one of %s", strings.Join(rules.values["encryptedDns"], ", "))
 	}
-	return fmt.Errorf("none, cloudflare, quad9 or adguard")
+	return nil
 }
-
-// address#name; the name is what the server's certificate is checked against
-var customDNSRe = regexp.MustCompile(`^[0-9A-Fa-f.:]+#[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$`)
 
 func checkCustomDNS(s string) error {
 	servers := strings.Fields(s)
@@ -136,7 +136,7 @@ func checkCustomDNS(s string) error {
 		return fmt.Errorf("at least one server, as address#name")
 	}
 	for _, sv := range servers {
-		if !customDNSRe.MatchString(sv) {
+		if !rules.allows("customDns", sv) {
 			return fmt.Errorf("%s isn't address#name, such as 194.242.2.2#dns.mullvad.net", sv)
 		}
 	}

@@ -2,6 +2,22 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.9.6
+
+### Changed
+
+- New installs get config [v4.11.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+- The installer keeps no copy of the config's settings rules. The screens and `--answers` check answers with the rules of the config release the installer pins, and `install.sh` checks them through that release's settings before anything touches the disk. A hostname with `_` in the middle is accepted now, as NixOS accepts it.
+- `--answers` also refuses an unknown desktop, NVIDIA driver or profile before starting, instead of `install.sh` stopping on it.
+- The Nix settings and the fingerprint reader makers are each in one file, `scripts/nix.conf` and `scripts/fingerprint-vendors`, which the screens and the scripts both read.
+- The menus for the desktop, NVIDIA driver, install type and DNS come from the config release, in the screens and in the plain prompts. The plain prompts number every menu, DNS included, and take a number, the value or the name.
+- The screens find the NVIDIA card and the fingerprint reader, and identify the disk, with the same functions in `scripts/common.sh` that `install.sh` uses, instead of their own copies.
+- The welcome screen's snowflake and the ISO's boot splash come from the config release's `welcome-logo` and `wallpaper` packages.
+
+### Added
+
+- `checks.contract`: what the installer still has to repeat from the config, the partition names, the Nix settings in the bootstrap scripts and the settings keys it writes, held against the config release it pins.
+
 ## 3.9.5
 
 ### Added

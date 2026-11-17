@@ -47,7 +47,7 @@ func (m model) reviewLines() []reviewLine {
 		case m.a.DNS == "custom":
 			opts = append(opts, "DNS over TLS to "+strings.Join(m.a.CustomDNS, ", "))
 		case i > 0:
-			opts = append(opts, dnsChoices[i].label+" DNS")
+			opts = append(opts, dnsChoices()[i].label+" DNS")
 		}
 		if m.a.Fingerprint {
 			opts = append(opts, "fingerprint login")
@@ -117,7 +117,7 @@ func (m model) keyReview(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if !m.cfg.dryRun {
-			id, err := diskIdentity(m.a.Disk)
+			id, err := diskIdentity(m.cfg.scriptsDir, m.a.Disk)
 			if err != nil {
 				m.note = "Couldn't read " + m.a.Disk + ": " + err.Error()
 				return m, nil

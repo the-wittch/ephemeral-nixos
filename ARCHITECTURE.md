@@ -12,9 +12,26 @@ The installer adds no NixOS modules to the machines it installs. `flake.nix` is 
 |---|---|
 | `installer/` (Go) | asks the questions, checks the answers, shows the progress, and runs `install.sh` |
 | `scripts/install.sh` | does all the disk work: checks, partitioning, installing |
-| `scripts/common.sh` | the checks and the clean-up both of them use |
+| `scripts/common.sh` | the disk checks and the clean-up, shared by `install.sh`, `tui.sh` and a local `bootstrap.sh` |
+| `scripts/nix.conf`, `scripts/fingerprint-vendors` | data both the screens and the scripts read |
+| `modules/tests/` | the install test, the script tests and the contract check |
 | `modules/iso.nix` | the ISO |
-| `modules/tests/` | the install test and the script tests |
+
+
+## What comes from the config
+
+The installer keeps no copy of what the config owns. It reads it from the config release `flake.lock` pins, so a new installer and the config it installs always agree:
+
+| what | from the config release | how the installer uses it |
+|---|---|---|
+| what each setting may be, and the allowed values | the `settings-contract` package | the screens check answers as you type; `--answers` checks the file; the Go tests check Go's matching agrees with the config's on every value in `installer/testdata/validation.json` |
+| whether an answer is a setting the config accepts | the `settings` output | `install.sh` evaluates it after writing `settings.json` and stops, with nothing changed, if the config refuses a value |
+| each menu: the desktops, NVIDIA drivers, profiles and DNS choices, in order, with their names and descriptions | the `settings-contract` package | the screens' menus and the plain prompts in `install.sh`, which builds the contract from `flake.lock` when the screens haven't passed it |
+| the apps and which are ticked | the `app-catalog` package | the screens' app list and `apps.json` |
+| the wallpaper and the welcome screen's snowflake | the `wallpaper` and `welcome-logo` packages | the ISO's boot splash and the welcome screen |
+| the disk layout | the machine's `disko.devices` | `install.sh` builds disko's script from it |
+
+What the installer keeps of its own: the wording of its other questions and its errors, and its disk checks. The screens find the NVIDIA card and fingerprint reader and identify the disk by running the same functions in `scripts/common.sh` that `install.sh` runs. A few things it has to repeat: the partition labels and `cryptroot`, needed before anything is staged; the Nix settings in the bootstrap scripts, which run before there is a clone; and the settings keys `install.sh` writes and `--answers` reads. `checks.contract` fails when any of them disagree with the pinned config release or with `scripts/nix.conf`.
 
 ## Stages
 
@@ -41,3 +58,4 @@ The installer adds no NixOS modules to the machines it installs. `flake.nix` is 
 1. **The install test runs before every release.** It covers a failed attempt and the retry after it, a config that doesn't evaluate leaving the disk untouched, the passphrase unlocking the installed disk, and the wipe after a reboot. The ISO image itself is booted to the installer's welcome screen before it's attached to a release.
 2. **`common.sh`'s checks and `teardown` are tested against fake disk commands** on every pull request, including each refusal.
 3. **A new check on a disk comes with a test of it refusing**, not only of it passing.
+4. **What the installer repeats from the config is checked against the config release it pins**, by `checks.contract` and the Go tests, on every pull request and on every `follow config` run. A config release that changes a name the installer depends on fails there, before the installer moves to it.
