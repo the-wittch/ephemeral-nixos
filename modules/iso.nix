@@ -81,7 +81,9 @@ let
             FONTCONFIG_FILE = pkgs.makeFontsConf { fontDirectories = [ pkgs.jetbrains-mono ]; };
           }
           ''
-            rsvg-convert -w ${toString width} -h ${toString height} ${inputs.ephemeral}/assets/wallpaper.svg -o $out
+            rsvg-convert -w ${toString width} -h ${toString height} ${
+              inputs.ephemeral.packages.${pkgs.stdenv.hostPlatform.system}.wallpaper
+            } -o $out
           '';
     in
     {

@@ -14,9 +14,33 @@ in
   perSystem =
     { pkgs, ... }:
     let
+      contract = inputs.ephemeral.packages.${pkgs.stdenv.hostPlatform.system}.settings-contract;
+      # the config's own verdict on each value in testdata/validation.json, matched the way the
+      # config matches, for the Go tests to agree with
+      verdicts =
+        let
+          inherit (lib.importJSON contract) rules;
+          allows =
+            key: value:
+            if builtins.isList rules.${key} then
+              builtins.elem value rules.${key}
+            else
+              builtins.match rules.${key} value != null;
+        in
+        pkgs.writeText "verdicts.json" (
+          builtins.toJSON (
+            lib.mapAttrs (
+              key:
+              map (value: {
+                inherit value;
+                ok = allows key value;
+              })
+            ) (lib.importJSON ../installer/testdata/validation.json)
+          )
+        );
       installer = pkgs.callPackage ../installer/package.nix {
-        inherit version;
-        wallpaper = "${inputs.ephemeral}/assets/wallpaper.svg";
+        inherit version contract verdicts;
+        logo = inputs.ephemeral.packages.${pkgs.stdenv.hostPlatform.system}.welcome-logo;
         source = lib.fileset.toSource {
           root = ../.;
           fileset = lib.fileset.unions [

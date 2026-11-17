@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -10,47 +11,61 @@ import (
 	"testing"
 )
 
-// testdata/validation.json is shared with modules/tests/_scripts.sh, so the screens and install.sh
-// can't drift apart on what they accept
-func TestValidationMatchesInstallSh(t *testing.T) {
-	b, err := os.ReadFile("testdata/validation.json")
+func TestMain(m *testing.M) {
+	var err error
+	if rules, err = loadContract(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
+
+// EPHEMERAL_VERDICTS is testdata/validation.json's values with the config's own verdict on each,
+// worked out in Nix from the same contract (modules/installer.nix). Go's regexp and the config's
+// have to agree on every one.
+func TestValidationMatchesConfig(t *testing.T) {
+	b, err := os.ReadFile(os.Getenv("EPHEMERAL_VERDICTS"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var cases map[string]struct{ Ok, Bad []string }
-	if err := json.Unmarshal(b, &cases); err != nil {
+	var verdicts map[string][]struct {
+		Value string
+		Ok    bool
+	}
+	if err := json.Unmarshal(b, &verdicts); err != nil {
 		t.Fatal(err)
 	}
 	checks := map[string]func(string) error{
-		"hostname":  checkHostname,
-		"username":  checkUsername,
-		"swap":      checkSwap,
-		"timezone":  checkTimezone,
-		"vault":     checkVault,
-		"controld":  checkControlD,
-		"dns":       checkDNS,
-		"customDns": checkCustomDNS,
+		"hostname":         checkHostname,
+		"username":         checkUsername,
+		"swapSize":         checkSwap,
+		"timeZone":         checkTimezone,
+		"keyboardLayout":   checkLayout,
+		"keyboardVariant":  checkVariant,
+		"locale":           checkLocale,
+		"passSshVault":     checkVault,
+		"controldResolver": checkControlD,
+		"customDns":        checkCustomDNS,
+		"desktop":          checkDesktop,
+		"nvidia":           checkNvidia,
+		"profile":          checkProfile,
+		"encryptedDns":     checkDNS,
 	}
-	for name, c := range cases {
-		check, ok := checks[name]
+	for key, cases := range verdicts {
+		check, ok := checks[key]
 		if !ok {
-			t.Errorf("no Go check for %q", name)
+			t.Errorf("no Go check for %q", key)
 			continue
 		}
-		for _, v := range c.Ok {
-			if err := check(v); err != nil {
-				t.Errorf("%s %q refused: %v", name, v, err)
-			}
-		}
-		for _, v := range c.Bad {
-			if check(v) == nil {
-				t.Errorf("%s %q accepted", name, v)
+		for _, c := range cases {
+			if got := check(c.Value) == nil; got != c.Ok {
+				t.Errorf("%s %q: the config says %v, the screens %v", key, c.Value, c.Ok, got)
 			}
 		}
 	}
-	for name := range checks {
-		if _, ok := cases[name]; !ok {
-			t.Errorf("testdata/validation.json has no cases for %q", name)
+	for key := range checks {
+		if len(verdicts[key]) == 0 {
+			t.Errorf("testdata/validation.json has no values for %q", key)
 		}
 	}
 }
@@ -110,15 +125,6 @@ func TestInheritedOverridesArentPassedOn(t *testing.T) {
 	a.Hardware = "/etc/hardware.nix"
 	if !slices.Contains(a.env("hash"), "HARDWARE_CONFIG=/etc/hardware.nix") {
 		t.Error("hardwareConfig from the answers didn't reach install.sh")
-	}
-}
-
-// the same line modules/tests/_scripts.sh expects from disk_identity in common.sh
-func TestIdentityMatchesInstallSh(t *testing.T) {
-	got := formatIdentity("SERIAL=\"\" WWN=\"\" SIZE=\"68719476736\" MODEL=\"Same Disk\"\n", "pci-0000:00:14.0-usb-0:2:1.0-scsi-0:0:0:0\n")
-	want := `SERIAL="" WWN="" SIZE="68719476736" MODEL="Same Disk" ID_PATH="pci-0000:00:14.0-usb-0:2:1.0-scsi-0:0:0:0"`
-	if got != want {
-		t.Errorf("identity line\n got %s\nwant %s", got, want)
 	}
 }
 

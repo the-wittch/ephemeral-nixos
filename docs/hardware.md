@@ -18,7 +18,7 @@ If yours works or doesn't, an [issue](https://github.com/the-wittch/ephemeral-ni
 ## Detected during the install
 
 - **Laptops:** a battery turns on the laptop extras (battery reporting, sensors, and thermald on Intel).
-- **Fingerprint readers:** a USB reader from Goodix, Synaptics, Validity, Elan, Egis, FocalTech, AuthenTec, UPEK or FPC is offered for login and sudo.
+- **Fingerprint readers:** a USB reader from one of the makers in [`scripts/fingerprint-vendors`](../scripts/fingerprint-vendors), such as Goodix, Synaptics or Elan, is offered for login and sudo.
 - **NVIDIA cards:** the installer shows the card and asks which driver to use. Laptops with an Intel or AMD GPU as well also need [PRIME](https://wiki.nixos.org/wiki/NVIDIA) set up in a module of your own.
 - **Everything else** (disk controllers, Wi-Fi chips, CPU microcode) comes from `nixos-generate-config` and the redistributable firmware NixOS ships.
 

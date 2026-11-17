@@ -65,7 +65,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "no install.sh in %s (set --scripts)\n", cfg.scriptsDir)
 		os.Exit(1)
 	}
-	os.Setenv("NIX_CONFIG", os.Getenv("NIX_CONFIG")+"\nexperimental-features = nix-command flakes\nhttp2 = false\ndownload-attempts = 5\nconnect-timeout = 10\n")
+	var err error
+	if rules, err = loadContract(); err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
+	}
+	// the same settings install.sh gets from common.sh
+	if b, err := os.ReadFile(filepath.Join(cfg.scriptsDir, "nix.conf")); err == nil {
+		os.Setenv("NIX_CONFIG", os.Getenv("NIX_CONFIG")+"\n"+string(b))
+	}
 
 	logPath := uiLogPath()
 	if f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600); err == nil {

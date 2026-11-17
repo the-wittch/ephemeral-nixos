@@ -123,6 +123,9 @@ func (a answers) check() error {
 	if a.Disk == "" {
 		add("diskDevice", errors.New("missing"))
 	}
+	add("desktop", checkDesktop(a.Desktop))
+	add("nvidia", checkNvidia(a.Nvidia))
+	add("profile", checkProfile(a.Profile))
 	add("hostname", checkHostname(a.Hostname))
 	add("username", checkUsername(a.Username))
 	add("swapSize", checkSwap(a.Swap))

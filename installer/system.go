@@ -100,19 +100,16 @@ func storageMember(d lsblkDev) string {
 	return ""
 }
 
-// the same commands as disk_identity in common.sh, so install.sh can compare the two as they are
-func diskIdentity(path string) (string, error) {
-	out, err := exec.Command("lsblk", "-dbP", "-o", "SERIAL,WWN,SIZE,MODEL", "--", path).Output()
-	if err != nil {
-		return "", fmt.Errorf("lsblk: %w", err)
-	}
-	// no physical path for some virtual disks; empty is what common.sh gets then too
-	idPath, _ := exec.Command("udevadm", "info", "--query=property", "--property=ID_PATH", "--value", "--name="+path).Output()
-	return formatIdentity(string(out), string(idPath)), nil
+// A function from scripts/common.sh, run from the screens, so they and install.sh detect and
+// identify things with the same code.
+func commonSh(scriptsDir, fn string, args ...string) (string, error) {
+	out, err := exec.Command("bash", append([]string{"-c", `SCRIPT_DIR=$1; shift; source "$SCRIPT_DIR/common.sh"; "$@"`, "bash", scriptsDir, fn}, args...)...).Output()
+	return strings.TrimSpace(string(out)), err
 }
 
-func formatIdentity(lsblk, idPath string) string {
-	return strings.TrimRight(lsblk, "\n") + ` ID_PATH="` + strings.TrimRight(idPath, "\n") + `"`
+// install.sh works out the same line right before erasing, and refuses if it changed
+func diskIdentity(scriptsDir, path string) (string, error) {
+	return commonSh(scriptsDir, "disk_identity", path)
 }
 
 func parseDisks(data []byte) ([]disk, error) {
@@ -181,30 +178,9 @@ func readTrim(path string) string {
 	return strings.TrimSpace(string(b))
 }
 
-// vendor 10de, pci class 03 (display)
-func nvidiaGPU() (string, bool) {
-	devs, _ := filepath.Glob("/sys/bus/pci/devices/*")
-	for _, d := range devs {
-		if readTrim(d+"/vendor") != "0x10de" || !strings.HasPrefix(readTrim(d+"/class"), "0x03") {
-			continue
-		}
-		name := "an NVIDIA card"
-		if out, err := exec.Command("lspci", "-s", filepath.Base(d)).Output(); err == nil {
-			s := string(out)
-			if i := strings.Index(s, ": "); i >= 0 {
-				s = s[i+2:]
-			}
-			s = revRe.ReplaceAllString(strings.TrimSpace(s), "")
-			if i := strings.LastIndex(s, "["); i >= 0 && strings.HasSuffix(s, "]") {
-				s = s[i+1 : len(s)-1]
-			}
-			if s != "" {
-				name = s
-			}
-		}
-		return printable(name), true
-	}
-	return "", false
+func nvidiaGPU(scriptsDir string) (string, bool) {
+	name, err := commonSh(scriptsDir, "nvidia_gpu")
+	return name, err == nil && name != ""
 }
 
 func hasBattery() bool {
@@ -212,22 +188,9 @@ func hasBattery() bool {
 	return len(m) > 0
 }
 
-// usb vendors that make fingerprint readers, the same list as common.sh
-func fingerprintReader() (string, bool) {
-	vendors := map[string]bool{"27c6": true, "06cb": true, "138a": true, "04f3": true, "1c7a": true, "2808": true, "08ff": true, "147e": true, "10a5": true}
-	devs, _ := filepath.Glob("/sys/bus/usb/devices/*")
-	for _, d := range devs {
-		v := readTrim(d + "/idVendor")
-		if !vendors[v] {
-			continue
-		}
-		name := strings.TrimSpace(readTrim(d+"/manufacturer") + " " + readTrim(d+"/product"))
-		if name == "" {
-			name = "a fingerprint reader"
-		}
-		return printable(fmt.Sprintf("%s (%s)", name, v)), true
-	}
-	return "", false
+func fingerprintReader(scriptsDir string) (string, bool) {
+	name, err := commonSh(scriptsDir, "fingerprint_reader")
+	return name, err == nil && name != ""
 }
 
 // the firmware only takes new Secure Boot keys in Setup Mode
@@ -269,8 +232,6 @@ func online() bool {
 	resp.Body.Close()
 	return resp.StatusCode == http.StatusOK
 }
-
-var revRe = regexp.MustCompile(`\s*\(rev [0-9a-f]+\)$`)
 
 var configTagRe = regexp.MustCompile(`ephemeral-nixos-config/(v[0-9]+\.[0-9]+\.[0-9]+)`)
 

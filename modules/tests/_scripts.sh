@@ -53,45 +53,12 @@ expect() {
 }
 called() { grep -qxF -- "$1" "$CALLS"; }
 
-# the same cases as the installer's Go tests, so the screens and install.sh agree
-declare -A validator=(
-  [hostname]=validate_hostname [username]=validate_username [swap]=validate_swap
-  [timezone]=validate_timezone [vault]=validate_vault [controld]=validate_controld
-  [dns]=validate_dns [customDns]=validate_custom_dns
-)
-while IFS=$'\t' read -r key want value; do
-  fn=${validator[$key]:-}
-  if [[ -z $fn ]]; then
-    echo "FAIL: no validator for $key in installer/testdata/validation.json" >&2
-    failures=$((failures + 1))
-    continue
-  fi
-  V=$(base64 -d <<<"$value") expect "$key $(printf %q "$(base64 -d <<<"$value")") ($want)" "$fn \"\$V\"" "$want"
-done < <(jq -r 'to_entries[] | .key as $k | (.value.ok[] | [$k, "succeeds", @base64]), (.value.bad[] | [$k, "fails", @base64]) | @tsv' "$VALIDATION")
-
-# matches formatIdentity in installer/system.go, which builds the same line
 expect "disk identity has the physical path" \
   "[[ \$(FAKE_ID_PATH=pci-0000:00:14.0-usb-0:2:1.0-scsi-0:0:0:0 disk_identity /dev/sdb) == 'SERIAL=\"\" WWN=\"\" SIZE=\"68719476736\" MODEL=\"Same Disk\" ID_PATH=\"pci-0000:00:14.0-usb-0:2:1.0-scsi-0:0:0:0\"' ]]" succeeds
 expect "two disks of the same model with no serial tell apart by where they're plugged in" \
   "[[ \$(FAKE_ID_PATH=pci-a disk_identity /dev/sdb) != \$(FAKE_ID_PATH=pci-b disk_identity /dev/sdb) ]]" succeeds
 
-for v in nixos my-laptop a; do expect "hostname $v" "validate_hostname '$v'" succeeds; done
-for v in -start 'has space' 'a.b' "$(printf 'x%.0s' {1..64})"; do expect "hostname '$v' refused" "validate_hostname '$v'" fails; done
-for v in alice _build-2; do expect "username $v" "validate_username '$v'" succeeds; done
-for v in Alice 1alice 'a b' "$(printf 'x%.0s' {1..33})"; do expect "username '$v' refused" "validate_username '$v'" fails; done
-for v in 4G 8192M 16; do expect "swap $v" "validate_swap '$v'" succeeds; done
-for v in 4GB '4 G' -1G; do expect "swap '$v' refused" "validate_swap '$v'" fails; done
-for v in 'x$(reboot)' 'a"b' 'a`b`' 'a\b' ''; do expect "vault '$v' refused" "validate_vault '$v'" fails; done
-expect "vault with a space" "validate_vault 'Work keys'" succeeds
-for v in 'id;rm' 'a b'; do expect "Control D id '$v' refused" "validate_controld '$v'" fails; done
-for v in none cloudflare quad9 adguard custom; do expect "DNS $v" "validate_dns $v" succeeds; done
-for v in google '' 'quad9;reboot'; do expect "DNS '$v' refused" "validate_dns '$v'" fails; done
-expect "own DNS servers" "validate_custom_dns '194.242.2.2#dns.mullvad.net  2a07:e340::2#dns.mullvad.net'" succeeds
-for v in '' 194.242.2.2 '1.2.3.4;reboot#a.b' '*'; do expect "own DNS '$v' refused" "validate_custom_dns '$v'" fails; done
 expect "apps with a quote refused" "validate_apps 'glow \"x'" fails
-expect "layout us,de" "validate_keyboard us,de ''" succeeds
-expect "layout 'us de' refused" "validate_keyboard 'us de' ''" fails
-expect "locale without UTF-8 refused" "validate_locale de_DE" fails
 
 expect "a mounted disk is in use" "FAKE_MOUNTS='/iso\n' disk_in_use /dev/sda" succeeds
 expect "an open LUKS disk is in use" "FAKE_TYPES='disk\npart\ncrypt\n' disk_in_use /dev/sdb" succeeds

@@ -9,28 +9,7 @@ import (
 	"time"
 )
 
-func TestValidation(t *testing.T) {
-	ok := map[string]func(string) error{
-		"my-laptop": checkHostname, "alice": checkUsername, "_build-2": checkUsername,
-		"16G": checkSwap, "8192M": checkSwap, "Europe/Berlin": checkTimezone,
-		"us,de": checkLayout, "": checkVariant, "nodeadkeys": checkVariant,
-		"de_DE.UTF-8": checkLocale, "Personal": checkVault, "abcd-1234": checkControlD,
-	}
-	for v, f := range ok {
-		if err := f(v); err != nil {
-			t.Errorf("%q should pass: %v", v, err)
-		}
-	}
-	bad := map[string]func(string) error{
-		"My Laptop": checkHostname, "-x": checkHostname, "Alice": checkUsername, "1abc": checkUsername,
-		"16GB": checkSwap, "Europe/Berlin;rm": checkTimezone, "US": checkLayout, "de_DE": checkLocale,
-		"a\"b": checkVault, "a$b": checkVault, "": checkVault, "a b": checkControlD,
-	}
-	for v, f := range bad {
-		if f(v) == nil {
-			t.Errorf("%q should fail", v)
-		}
-	}
+func TestPassphraseChecks(t *testing.T) {
 	if checkPassphrase("short", "") == nil || checkPassphrase("long enough", "different") == nil {
 		t.Error("passphrase checks")
 	}

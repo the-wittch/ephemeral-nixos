@@ -15,7 +15,7 @@ permissions:
 jobs:
   install-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -35,6 +35,8 @@ jobs:
           printf '{"username": "alice"}\n' > settings.json
           cp hardware-configuration.example.nix hardware-configuration.nix
       - name: install and boot
+        # it usually takes 18 minutes, building included
+        timeout-minutes: 50
         run: nix build path:.#checks.x86_64-linux.install -L --no-link
 
   release:

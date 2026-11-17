@@ -3,9 +3,12 @@
   buildGoModule,
   makeWrapper,
   runCommand,
-  librsvg,
-  imagemagick,
   gawk,
+  bash,
+  coreutils,
+  gnugrep,
+  gnused,
+  systemd,
   util-linux,
   mkpasswd,
   pciutils,
@@ -13,11 +16,15 @@
   kbd,
   xkeyboard-config,
   glibcLocales,
-  # the config's assets/wallpaper.svg, for the snowflake on the welcome screen
-  wallpaper,
+  # the snowflake on the welcome screen, the config's welcome-logo package
+  logo,
   version,
   # flake.nix, flake.lock and scripts/, which install.sh copies and runs
   source,
+  # the settings rules, from the config release this installer pins
+  contract,
+  # what the config says about each value in testdata/validation.json, for the tests
+  verdicts,
 }:
 let
   # copies, so it doesn't carry all of glibcLocales and xkeyboard-config
@@ -26,19 +33,6 @@ let
     cp ${xkeyboard-config}/share/X11/xkb/rules/base.lst $out/base.lst
     grep '\.UTF-8/UTF-8' ${glibcLocales}/share/i18n/SUPPORTED > $out/locales
   '';
-
-  logo =
-    runCommand "ephemeral-install-logo"
-      {
-        nativeBuildInputs = [
-          librsvg
-          imagemagick
-          gawk
-        ];
-      }
-      ''
-        bash ${./logo.sh} ${wallpaper} "$out"
-      '';
 in
 buildGoModule {
   pname = "ephemeral-install";
@@ -57,6 +51,9 @@ buildGoModule {
 
   env.CGO_ENABLED = "0";
   ldflags = [ "-X main.version=v${version}" ];
+  preCheck = ''
+    export EPHEMERAL_CONTRACT=${contract} EPHEMERAL_VERDICTS=${verdicts}
+  '';
   nativeBuildInputs = [ makeWrapper ];
 
   postInstall = ''
@@ -66,8 +63,16 @@ buildGoModule {
     ln -s ${lists} $out/share/ephemeral-nixos-lists
     wrapProgram $out/bin/ephemeral-install \
       --set-default EPHEMERAL_LOGO ${logo} \
+      --set-default EPHEMERAL_CONTRACT ${contract} \
       --prefix PATH : ${
+        # the screens run some of common.sh (nvidia_gpu, fingerprint_reader, disk_identity)
         lib.makeBinPath [
+          bash
+          coreutils
+          gawk
+          gnugrep
+          gnused
+          systemd
           util-linux
           mkpasswd
           pciutils

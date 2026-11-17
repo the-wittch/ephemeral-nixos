@@ -3,91 +3,21 @@
 die() { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 
-# bootstrap.sh and bootstrap-tui.sh set the same before there's a clone to read this from
+# scripts/nix.conf, which the screens read too; bootstrap.sh and bootstrap-tui.sh keep a copy, since
+# they run before there's a clone to read it from
 set_nix_config() {
+  local conf
+  conf=$(<"$SCRIPT_DIR/nix.conf")
   export NIX_CONFIG="${NIX_CONFIG-}
-experimental-features = nix-command flakes
-http2 = false
-download-attempts = 5
-connect-timeout = 10
-"
-}
-
-validate_hostname() {
-  [[ $1 =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]] \
-    || die "the hostname can only have letters, digits and hyphens, and can't start or end with a hyphen, so not $1. Try something like my-laptop"
-}
-
-validate_username() {
-  [[ $1 =~ ^[a-z_][a-z0-9_-]*$ && ${#1} -le 32 ]] \
-    || die "the username has to be lowercase letters, digits, - and _, start with a letter or _, and be at most 32 long, so not $1. Try something like alice"
-}
-
-validate_swap() {
-  [[ $1 =~ ^[0-9]+[KMGT]?$ ]] || die "swap is a size like 4G or 8192M, not $1"
-}
-
-validate_timezone() {
-  [[ $1 =~ ^[A-Za-z0-9_/+-]+$ ]] || die "$1 isn't a time zone; they look like Europe/Berlin or America/New_York"
-}
-
-validate_desktop() {
-  case $1 in
-    plasma | gnome | niri | umbriel) ;;
-    *) die "desktop must be plasma, gnome, niri or umbriel (got: $1)" ;;
-  esac
-}
-
-validate_profile() {
-  case $1 in
-    full | minimal) ;;
-    *) die "PROFILE must be full or minimal (got: $1)" ;;
-  esac
+$conf"
 }
 
 validate_bool() {
   [[ $2 == true || $2 == false ]] || die "$1 must be true or false (got: $2)"
 }
 
-validate_vault() {
-  case $1 in
-    "" | *[[:cntrl:]]* | *'"'* | *'$'* | *'`'* | *\\*)
-      die "a Proton Pass vault name can't have quotes, \$, backticks or backslashes, since it ends up in the login script: $1"
-      ;;
-  esac
-}
-
-validate_controld() {
-  [[ -z $1 || $1 =~ ^[A-Za-z0-9_-]+$ ]] || die "a Control D resolver id is letters, digits, - and _, as in your Control D dashboard, so not $1"
-}
-
-validate_dns() {
-  case $1 in
-    none | cloudflare | quad9 | adguard | custom) ;;
-    *) die "ENCRYPTED_DNS is none, cloudflare, quad9, adguard or custom, not $1" ;;
-  esac
-}
-
-# address#name, the name being what the server's certificate is checked against
-validate_custom_dns() {
-  local s list
-  read -ra list <<<"$1"
-  ((${#list[@]})) || die "ENCRYPTED_DNS=custom needs servers in CUSTOM_DNS, as address#name, e.g. 194.242.2.2#dns.mullvad.net"
-  for s in "${list[@]}"; do
-    [[ $s =~ ^[0-9A-Fa-f.:]+#[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] ||
-      die "$s in CUSTOM_DNS isn't address#name, such as 194.242.2.2#dns.mullvad.net"
-  done
-}
-
 validate_apps() {
   [[ $1 =~ ^[A-Za-z0-9._+\ -]*$ ]] || die "APPS has to be app names separated by commas or spaces (got: $1)"
-}
-
-validate_nvidia() {
-  case $1 in
-    none | open | legacy) ;;
-    *) die "NVIDIA_DRIVER must be none, open, or legacy (got: $1)" ;;
-  esac
 }
 
 # device names go into prompts; drop escape sequences
@@ -95,30 +25,19 @@ printable() {
   tr -cd '[:print:]\n'
 }
 
-# vendor 10de, pci class 03 (display)
+# vendor 10de, pci class 03 (display); the screens call this too. lspci's name, without the
+# revision, and only the model in brackets when it gives one
 nvidia_gpu() {
-  local d
+  local d name
   for d in /sys/bus/pci/devices/*; do
     [[ -r $d/vendor && -r $d/class ]] || continue
     if [[ $(<"$d/vendor") == 0x10de && $(<"$d/class") == 0x03* ]]; then
-      if command -v lspci >/dev/null; then
-        lspci -s "${d##*/}" | cut -d' ' -f2- | sed 's/^[^:]*: //' | printable
-      else
-        echo "NVIDIA GPU"
-      fi
+      name=$(lspci -s "${d##*/}" 2>/dev/null | sed -E 's/^[0-9a-f:.]+ [^:]*: //; s/ *\(rev [0-9a-f]+\)$//; s/.*\[([^]]*)\]$/\1/' || true)
+      printf '%s\n' "${name:-an NVIDIA card}" | printable
       return 0
     fi
   done
   return 1
-}
-
-validate_keyboard() {
-  [[ $1 =~ ^[a-z]{2,3}(,[a-z]{2,3})*$ ]] || die "a keyboard layout is a short code like us or de, or two like us,de, so not $1"
-  [[ $2 =~ ^[a-z0-9_-]*(,[a-z0-9_-]*)*$ ]] || die "a keyboard variant is a name like nodeadkeys, or empty for the usual one, so not $2"
-}
-
-validate_locale() {
-  [[ $1 =~ ^[A-Za-z_]+\.UTF-8$ ]] || die "a language is a name like en_US.UTF-8 or de_DE.UTF-8, so not $1"
 }
 
 warn_luks_layout() {
@@ -138,18 +57,18 @@ has_battery() {
   return 1
 }
 
-# usb vendors that make fingerprint readers: goodix, synaptics, validity, elan, egis, focaltech, authentec, upek, fpc
+# the makers in scripts/fingerprint-vendors; the screens call this too
 fingerprint_reader() {
-  local d v
+  local d v vendors name
+  vendors=$(awk '$1 !~ /^#/ { print $1 }' "$SCRIPT_DIR/fingerprint-vendors")
   for d in /sys/bus/usb/devices/*; do
     [[ -r $d/idVendor ]] || continue
     v=$(<"$d/idVendor")
-    case $v in
-      27c6 | 06cb | 138a | 04f3 | 1c7a | 2808 | 08ff | 147e | 10a5)
-        printf '%s %s (%s)\n' "$(cat "$d/manufacturer" 2>/dev/null)" "$(cat "$d/product" 2>/dev/null)" "$v" | printable
-        return 0
-        ;;
-    esac
+    if grep -qxF -- "$v" <<<"$vendors"; then
+      name=$(printf '%s %s' "$(cat "$d/manufacturer" 2>/dev/null)" "$(cat "$d/product" 2>/dev/null)" | sed 's/^ *//; s/ *$//')
+      printf '%s (%s)\n' "${name:-a fingerprint reader}" "$v" | printable
+      return 0
+    fi
   done
   return 1
 }
@@ -204,8 +123,8 @@ disk_in_use() {
 
 # A name like /dev/sdb goes to whichever disk shows up second, so a disk plugged in or out
 # between choosing and erasing can change what it points at. These don't change; the physical
-# path tells apart two of the same model that report no serial. installer/system.go builds the
-# same line, and install.sh compares the two as text.
+# path tells apart two of the same model that report no serial. The screens run this to show
+# the disk, and install.sh runs it again right before erasing and compares the two as text.
 disk_identity() {
   printf '%s ID_PATH="%s"\n' "$(lsblk -dbP -o SERIAL,WWN,SIZE,MODEL -- "$1")" \
     "$(udevadm info --query=property --property=ID_PATH --value --name="$1" 2>/dev/null || true)"

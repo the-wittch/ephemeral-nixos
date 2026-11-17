@@ -13,7 +13,7 @@ This repo is the installer and nothing else. Its `flake.nix`, shown in the [READ
 | `modules/iso.nix` | the Ephemeral Nix ISO: the installer on the minimal NixOS ISO, in Catppuccin colours. Its live system is `flake.modules.nixos.iso` |
 | `modules/tests/install.nix`, `tests/install/` | the end-to-end test: boots the ISO's live system offline, installs from its read-only copy of the scripts, then boots the disk it wrote |
 
-CI checks the scripts and the machine flake on every pull request: the secret scan, actionlint and zizmor on the workflows, shellcheck, nixfmt, the Go tests, `govulncheck`, and `scripts`, which runs `common.sh`'s checks and `teardown` against fake `lsblk`, `findmnt` and `cryptsetup`, so what they refuse and what they undo is tested without a disk. The install test takes a while and only runs when you start it: `gh workflow run install-test.yml --ref <branch>`, or locally:
+CI checks the scripts and the machine flake on every pull request: the secret scan, actionlint and zizmor on the workflows, shellcheck, nixfmt, the Go tests, `govulncheck`, and `scripts`, which runs `common.sh`'s checks and `teardown` against fake `lsblk`, `findmnt` and `cryptsetup`, so what they refuse and what they undo is tested without a disk, and `contract`, which holds the few names the installer repeats against the config release it pins. The install test takes a while and only runs when you start it: `gh workflow run install-test.yml --ref <branch>`, or locally:
 
 ```bash
 printf '{"username": "alice"}\n' > settings.json
@@ -29,7 +29,7 @@ Before the ISO is attached, `.github/iso-boot.sh` boots it in QEMU with UEFI and
 
 ## The installer screens
 
-`installer/` asks the questions, checks the answers with the same rules as `common.sh` (both are tested against `installer/testdata/validation.json`), and runs `install.sh` with them, so the disk work stays in one place. The disk passphrase goes to `install.sh` on file descriptor 3 (`PASSPHRASE_FD=3`), which it reads and closes before running anything, so only disko gets it, and the login password only as a yescrypt hash in `PASSWORD_HASH`, so neither is in the environment or the log in plain text.
+`installer/` asks the questions, checks the answers with the rules of the config release it pins (its `settings-contract` package, which `package.nix` points `EPHEMERAL_CONTRACT` at), and runs `install.sh` with them, so the disk work stays in one place. `install.sh` checks them again through that release's `settings` output. The Go tests check Go's matching agrees with the config's on each value in `installer/testdata/validation.json`. The disk passphrase goes to `install.sh` on file descriptor 3 (`PASSPHRASE_FD=3`), which it reads and closes before running anything, so only disko gets it, and the login password only as a yescrypt hash in `PASSWORD_HASH`, so neither is in the environment or the log in plain text.
 
 `install.sh` runs in a session of its own, writing to `/run/ephemeral-install/output` and leaving its exit status in `status` there. The screens only follow that file, so quitting them, or a crash, doesn't stop the install, and starting them again picks it back up. Problems in the screens themselves go to `/tmp/ephemeral-install-ui.log`.
 

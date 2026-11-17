@@ -16,6 +16,8 @@ permissions:
 jobs:
   flake-check:
     runs-on: ubuntu-latest
+    # it usually takes 2 minutes
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -43,7 +45,7 @@ jobs:
           nix run --inputs-from path:. nixpkgs#zizmor -- --offline .github/workflows/
 
       - name: shellcheck
-        run: nix run --inputs-from path:. nixpkgs#shellcheck -- -x -P SCRIPTDIR scripts/*.sh .github/*.sh installer/logo.sh modules/tests/_scripts.sh
+        run: git ls-files -z "*.sh" | xargs -0 nix run --inputs-from path:. nixpkgs#shellcheck -- -x -P SCRIPTDIR
 
       - name: nixfmt
         run: git ls-files -z '*.nix' | xargs -0 nix run --inputs-from path:. nixpkgs#nixfmt -- --check
