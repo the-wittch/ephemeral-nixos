@@ -8,6 +8,10 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 - The check that refuses the disk holding the installer image, and the one that refuses a disk in use, could let either through. Each piped `lsblk` into `grep -q`, which stops at the first match; `lsblk` was then cut off, and that counted as a failure, so a match read as none. A test with long `lsblk` output caught the old checks missing both every time.
 
+### Changed
+
+- New installs get config [v4.11.1](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.9.6
 
 ### Changed
