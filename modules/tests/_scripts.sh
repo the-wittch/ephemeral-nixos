@@ -65,6 +65,10 @@ expect "an open LUKS disk is in use" "FAKE_TYPES='disk\npart\ncrypt\n' disk_in_u
 expect "an idle disk isn't in use" "FAKE_MOUNTS='\n\n' disk_in_use /dev/vda" fails
 expect "an installer image is found unmounted" "FAKE_FSTYPES='iso9660\niso9660\n' holds_installer_image /dev/sda" succeeds
 expect "a normal disk holds no installer image" "FAKE_FSTYPES='\nvfat\ncrypto_LUKS\n' holds_installer_image /dev/vda" fails
+# more than a pipe holds after the match, so grep -q always stops before lsblk is done
+long=$(printf 'vfat\\n%.0s' {1..20000})
+expect "an installer image is found among many partitions" "FAKE_FSTYPES='iso9660\n$long' holds_installer_image /dev/sda" succeeds
+expect "a disk with many mounts is in use" "FAKE_MOUNTS='/iso\n${long//vfat//m}' disk_in_use /dev/sda" succeeds
 expect "an LVM member is found" "[[ \$(FAKE_FSTYPES='\nLVM2_member\n' storage_member /dev/vda) == 'an LVM volume group' ]]" succeeds
 expect "a ZFS member is found" "[[ \$(FAKE_FSTYPES='\nvfat\nzfs_member\n' storage_member /dev/vda) == 'a ZFS pool' ]]" succeeds
 expect "an md RAID member is found" "[[ \$(FAKE_FSTYPES='\nlinux_raid_member\n' storage_member /dev/vda) == 'a RAID array' ]]" succeeds

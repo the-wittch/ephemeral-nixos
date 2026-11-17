@@ -321,10 +321,11 @@ nix eval --json "path:${STAGE}#settings.${FLAKE_ATTR}" >/dev/null
 # the Control D id goes in its own file, not in settings.json
 if [[ -n $CONTROLD_RESOLVER ]]; then
   contract=$(nix build --no-link --print-out-paths "path:${STAGE}#settings-contract")
-  S_ID=$CONTROLD_RESOLVER S_CONTRACT=$contract nix eval --impure --raw --expr '
+  verdict=$(S_ID=$CONTROLD_RESOLVER S_CONTRACT=$contract nix eval --impure --raw --expr '
     let rule = (builtins.fromJSON (builtins.readFile (builtins.getEnv "S_CONTRACT"))).rules.controldResolver;
     in if builtins.match rule (builtins.getEnv "S_ID") != null then "ok" else "no"
-  ' | grep -qx ok || die "the Control D resolver id is only letters, digits, - and _, as in your Control D dashboard; the one given has something else in it"
+  ')
+  [[ $verdict == ok ]] || die "the Control D resolver id is only letters, digits, - and _, as in your Control D dashboard; the one given has something else in it"
 fi
 
 # a mistake in the config would otherwise only show once the disk is erased
@@ -360,7 +361,7 @@ fi
 findmnt /mnt >/dev/null 2>&1 || die "/mnt is not mounted after disko"
 findmnt /mnt/persist >/dev/null 2>&1 || die "/mnt/persist is not mounted after disko"
 findmnt /mnt/boot >/dev/null 2>&1 || die "/mnt/boot is not mounted after disko"
-btrfs subvolume list /mnt | grep -q 'root-blank' || die "root-blank missing after disko"
+grep -q root-blank <<<"$(btrfs subvolume list /mnt)" || die "root-blank missing after disko"
 
 stage hardware
 if [[ -n $HARDWARE_CONFIG ]]; then

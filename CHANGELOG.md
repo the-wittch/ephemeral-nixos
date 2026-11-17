@@ -2,6 +2,12 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.9.7
+
+### Fixed
+
+- The check that refuses the disk holding the installer image, and the one that refuses a disk in use, could let either through. Each piped `lsblk` into `grep -q`, which stops at the first match; `lsblk` was then cut off, and that counted as a failure, so a match read as none. A test with long `lsblk` output caught the old checks missing both every time.
+
 ## 3.9.6
 
 ### Changed
