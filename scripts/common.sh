@@ -96,8 +96,12 @@ $(lsblk -dpn -o NAME,SIZE,MODEL -e 7,11 2>/dev/null | grep -v '^/dev/zram' | sed
   fi
 }
 
+# These read lsblk into a variable before grep: piped into grep -q, lsblk can be cut off when
+# grep stops at the first match, and under pipefail a match then reads as none.
 holds_installer_image() {
-  lsblk -nro FSTYPE -- "$1" 2>/dev/null | grep -qx iso9660
+  local fstypes
+  fstypes=$(lsblk -nro FSTYPE -- "$1" 2>/dev/null) || return 1
+  grep -qx iso9660 <<<"$fstypes"
 }
 
 # disko runs vgremove -f or zpool destroy -f on these, which also wipes the rest of the
@@ -117,8 +121,11 @@ storage_member() {
 }
 
 disk_in_use() {
-  lsblk -nro MOUNTPOINTS "$1" 2>/dev/null | grep -q . && return 0
-  lsblk -nro TYPE "$1" 2>/dev/null | grep -qE '^(crypt|lvm|raid)'
+  local mounts types
+  mounts=$(lsblk -nro MOUNTPOINTS "$1" 2>/dev/null) || true
+  grep -q . <<<"$mounts" && return 0
+  types=$(lsblk -nro TYPE "$1" 2>/dev/null) || true
+  grep -qE '^(crypt|lvm|raid)' <<<"$types"
 }
 
 # A name like /dev/sdb goes to whichever disk shows up second, so a disk plugged in or out
@@ -185,7 +192,7 @@ teardown() {
   fi
   if cryptsetup status cryptroot >/dev/null 2>&1; then
     dev=$(cryptsetup status cryptroot | awk '$1 == "device:" { print $2 }')
-    lsblk -nlpo NAME "$disk" | grep -qxF -- "$dev" ||
+    grep -qxF -- "$dev" <<<"$(lsblk -nlpo NAME "$disk")" ||
       die "cryptroot is open on $dev, which isn't on $disk; close it yourself if that's safe: sudo cryptsetup close cryptroot"
     cryptsetup close cryptroot
   fi
