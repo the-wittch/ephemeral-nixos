@@ -39,6 +39,12 @@ jobs:
             nix run --inputs-from path:. ephemeral#check-no-secrets -- --range "$base..HEAD"
           fi
 
+      # the config's checker, at the release the installer pins
+      - name: links between the docs
+        env:
+          REPO: ${{ github.repository }}
+        run: nix run --inputs-from path:. ephemeral#check-links -- "$REPO"
+
       - name: workflow lint
         run: |
           nix run --inputs-from path:. nixpkgs#actionlint

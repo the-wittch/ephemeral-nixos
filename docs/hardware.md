@@ -10,7 +10,7 @@
 ## What's tested
 
 - **Every release:** CI installs from the ISO's live system onto a QEMU/KVM virtual machine with UEFI, then unlocks and boots the installed disk. The ISO itself is booted to the installer's first screen before it's published. The config's boot tests also boot both profiles in a VM.
-- **By hand:** the maintainer has installed from the ISO on two laptops.
+- **By hand:** the maintainer has installed from the ISO on two laptops, and run Secure Boot with unlocking by TPM and PIN on a Framework laptop.
 - **Not tested:** NVIDIA drivers, laptops with two GPUs, and Wi-Fi in a VM (CI checks only that the ISO has what Wi-Fi needs).
 
 If yours works or doesn't, an [issue](https://github.com/the-wittch/ephemeral-nixos/issues/new/choose) with the output of `lspci -nn` helps the next person.

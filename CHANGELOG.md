@@ -2,6 +2,23 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.9.8
+
+### Fixed
+
+- The manual install steps work on the NixOS ISO, which doesn't turn on flakes: they take the installer's Nix settings first. They start from a checked clone of a release, run the installer's disk checks on the disk before erasing it, and say plainly that the next step erases it.
+- `--answers` refuses a key it doesn't read, and names it, instead of ignoring it. A misspelled `useOpenSnitch` or `secureBoot` used to leave that setting at its default without a word. A setting it doesn't set, such as `useTailscale`, gets an error that says to put it in `settings.json` after the install; `laptop` and `useControlD` are still accepted, since the installer works them out itself. [Unattended installs](docs/unattended.md) lists the keys it reads.
+- The troubleshooting entry for a login that fails points to steps that exist.
+
+### Changed
+
+- New installs get config [v4.14.2](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+- The README lists the installer's questions in the order the screens ask them.
+
+### Added
+
+- CI checks the links between the docs, headings included, with the config's `check-links`.
+
 ## 3.9.7
 
 ### Fixed

@@ -13,7 +13,7 @@ This repo is the installer and nothing else. Its `flake.nix`, shown in the [READ
 | `modules/iso.nix` | the Ephemeral Nix ISO: the installer on the minimal NixOS ISO, in Catppuccin colours. Its live system is `flake.modules.nixos.iso` |
 | `modules/tests/install.nix`, `tests/install/` | the end-to-end test: boots the ISO's live system offline, installs from its read-only copy of the scripts, then boots the disk it wrote |
 
-CI checks the scripts and the machine flake on every pull request: the secret scan, actionlint and zizmor on the workflows, shellcheck, nixfmt, the Go tests, `govulncheck`, and `scripts`, which runs `common.sh`'s checks and `teardown` against fake `lsblk`, `findmnt` and `cryptsetup`, so what they refuse and what they undo is tested without a disk, and `contract`, which holds the few names the installer repeats against the config release it pins. The install test takes a while and only runs when you start it: `gh workflow run install-test.yml --ref <branch>`, or locally:
+CI checks the scripts and the machine flake on every pull request: the secret scan, the links between the docs (with the config's `check-links`), actionlint and zizmor on the workflows, shellcheck, nixfmt, the Go tests, `govulncheck`, and `scripts`, which runs `common.sh`'s checks and `teardown` against fake `lsblk`, `findmnt` and `cryptsetup`, so what they refuse and what they undo is tested without a disk, and `contract`, which holds the few names the installer repeats against the config release it pins. The install test takes a while and only runs when you start it: `gh workflow run install-test.yml --ref <branch>`, or locally:
 
 ```bash
 printf '{"username": "alice"}\n' > settings.json
