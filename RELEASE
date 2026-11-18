@@ -1,5 +1,5 @@
 # Pinned install target.
-# Installers: TAG=v3.9.8 EXPECTED_REV=<COMMIT> (see README).
+# Installers: TAG=v3.9.9 EXPECTED_REV=<COMMIT> (see README).
 
-TAG=v3.9.8
-COMMIT=777ce700ad418e3b40195262c619dab53eb369f7
+TAG=v3.9.9
+COMMIT=36ed8d97cc6a0c3a67af6b660753f9cc4d87b4c4
