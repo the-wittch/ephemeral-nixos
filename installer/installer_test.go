@@ -174,6 +174,17 @@ func TestReadAnswers(t *testing.T) {
 		t.Errorf("an unknown provider should be refused, got %v", err)
 	}
 
+	typo := filepath.Join(dir, "typo.json")
+	os.WriteFile(typo, []byte(`{"diskDevice":"/dev/vda","passphrase":"correct horse","password":"pw","useOpenSnitc":false}`), 0o600)
+	if _, err := readAnswers(typo); err == nil || !strings.Contains(err.Error(), "useOpenSnitc isn't a key") {
+		t.Errorf("a misspelled key should be refused by name, got %v", err)
+	}
+	later := filepath.Join(dir, "later.json")
+	os.WriteFile(later, []byte(`{"diskDevice":"/dev/vda","passphrase":"correct horse","password":"pw","useTailscale":true}`), 0o600)
+	if _, err := readAnswers(later); err == nil || !strings.Contains(err.Error(), "useTailscale isn't set by the installer") {
+		t.Errorf("a setting the installer doesn't set should be refused, got %v", err)
+	}
+
 	bad := filepath.Join(dir, "bad.json")
 	os.WriteFile(bad, []byte(`{"hostname":"My Laptop","diskDevice":"/dev/vda","passphrase":"short","password":"pw"}`), 0o600)
 	_, err = readAnswers(bad)

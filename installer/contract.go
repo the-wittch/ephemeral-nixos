@@ -15,6 +15,8 @@ type contract struct {
 	patterns map[string]*regexp.Regexp
 	values   map[string][]string
 	menus    map[string][]choice
+	// every key settings.json can have
+	settings map[string]bool
 }
 
 // the settings the screens ask for from a menu
@@ -32,16 +34,21 @@ func loadContract() (contract, error) {
 		return contract{}, err
 	}
 	var raw struct {
-		Rules   map[string]json.RawMessage `json:"rules"`
-		Choices map[string][]struct {
+		Rules    map[string]json.RawMessage `json:"rules"`
+		Defaults map[string]json.RawMessage `json:"defaults"`
+		Choices  map[string][]struct {
 			Value, Label, Description, Tag string
 		} `json:"choices"`
 	}
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return contract{}, fmt.Errorf("%s: %w", path, err)
 	}
-	c := contract{patterns: map[string]*regexp.Regexp{}, values: map[string][]string{}, menus: map[string][]choice{}}
+	c := contract{patterns: map[string]*regexp.Regexp{}, values: map[string][]string{}, menus: map[string][]choice{}, settings: map[string]bool{}}
+	for key := range raw.Defaults {
+		c.settings[key] = true
+	}
 	for key, rule := range raw.Rules {
+		c.settings[key] = true
 		var pattern string
 		var values []string
 		switch {

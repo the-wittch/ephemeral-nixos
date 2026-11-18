@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
@@ -97,11 +99,44 @@ func readAnswers(path string) (answers, error) {
 	if err != nil {
 		return a, err
 	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return a, fmt.Errorf("%s: %w", path, err)
+	}
+	if err := checkAnswerKeys(fields); err != nil {
+		return a, fmt.Errorf("%s: %w", path, err)
+	}
 	if err := json.Unmarshal(b, &a); err != nil {
 		return a, fmt.Errorf("%s: %w", path, err)
 	}
 	a.ControlD = a.ControlDID != ""
 	return a, a.check()
+}
+
+// install.sh works these out itself, so a file made from a settings.json can keep them
+var derivedKeys = map[string]bool{"laptop": true, "useControlD": true}
+
+// A key that does nothing would leave its setting at the default without a word, and a
+// misspelled useOpenSnitch or secureBoot is exactly that.
+func checkAnswerKeys(fields map[string]json.RawMessage) error {
+	taken := map[string]bool{}
+	t := reflect.TypeFor[answers]()
+	for i := range t.NumField() {
+		if name, _, _ := strings.Cut(t.Field(i).Tag.Get("json"), ","); name != "" && name != "-" {
+			taken[name] = true
+		}
+	}
+	var errs []error
+	for _, key := range slices.Sorted(maps.Keys(fields)) {
+		switch {
+		case taken[key], derivedKeys[key]:
+		case rules.settings[key]:
+			errs = append(errs, fmt.Errorf("%s isn't set by the installer; put it in settings.json after the install", key))
+		default:
+			errs = append(errs, fmt.Errorf("%s isn't a key the installer knows; check its spelling", key))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // the file holds the passphrase and the password in plain text
