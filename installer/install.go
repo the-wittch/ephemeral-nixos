@@ -116,8 +116,8 @@ func readAnswers(path string) (answers, error) {
 // install.sh works these out itself, so a file made from a settings.json can keep them
 var derivedKeys = map[string]bool{"laptop": true, "useControlD": true}
 
-// A key that does nothing would leave its setting at the default without a word, and a
-// misspelled useOpenSnitch or secureBoot is exactly that.
+// A misspelled key, such as useOpenSnitch or secureBoot, would otherwise leave its setting at
+// the default without a word.
 func checkAnswerKeys(fields map[string]json.RawMessage) error {
 	taken := map[string]bool{}
 	t := reflect.TypeFor[answers]()

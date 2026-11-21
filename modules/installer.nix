@@ -1,4 +1,3 @@
-# nix run path:.#installer -- --dry-run
 { inputs, lib, ... }:
 let
   # the newest release in CHANGELOG.md; release.sh won't tag one without it
