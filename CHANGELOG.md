@@ -10,6 +10,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Changed
 
+- New installs get config [v4.18.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
 - The app categories come in the order the config sets, the one `ephemeral-apps` shows too, instead of a list the installer kept itself. Security is now Passwords and Security testing.
 - The desktop and install-type menus have shorter lines from the config, so they fit 80 columns; the headless choice is "None".
 
