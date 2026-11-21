@@ -50,6 +50,7 @@ func TestValidationMatchesConfig(t *testing.T) {
 		"nvidia":           checkNvidia,
 		"profile":          checkProfile,
 		"encryptedDns":     checkDNS,
+		"sshKeys":          checkSSHKey,
 	}
 	for key, cases := range verdicts {
 		check, ok := checks[key]

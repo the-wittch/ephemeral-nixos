@@ -25,6 +25,7 @@ in
       settings = [ "username" ] ++ lib.attrNames contract.defaults;
       installSh = script "install.sh";
       commonSh = script "common.sh";
+      initrdKey = import "${inputs.ephemeral}/modules/_initrd-ssh-key.nix";
       disks = config.flake.nixosConfigurations.install-plain.config.disko.devices.disk;
       parts = lib.concatMap lib.attrValues (map (d: d.content.partitions) (lib.attrValues disks));
 
@@ -53,6 +54,13 @@ in
               "bootstrap.sh"
               "bootstrap-tui.sh"
             ]
+        # a server's key for unlocking over SSH, which install.sh makes before the boot loader needs it
+        ++ map (path: "install.sh doesn't make ${path}, where the config looks for it") (
+          builtins.filter (path: !lib.hasInfix "/mnt${path}" installSh) [
+            initrdKey.key
+            initrdKey.boot
+          ]
+        )
         # what install.sh writes into settings.json, and what --answers reads as settings
         ++ map (key: "install.sh writes ${key}, which the config has no setting for") (
           lib.subtractLists settings (captures "\\[ \"([a-zA-Z]+)\" " installSh)

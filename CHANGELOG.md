@@ -2,6 +2,19 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.10.0
+
+### Added
+
+- Servers. A new Server screen asks whether the machine stays on and takes SSH logins with keys only, and for the public keys that may log in: pasted, or `github:yourname` to fetch the ones on your GitHub account.
+- "None" on the desktop screen, for a server you only reach over SSH. It ticks Server, leaves OpenSnitch out, and offers only the terminal apps.
+- A server's install makes the host key for unlocking its disk over SSH after a reboot, and shows its fingerprint at the end, to check the first time you connect.
+- Unattended installs take `SERVER` and `SSH_KEYS`, and `--answers` takes `server` and `sshKeys`.
+
+### Changed
+
+- New installs get config [v4.16.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.9.12
 
 ### Changed

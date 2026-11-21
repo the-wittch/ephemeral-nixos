@@ -246,7 +246,13 @@ func (m model) viewEnd(w int) ([]string, string) {
 		if m.reattached {
 			user = "the user you picked"
 		}
-		out = append(out, "   "+sText.Render("At boot, unlock the disk with your passphrase, then log in as "+user+"."), "")
+		if fp := unlockFingerprint(m.lines); fp != "" {
+			out = append(out, "   "+sText.Render("At boot, unlock the disk with your passphrase, at the keyboard or over Ethernet with"),
+				"   "+sText.Render("ssh -p 2222 root@<its address>. Check that ssh shows "+fp+" the first time."),
+				"   "+sText.Render("Then log in as "+user+", over SSH with your key."), "")
+		} else {
+			out = append(out, "   "+sText.Render("At boot, unlock the disk with your passphrase, then log in as "+user+"."), "")
+		}
 		if m.a.SecureBoot {
 			sb := []string{"Secure Boot: the firmware wasn't in Setup Mode, so it doesn't have this", "machine's keys yet. The config's security notes say how to put them in."}
 			if m.setupMode && !setupMode() {
@@ -302,4 +308,15 @@ func formatDuration(d time.Duration) string {
 	m := int(d.Minutes())
 	s := int(d.Seconds()) % 60
 	return fmt.Sprintf("%d:%02d", m, s)
+}
+
+// the host key install.sh made for unlocking a server over SSH, from the line ssh-keygen -l
+// printed for it
+func unlockFingerprint(lines []string) string {
+	for _, l := range lines {
+		if f := strings.Fields(l); len(f) == 4 && strings.HasPrefix(f[1], "SHA256:") && f[2] == "initrd" {
+			return f[1]
+		}
+	}
+	return ""
 }

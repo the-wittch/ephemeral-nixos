@@ -224,6 +224,20 @@ if [[ -z ${SECURE_BOOT:-} ]]; then
   [[ ${sb:-n} =~ ^[Yy] ]] && SECURE_BOOT=true
 fi
 validate_bool SECURE_BOOT "$SECURE_BOOT"
+if [[ -z ${SERVER:-} ]]; then
+  SERVER=false
+  if [[ $INSTALL_DESKTOP == none ]]; then
+    SERVER=true
+  else
+    read -r -p "A server: SSH with keys only, no sleep, the disk unlocked over SSH after a reboot? [y/N]: " sv
+    [[ ${sv:-n} =~ ^[Yy] ]] && SERVER=true
+  fi
+fi
+validate_bool SERVER "$SERVER"
+if [[ $SERVER == true && -z ${SSH_KEYS:-} ]]; then
+  read -r -p "SSH public key that may log in (ssh-ed25519 AAAA… you@laptop): " SSH_KEYS
+fi
+[[ $SERVER == true ]] || SSH_KEYS=
 SETUP_MODE_BEFORE=false
 setup_mode && SETUP_MODE_BEFORE=true
 validate_flake_attr "$FLAKE_ATTR"
@@ -237,7 +251,7 @@ fi
 validate_swap_fits "$DISK" "$SWAP_SIZE"
 validate_partlabels "$DISK"
 info "desktop=$INSTALL_DESKTOP profile=$PROFILE nvidia=$NVIDIA_DRIVER keyboard=$KEYBOARD_LAYOUT${KEYBOARD_VARIANT:+($KEYBOARD_VARIANT)} locale=$LOCALE extras=$EXTRAS laptop=$LAPTOP fingerprint=$FINGERPRINT${APPS:+ apps=$APPS}"
-info "opensnitch=$OPENSNITCH pass-ssh-agent=$PASS_SSH_AGENT${CONTROLD_RESOLVER:+ controld=on} dns=$ENCRYPTED_DNS secure-boot=$SECURE_BOOT"
+info "opensnitch=$OPENSNITCH pass-ssh-agent=$PASS_SSH_AGENT${CONTROLD_RESOLVER:+ controld=on} dns=$ENCRYPTED_DNS secure-boot=$SECURE_BOOT server=$SERVER"
 
 STAGE=""
 cleanup() {
@@ -264,7 +278,7 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
   S_SWAP=$SWAP_SIZE S_TZ=$TIMEZONE S_DESKTOP=$INSTALL_DESKTOP S_NVIDIA=$NVIDIA_DRIVER \
   S_KB=$KEYBOARD_LAYOUT S_KBV=$KEYBOARD_VARIANT S_LOCALE=$LOCALE S_LAPTOP=$LAPTOP S_FP=$FINGERPRINT S_EXTRAS=$EXTRAS \
   S_PROFILE=$PROFILE S_OPENSNITCH=$OPENSNITCH S_AGENT=$PASS_SSH_AGENT S_VAULT=$PASS_SSH_VAULT S_CONTROLD=$CONTROLD_RESOLVER S_DNS=$ENCRYPTED_DNS S_CUSTOMDNS=$CUSTOM_DNS \
-  S_SB=$SECURE_BOOT \
+  S_SB=$SECURE_BOOT S_SERVER=$SERVER S_SSHKEYS=$SSH_KEYS \
   nix eval --impure --raw --expr '
     let
       e = builtins.getEnv;
@@ -296,7 +310,16 @@ S_HOSTNAME=$INSTALL_HOSTNAME S_USERNAME=$INSTALL_USERNAME S_DISK=$DISK \
         else
           [ ]
       )
-      ++ (if e "S_SB" == "true" then [ [ "secureBoot" true ] ] else [ ]);
+      ++ (if e "S_SB" == "true" then [ [ "secureBoot" true ] ] else [ ])
+      ++ (
+        if e "S_SERVER" == "true" then
+          [
+            [ "server" true ]
+            [ "sshKeys" (builtins.filter (k: builtins.isString k && k != "") (builtins.split "\n" (e "S_SSHKEYS"))) ]
+          ]
+        else
+          [ ]
+      );
       line = f: "  ${builtins.toJSON (builtins.elemAt f 0)}: ${builtins.toJSON (builtins.elemAt f 1)}";
     in
     "{\n" + builtins.concatStringsSep ",\n" (map line fields) + "\n}\n"
@@ -377,6 +400,19 @@ fi
 mkdir -p /mnt/persist/passwords /mnt/persist/etc/ssh /mnt/persist/etc/nixos
 chmod 700 /mnt/persist/passwords
 chmod 755 /mnt/persist/etc/ssh
+# The host key for unlocking over SSH. The boot loader copies boot-key into the initrd while
+# nixos-install runs, so it has to be there first. It stays unsealed: Secure Boot isn't on yet,
+# and ephemeral-update seals it to the TPM once it is.
+if [[ $SERVER == true ]]; then
+  initrd_key=/mnt/persist/etc/ssh/initrd/ssh_host_ed25519_key
+  install -d -m 0700 /mnt/persist/etc/ssh/initrd
+  if command -v ssh-keygen >/dev/null; then
+    ssh-keygen -q -t ed25519 -N "" -C initrd -f "$initrd_key"
+  else
+    nix shell --inputs-from "path:${STAGE}" nixpkgs#openssh -c ssh-keygen -q -t ed25519 -N "" -C initrd -f "$initrd_key"
+  fi
+  install -m 600 "$initrd_key" /mnt/persist/etc/ssh/initrd/boot-key
+fi
 # has to exist before the bind mount; activation chowns it
 install -d -m 0700 "/mnt/persist/home/${INSTALL_USERNAME}"
 if [[ -n $CONTROLD_RESOLVER ]]; then
@@ -465,6 +501,13 @@ After the first login:
   ephemeral-help     every command
 
 EOF
+if [[ $SERVER == true ]]; then
+  echo "Server: after a reboot, unlock the disk over Ethernet with ssh -p 2222 root@<its address>."
+  echo "The first time, check that ssh shows this fingerprint:"
+  echo "  $(ssh-keygen -lf "$initrd_key.pub" 2>/dev/null || cat "$initrd_key.pub")"
+  echo "Then log in with ssh ${INSTALL_USERNAME}@<its address>."
+  echo
+fi
 if [[ $SECURE_BOOT == true ]]; then
   if [[ $SETUP_MODE_BEFORE == true ]] && ! setup_mode; then
     echo "Secure Boot: this machine's keys are in the firmware. At the reboot, turn Secure Boot on in"

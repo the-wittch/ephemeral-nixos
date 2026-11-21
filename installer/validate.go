@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -67,6 +68,23 @@ func checkVault(s string) error {
 func checkControlD(s string) error {
 	if !rules.allows("controldResolver", s) {
 		return fmt.Errorf("the resolver id from the Control D dashboard, such as abcd1234")
+	}
+	return nil
+}
+
+func checkSSHKey(s string) error {
+	if !rules.allows("sshKeys", s) {
+		return fmt.Errorf("a public key, such as ssh-ed25519 AAAA… you@laptop, and not the private one")
+	}
+	return nil
+}
+
+// GitHub's own rule for user names, checked before the name goes into a URL
+var githubNameRe = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$`)
+
+func checkGitHubName(s string) error {
+	if !githubNameRe.MatchString(s) {
+		return fmt.Errorf("a GitHub user name, such as github:octocat")
 	}
 	return nil
 }

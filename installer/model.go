@@ -22,6 +22,7 @@ const (
 	stOptions
 	stApps
 	stMachine
+	stServer
 	stSecrets
 	stReview
 	stInstalling
@@ -29,11 +30,11 @@ const (
 	stFailed
 )
 
-var questions = []stepID{stDisk, stDesktop, stGraphics, stRegion, stType, stOptions, stApps, stMachine, stSecrets, stReview}
+var questions = []stepID{stDisk, stDesktop, stGraphics, stRegion, stType, stOptions, stApps, stMachine, stServer, stSecrets, stReview}
 
 var stepName = map[stepID]string{
 	stDisk: "Disk", stDesktop: "Desktop", stGraphics: "Graphics", stRegion: "Region",
-	stType: "Install type", stOptions: "Options", stApps: "Apps", stMachine: "Machine",
+	stType: "Install type", stOptions: "Options", stApps: "Apps", stMachine: "Machine", stServer: "Server",
 	stSecrets: "Secrets", stReview: "Review",
 }
 
@@ -93,6 +94,11 @@ type model struct {
 
 	machineIn    []textinput.Model
 	machineFocus int
+
+	serverFocus int
+	keyIn       textinput.Model
+	// the GitHub user whose keys are on their way
+	fetching string
 
 	secretIn    []textinput.Model
 	secretFocus int
@@ -203,6 +209,9 @@ func newModel(cfg config) model {
 		newInput(m.a.Username, "nixuser"),
 		newInput(m.a.Swap, "4G"),
 	}
+	m.keyIn = newInput("", "ssh-ed25519 AAAA… or github:yourname")
+	// an RSA key is 750 characters or so
+	m.keyIn.CharLimit = 4096
 	m.secretIn = []textinput.Model{newSecret(), newSecret(), newSecret(), newSecret()}
 	m.confirmIn = newInput("", "")
 	m.logView = viewport.New(80, 20)
@@ -266,6 +275,10 @@ func (m *model) next() tea.Cmd {
 		if m.step == stType && m.a.Profile == "full" {
 			return m.goTo(stOptions)
 		}
+		// a change to the desktop can make it a server, which needs its keys
+		if m.step != stServer && m.a.serverUnanswered() {
+			return m.goTo(stServer)
+		}
 		m.editing = false
 		return m.goTo(stReview)
 	}
@@ -311,9 +324,23 @@ func (m *model) enter() tea.Cmd {
 		m.vaultIn.Blur()
 		m.controldIn.Blur()
 		m.customDNSIn.Blur()
+	case stApps:
+		// a change of desktop can leave fewer categories than before
+		if m.appCat >= len(m.appCategories()) {
+			m.appCat, m.appIdx, m.appPane = 0, 0, 0
+		}
 	case stMachine:
 		m.machineFocus = 0
 		return m.focusMachine()
+	case stServer:
+		if m.a.Desktop == "none" {
+			m.a.Server = true
+		}
+		m.serverFocus = 0
+		if m.a.serverUnanswered() {
+			m.serverFocus = 1
+		}
+		return m.focusServer()
 	case stSecrets:
 		m.secretFocus = 0
 		return m.focusSecret()
@@ -331,7 +358,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height = msg.Width, msg.Height
 		m.logView.Width = min(msg.Width-6, frameWidth-2)
 		m.logView.Height = max(msg.Height-10, 5)
+		// so a long key scrolls inside its field instead of off the screen
+		m.keyIn.Width = max(min(msg.Width-4, frameWidth)-30, 20)
 		return m, nil
+	case keysMsg:
+		return m.gotKeys(msg), nil
 	case onlineMsg:
 		if msg.round != m.onlineRound {
 			return m, nil
@@ -403,6 +434,8 @@ func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.keyApps(k)
 	case stMachine:
 		return m.keyMachine(k)
+	case stServer:
+		return m.keyServer(k)
 	case stSecrets:
 		return m.keySecrets(k)
 	case stReview:

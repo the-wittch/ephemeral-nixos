@@ -72,6 +72,8 @@ type answers struct {
 	CustomDNS   []string `json:"customDns"`
 	Fingerprint bool     `json:"fingerprint"`
 	SecureBoot  bool     `json:"secureBoot"`
+	Server      bool     `json:"server"`
+	SSHKeys     []string `json:"sshKeys"`
 	Apps        []string `json:"apps"`
 	Hostname    string   `json:"hostname"`
 	Username    string   `json:"username"`
@@ -183,6 +185,15 @@ func (a answers) check() error {
 	if a.ControlD && a.DNS != "none" {
 		add("encryptedDns", errors.New("can't be on together with Control D"))
 	}
+	if a.Desktop == "none" && !a.Server {
+		add("server", errors.New(`has to be true with "desktop": "none", since SSH is the only way in`))
+	}
+	if a.Server && len(a.SSHKeys) == 0 {
+		add("sshKeys", errors.New("a server needs at least one, or nobody can log in"))
+	}
+	for _, k := range a.SSHKeys {
+		add("sshKeys", checkSSHKey(k))
+	}
 	return errors.Join(errs...)
 }
 
@@ -210,6 +221,10 @@ func (a answers) env(hash string) []string {
 	if a.ControlD {
 		controld = a.ControlDID
 	}
+	var keys []string
+	if a.Server {
+		keys = a.SSHKeys
+	}
 	env := append(inheritedEnv(),
 		"DISK="+a.Disk,
 		"CONFIRM=YES",
@@ -232,6 +247,9 @@ func (a answers) env(hash string) []string {
 		"APPS="+strings.Join(a.Apps, " "),
 		"FINGERPRINT="+boolStr(a.Fingerprint),
 		"SECURE_BOOT="+boolStr(a.SecureBoot),
+		"SERVER="+boolStr(a.Server),
+		// a key's comment can have spaces in it
+		"SSH_KEYS="+strings.Join(keys, "\n"),
 		"SWAP_SIZE="+a.Swap,
 		"PASSWORD_HASH="+hash,
 		"FLAKE_ATTR=nixos",
@@ -472,6 +490,9 @@ done
 if [ "$EPHEMERAL_DRY_RUN_FAIL" = 1 ]; then
   echo "error: builder for '/nix/store/...-nvidia-x11-580.95.05.drv' failed with exit code 2"
   exit 1
+fi
+if [ "$SERVER" = true ]; then
+  echo "  256 SHA256:Zk3uP0c8aW9v+2QxYq1tR5sN7mLb4Hd6Jf0eKg2nXyI initrd (ED25519)"
 fi
 echo "done. detach ISO, reboot, unlock LUKS, log in."
 `

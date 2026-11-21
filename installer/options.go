@@ -21,7 +21,12 @@ const (
 )
 
 func (m model) optRows() []optRow {
-	rows := []optRow{optExtras, optOpenSnitch, optPassAgent}
+	rows := []optRow{optExtras}
+	// it asks its questions on the desktop, so it's only on with one
+	if m.a.Desktop != "none" {
+		rows = append(rows, optOpenSnitch)
+	}
+	rows = append(rows, optPassAgent)
 	if m.a.PassAgent {
 		rows = append(rows, optVault)
 	}

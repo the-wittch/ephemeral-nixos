@@ -10,8 +10,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// apps for another desktop than the one picked aren't shown
+// apps for another desktop than the one picked aren't shown, and without a desktop only the
+// terminal ones are
 func (m model) offered(a app) bool {
+	if m.a.Desktop == "none" {
+		return a.Category == "Terminal"
+	}
 	return len(a.Desktops) == 0 || slices.Contains(a.Desktops, m.a.Desktop)
 }
 
@@ -113,16 +117,23 @@ func (m model) viewApps(w int) ([]string, string) {
 			sSub.Render("The full error is in "+uiLogPath()+"."))
 		return out, hint("r", "try again", "enter", "next step", "esc", "back")
 	}
+	cats := m.appCategories()
+	if len(cats) == 0 {
+		out = append(out, sText.Render("Without a desktop, only terminal apps are offered, and there are none in the list."))
+		return out, hint("enter", "next step", "esc", "back")
+	}
 	count := 0
 	for _, a := range m.catalog {
 		if m.offered(a) && m.picked[a.ID] {
 			count++
 		}
 	}
-	cats := m.appCategories()
 	// on a short screen the categories and the panel come first; each category shows its own count
 	if len(out)+2+len(cats)+appPanel <= m.bodyRows() {
 		intro := sSub.Render("Some are ticked to start with. Change any of them later with ephemeral-apps.")
+		if m.a.Desktop == "none" {
+			intro = sSub.Render("Without a desktop, only terminal apps. Change them later with ephemeral-apps.")
+		}
 		picked := sMauve.Render(fmt.Sprintf("%d picked", count))
 		out = append(out, intro+spaces(max(w-lipgloss.Width(intro)-lipgloss.Width(picked), 2))+picked, "")
 	}

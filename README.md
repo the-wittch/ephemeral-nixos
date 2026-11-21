@@ -98,14 +98,15 @@ Without the menus, it doesn't ask for the hostname, user, swap size or timezone,
 
 The screens come in this order:
 
-1. **Disk** and **desktop**.
+1. **Disk** and **desktop**, or none for a server you only reach over SSH.
 2. **Graphics**, only when it finds an NVIDIA card: it shows the card and asks for `open` (RTX 20 / GTX 16 series and newer), `legacy` (GTX 900 / 10 series) or `none`. The driver is compiled during the install, which adds a few minutes.
 3. **Region:** keyboard layout, language and timezone; type to search the lists.
 4. **Install type:** the full system, or a small install, a plain desktop finished later with `ephemeral-setup`.
-5. **Options**, full system only: the extra shell tools (atuin, fzf, bat, fastfetch and more), OpenSnitch, the Proton Pass SSH agent, and where DNS goes: the network's own, or encrypted to Cloudflare, Quad9, AdGuard, Control D or servers you name. Fingerprint login when it finds a reader, and last, Secure Boot with keys made on the machine; with the firmware in Setup Mode, they go into it during the install. A battery turns on the laptop extras without asking.
-6. **Apps**, full system only: the same list as `ephemeral-apps`, with Firefox, VLC and a few tools ticked to start with, and Steam, VS Code, Brave and Nerd Fonts among those to pick.
+5. **Options**, full system only: the extra shell tools (atuin, fzf, bat, fastfetch and more), OpenSnitch (with a desktop), the Proton Pass SSH agent, and where DNS goes: the network's own, or encrypted to Cloudflare, Quad9, AdGuard, Control D or servers you name. Fingerprint login when it finds a reader, and last, Secure Boot with keys made on the machine; with the firmware in Setup Mode, they go into it during the install. A battery turns on the laptop extras without asking.
+6. **Apps**, full system only: the same list as `ephemeral-apps`, with Firefox, VLC and a few tools ticked to start with, and Steam, VS Code, Brave and Nerd Fonts among those to pick. Without a desktop, only the terminal apps.
 7. **Machine:** hostname, user and swap size.
-8. **Secrets:** the LUKS passphrase and the login password. With a non-US layout it switches the console to that layout first, so you type the passphrase the way you will at boot; where it can't, it says so.
+8. **Server:** whether it stays on and takes SSH logins with keys only, and the public keys that may log in. Paste them, or type `github:yourname` to fetch the ones on your GitHub account. A server's disk can be unlocked over SSH after a reboot, so the install makes a host key for that, and prints its fingerprint at the end to check the first time you connect. The config's [servers page](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/servers.md) has the rest.
+9. **Secrets:** the LUKS passphrase and the login password. With a non-US layout it switches the console to that layout first, so you type the passphrase the way you will at boot; where it can't, it says so.
 
 It detects the rest of your hardware once the disk is mounted. When it's done, remove the ISO and reboot.
 
@@ -142,7 +143,7 @@ This repo is the installer and nothing else. Its `flake.nix` is the machine flak
 ```nix
 {
   inputs = {
-    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v4.15.0";
+    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v4.16.0";
     # the installer runs nixpkgs tools by name
     nixpkgs.follows = "ephemeral/nixpkgs";
   };

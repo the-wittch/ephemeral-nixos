@@ -103,16 +103,16 @@
         "zork-nix": "zork-nix"
       },
       "locked": {
-        "lastModified": 1795221578,
-        "narHash": "sha256-Hhes4T2YwNRhLJObaonQntYuBTKzjtfA+SebvPsE7lI=",
+        "lastModified": 1795240811,
+        "narHash": "sha256-+dBo35tjvcwB7dfBh35S+O/f1YjQFWgNdAn5AETqcHU=",
         "owner": "the-wittch",
         "repo": "ephemeral-nixos-config",
-        "rev": "78437d76adf791dd42132a52544850ec5b600ffd",
+        "rev": "d300a9d01a35aeff0ebbebd7b48da01ad9c77586",
         "type": "github"
       },
       "original": {
         "owner": "the-wittch",
-        "ref": "v4.15.0",
+        "ref": "v4.16.0",
         "repo": "ephemeral-nixos-config",
         "type": "github"
       }
