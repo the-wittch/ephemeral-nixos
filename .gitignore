@@ -5,6 +5,7 @@
 /hardware-configuration.nix
 /smb-shares.json
 /smb-shares.nix
+/backup.json
 
 passwords/
 *.key
