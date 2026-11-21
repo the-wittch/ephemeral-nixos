@@ -2,6 +2,22 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.11.0
+
+### Added
+
+- A search in the app list: `/` opens it, each word you type has to start a word in an app's name or description, Tab ticks a result, and Enter or Esc closes it. On a wide enough screen the results show their category.
+
+### Changed
+
+- The app categories come in the order the config sets, the one `ephemeral-apps` shows too, instead of a list the installer kept itself. Security is now Passwords and Security testing.
+- The desktop and install-type menus have shorter lines from the config, so they fit 80 columns; the headless choice is "None".
+
+### Fixed
+
+- Lines that were cut off on an 80×24 screen: the Server screen's description, the battery line on the Options screen once the vault field is open, and the review's line about the disk, which now wraps.
+- The review said "NVIDIA, none driver" for a card left on nouveau; it now says so in words. Its apps line starts with how many are picked.
+
 ## 3.10.0
 
 ### Added

@@ -124,11 +124,6 @@ type app struct {
 	Desktops                               []string
 }
 
-var categoryOrder = []string{
-	"Browsers", "Communication", "Office", "Media", "Graphics", "Gaming",
-	"Development", "Security", "Terminal", "Utilities", "Fonts", "System", "Virtualization",
-}
-
 func parseCatalog(data []byte) ([]app, error) {
 	var raw map[string]struct {
 		Label       string   `json:"label"`

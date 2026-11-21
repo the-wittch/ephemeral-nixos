@@ -253,7 +253,13 @@ func (m model) viewOptions(w int) ([]string, string) {
 		out = append(out, m.gap()...)
 	}
 	if m.laptop {
-		out = append(out, sSub.Render("Found on this machine"), "    "+sGreen.Render(g.dot)+" "+sText.Render("a battery: laptop extras, thermald and battery reporting"))
+		battery := "    " + sGreen.Render(g.dot) + " " + sText.Render("a battery: laptop extras, thermald and battery reporting")
+		if m.roomy() {
+			out = append(out, sSub.Render("Found on this machine"), battery)
+		} else {
+			// the heading would push it off a 24-row screen once the vault field is open
+			out = append(out, "    "+sGreen.Render(g.dot)+" "+sText.Render("found a battery: laptop extras, thermald and battery reporting"))
+		}
 	}
 	switch m.optRow() {
 	case optVault, optControlDID, optCustomDNS:

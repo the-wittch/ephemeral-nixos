@@ -25,7 +25,11 @@ func (m model) reviewLines() []reviewLine {
 	lines := []reviewLine{{"DISK", diskVal + "  erased", stDisk, true}}
 	lines = append(lines, reviewLine{"DESKTOP", m.labelFor(stDesktop), stDesktop, false})
 	if m.hasGPU {
-		lines = append(lines, reviewLine{"GRAPHICS", "NVIDIA, " + m.a.Nvidia + " driver", stGraphics, false})
+		gfx := "NVIDIA's " + m.a.Nvidia + " driver"
+		if m.a.Nvidia == "none" {
+			gfx = "NVIDIA card, on the open-source nouveau driver"
+		}
+		lines = append(lines, reviewLine{"GRAPHICS", gfx, stGraphics, false})
 	}
 	region := m.a.Layout
 	if m.a.Variant != "" {
@@ -68,7 +72,7 @@ func (m model) reviewLines() []reviewLine {
 			}
 		}
 		if len(names) > 0 {
-			apps = strings.Join(names, ", ")
+			apps = itoa(len(names)) + ": " + strings.Join(names, ", ")
 		} else if len(m.catalog) == 0 && m.a.Desktop != "none" {
 			apps = "the defaults, such as Firefox"
 		}
@@ -175,7 +179,7 @@ func (m model) viewReview(w int) ([]string, string) {
 	if !spaced {
 		out = append(out, "")
 	}
-	out = append(out, sSub.Render(truncate(m.a.Disk+" becomes a 1G boot partition and the rest encrypted, with a "+m.a.Swap+" swap file inside.", w)))
+	out = append(out, strings.Split(sSub.Width(w).Render(m.a.Disk+" becomes a 1G boot partition and the rest encrypted, with a "+m.a.Swap+" swap file inside."), "\n")...)
 	out = append(out, strings.Split(box.Render(prompt+m.confirmIn.View()), "\n")...)
 	if m.cfg.dryRun {
 		out = append(out, sYellow.Render("Dry run: install.sh won't run."))

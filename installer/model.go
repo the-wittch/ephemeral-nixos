@@ -90,6 +90,8 @@ type model struct {
 	appCat         int
 	appIdx         int
 	appPane        int
+	appSearching   bool
+	appQuery       textinput.Model
 	picked         map[string]bool
 
 	machineIn    []textinput.Model
@@ -209,6 +211,8 @@ func newModel(cfg config) model {
 		newInput(m.a.Username, "nixuser"),
 		newInput(m.a.Swap, "4G"),
 	}
+	m.appQuery = newInput("", "name or what it does")
+	m.appQuery.Width = 18
 	m.keyIn = newInput("", "ssh-ed25519 AAAA… or github:yourname")
 	// an RSA key is 750 characters or so
 	m.keyIn.CharLimit = 4096
@@ -416,7 +420,8 @@ func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	// an error stays up until the next key, which either fixes it or says it again
 	m.note = ""
-	if k.String() == "esc" && m.step > stWelcome && m.step <= stReview {
+	// in the app search it closes the search instead
+	if k.String() == "esc" && m.step > stWelcome && m.step <= stReview && !(m.step == stApps && m.appSearching) {
 		return m, m.back()
 	}
 	switch m.step {
