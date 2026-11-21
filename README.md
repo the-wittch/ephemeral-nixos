@@ -59,8 +59,8 @@ Boot the NixOS graphical ISO in UEFI mode and connect to the network, then use o
 Take the tag and commit from the latest [release](https://github.com/the-wittch/ephemeral-nixos/releases), or from [`RELEASE`](./RELEASE) on that tag, and check the clone against them:
 
 ```bash
-TAG=v3.10.0
-REV=3a53bc80933ef25ca8751ba644b071cd30ec7e4c
+TAG=v3.11.0
+REV=84db86d58ee221411f8551bfee9cb52c257cca53
 git clone --branch "$TAG" --depth 1 https://github.com/the-wittch/ephemeral-nixos.git ~/nix
 cd ~/nix
 [[ $(git rev-parse HEAD) == "$REV" ]] || echo "hash mismatch, stop here"
@@ -70,8 +70,8 @@ sudo ./scripts/tui.sh
 Or let the bootstrap script clone and check it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v3.10.0/scripts/bootstrap-tui.sh -o /tmp/bootstrap-tui.sh
-sudo env TAG=v3.10.0 EXPECTED_REV=3a53bc80933ef25ca8751ba644b071cd30ec7e4c bash /tmp/bootstrap-tui.sh
+curl -fsSL https://raw.githubusercontent.com/the-wittch/ephemeral-nixos/v3.11.0/scripts/bootstrap-tui.sh -o /tmp/bootstrap-tui.sh
+sudo env TAG=v3.11.0 EXPECTED_REV=84db86d58ee221411f8551bfee9cb52c257cca53 bash /tmp/bootstrap-tui.sh
 ```
 
 Release tags are signed, so GitHub shows them as Verified. [Weekly releases](docs/development.md) are tagged by CI and aren't signed. From v3.7.3 on, GitHub signs a record of every release's tag and files instead, which `gh release verify "$TAG" -R the-wittch/ephemeral-nixos` checks. Checking the commit hash as above works for every release.
