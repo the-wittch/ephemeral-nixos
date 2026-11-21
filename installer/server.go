@@ -214,7 +214,7 @@ func (m model) viewServer(w int) ([]string, string) {
 	if m.a.Server {
 		check = sGreen.Render(g.checked) + " "
 	}
-	desc := "stays on, takes SSH logins with keys only, and the disk can be unlocked over SSH after a reboot"
+	desc := "stays on, and takes SSH logins with keys only"
 	if m.a.Desktop == "none" {
 		desc = "without a desktop it has to be: SSH is the only way in"
 	}

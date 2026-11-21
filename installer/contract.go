@@ -17,6 +17,8 @@ type contract struct {
 	menus    map[string][]choice
 	// every key settings.json can have
 	settings map[string]bool
+	// the app categories, in the order to show them
+	categories []string
 }
 
 // the settings the screens ask for from a menu
@@ -39,6 +41,7 @@ func loadContract() (contract, error) {
 		Choices  map[string][]struct {
 			Value, Label, Description, Tag string
 		} `json:"choices"`
+		AppCategories []string `json:"appCategories"`
 	}
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return contract{}, fmt.Errorf("%s: %w", path, err)
@@ -65,6 +68,10 @@ func loadContract() (contract, error) {
 			return contract{}, fmt.Errorf("the rule for %s is neither a pattern nor a list of values", key)
 		}
 	}
+	if len(raw.AppCategories) == 0 {
+		return contract{}, fmt.Errorf("%s has no order for the app categories; the config release is older than this installer", path)
+	}
+	c.categories = raw.AppCategories
 	for _, key := range menuSettings {
 		if len(raw.Choices[key]) == 0 {
 			return contract{}, fmt.Errorf("%s has no menu for %s; the config release is older than this installer", path, key)

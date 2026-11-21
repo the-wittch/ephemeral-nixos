@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -42,16 +44,14 @@ func (m model) appCategories() []string {
 		}
 	}
 	var out []string
-	for _, c := range categoryOrder {
+	for _, c := range rules.categories {
 		if seen[c] {
 			out = append(out, c)
 			delete(seen, c)
 		}
 	}
-	for c := range seen {
-		out = append(out, c)
-	}
-	return out
+	// the catalog only takes the ones in the order, but a test catalog can have others
+	return append(out, slices.Sorted(maps.Keys(seen))...)
 }
 
 func (m model) appsIn(cat string) []app {
@@ -64,7 +64,68 @@ func (m model) appsIn(cat string) []app {
 	return out
 }
 
+// Each word of the search has to start a word of the app's name or description, as in
+// ephemeral-apps, so "scan" finds a network scanner and not every name with s, c, a and n in it.
+func appMatches(a app, query string) bool {
+	split := func(s string) []string {
+		return strings.FieldsFunc(strings.ToLower(s), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
+	}
+	words := split(a.Label + " " + a.Description)
+	for _, q := range split(query) {
+		if !slices.ContainsFunc(words, func(w string) bool { return strings.HasPrefix(w, q) }) {
+			return false
+		}
+	}
+	return true
+}
+
+// the apps offered here that match the search, from every category
+func (m model) searchResults() []app {
+	var out []app
+	for _, a := range m.catalog {
+		if m.offered(a) && appMatches(a, m.appQuery.Value()) {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+func (m *model) closeSearch() {
+	m.appSearching = false
+	m.appQuery.SetValue("")
+	m.appQuery.Blur()
+	m.appIdx, m.appPane = 0, 0
+}
+
+func (m model) keySearch(k tea.KeyMsg) (tea.Model, tea.Cmd) {
+	res := m.searchResults()
+	switch k.String() {
+	case "enter", "esc":
+		m.closeSearch()
+		return m, nil
+	case "up":
+		m.appIdx = max(m.appIdx-1, 0)
+		return m, nil
+	case "down":
+		m.appIdx = max(min(m.appIdx+1, len(res)-1), 0)
+		return m, nil
+	case "tab":
+		if m.appIdx < len(res) {
+			id := res[m.appIdx].ID
+			m.picked[id] = !m.picked[id]
+		}
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.appQuery, cmd = m.appQuery.Update(k)
+	m.appIdx = 0
+	return m, cmd
+}
+
 func (m model) keyApps(k tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.appSearching {
+		return m.keySearch(k)
+	}
 	if k.String() == "enter" {
 		m.a.Apps = m.appChoices()
 		return m, m.next()
@@ -79,6 +140,10 @@ func (m model) keyApps(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	apps := m.appsIn(cats[m.appCat])
 	switch k.String() {
+	case "/":
+		m.appSearching = true
+		m.appIdx, m.appPane = 0, 1
+		return m, m.appQuery.Focus()
 	case "tab", "right", "left", "shift+tab":
 		m.appPane = 1 - m.appPane
 	case "up":
@@ -140,6 +205,10 @@ func (m model) viewApps(w int) ([]string, string) {
 
 	apps := m.appsIn(cats[m.appCat])
 	var left []string
+	if m.appSearching {
+		apps = m.searchResults()
+		left = append(left, sMauve.Render(" / ")+m.appQuery.View(), "")
+	}
 	for i, c := range cats {
 		n := 0
 		for _, a := range m.appsIn(c) {
@@ -151,8 +220,10 @@ func (m model) viewApps(w int) ([]string, string) {
 		if n > 0 {
 			count = strconv.Itoa(n)
 		}
-		text := padRight(c, 16) + padLeft(count, 2)
+		text := padRight(c, 17) + padLeft(count, 2)
 		switch {
+		case m.appSearching:
+			left = append(left, "   "+sDim.Render(text)+" ")
 		case i == m.appCat && m.appPane == 0:
 			left = append(left, sCursor.Render(" "+g.cursor+" "+text+" "))
 		case i == m.appCat:
@@ -186,9 +257,13 @@ func (m model) viewApps(w int) ([]string, string) {
 			box = sGreen.Render(g.checked)
 		}
 		flags := appFlags(a)
-		text := padRight(truncate(a.Label, labelW-2), labelW) + truncate(a.Description, rw-4-labelW-len(flags))
+		// the category only where it leaves room for the description; the panel below has it anyway
+		if cat := " · " + a.Category; m.appSearching && rw-4-labelW-len(flags)-lipgloss.Width(cat) >= 24 {
+			flags += cat
+		}
+		text := padRight(truncate(a.Label, labelW-2), labelW) + truncate(a.Description, rw-4-labelW-lipgloss.Width(flags))
 		if i == m.appIdx && m.appPane == 1 {
-			right = append(right, box+" "+sCursor.Render(padRight(text, rw-4-len(flags)))+sDim.Render(flags))
+			right = append(right, box+" "+sCursor.Render(padRight(text, rw-4-lipgloss.Width(flags)))+sDim.Render(flags))
 		} else {
 			right = append(right, box+" "+sText.Render(text)+sDim.Render(flags))
 		}
@@ -210,7 +285,11 @@ func (m model) viewApps(w int) ([]string, string) {
 	// the selected app in full, since its row may be cut short
 	if m.appPane == 1 && m.appIdx < len(apps) {
 		a := apps[m.appIdx]
-		out = append(out, "", sBold.Render(a.Label)+sDim.Render(appFlags(a)), sSub.Render(truncate(a.Description, w)))
+		head := sBold.Render(a.Label) + sDim.Render(appFlags(a))
+		if m.appSearching {
+			head += sDim.Render(" · " + a.Category)
+		}
+		out = append(out, "", head, sSub.Render(truncate(a.Description, w)))
 		if a.Warn != "" {
 			warn := strings.Split(lipgloss.NewStyle().Width(w-2).Render(a.Warn), "\n")
 			for i, l := range warn[:min(len(warn), 2)] {
@@ -222,7 +301,13 @@ func (m model) viewApps(w int) ([]string, string) {
 			}
 		}
 	}
-	return out, hint("x", "tick", "tab", "switch side", "↑↓", "move", "enter", "next step", "esc", "back")
+	if m.appSearching {
+		if len(apps) == 0 {
+			out = append(out, "", sSub.Render("Nothing matches; each word has to start a word in an app's name or description."))
+		}
+		return out, hint("type", "to search", "↑↓", "move", "tab", "tick", "enter", "done")
+	}
+	return out, hint("x", "tick", "/", "search", "tab", "switch side", "↑↓", "move", "enter", "next step", "esc", "back")
 }
 
 func appFlags(a app) string {

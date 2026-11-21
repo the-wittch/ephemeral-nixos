@@ -552,3 +552,45 @@ func TestAppDefaultsAndDesktops(t *testing.T) {
 		t.Errorf("an unticked default should be saved as -firefox: %v", m.a.Apps)
 	}
 }
+
+func TestAppSearch(t *testing.T) {
+	m := newTestModel(t)
+	m = update(t, m, catalogMsg{apps: []app{
+		{ID: "nmap", Label: "Nmap", Category: "Security testing", Description: "network scanner and service detection"},
+		{ID: "bpftune", Label: "bpftune", Category: "System", Description: "tunes network and memory settings"},
+		{ID: "xz", Label: "xz", Category: "Utilities", Description: "compress files"},
+	}})
+	m = toInstallType(t, m)
+	m = press(t, m, enter, enter)
+	wantStep(t, m, stApps)
+
+	m = press(t, m, typed("/"), typed("scan"))
+	if !m.appSearching {
+		t.Fatal("/ should open the search")
+	}
+	if res := m.searchResults(); len(res) != 1 || res[0].ID != "nmap" {
+		t.Errorf("scan should only find the scanner, got %+v", res)
+	}
+	m = press(t, m, tab)
+	if !m.picked["nmap"] {
+		t.Error("tab should tick the result")
+	}
+	m = press(t, m, ctrlU, typed("x"))
+	if m.picked["xz"] || m.appQuery.Value() != "x" {
+		t.Errorf("x is typed into the search, not a tick: query %q", m.appQuery.Value())
+	}
+	m = press(t, m, ctrlU, typed("network tune"))
+	if res := m.searchResults(); len(res) != 1 || res[0].ID != "bpftune" {
+		t.Errorf("every word has to match, got %+v", res)
+	}
+
+	m = press(t, m, esc)
+	wantStep(t, m, stApps)
+	if m.appSearching || m.appQuery.Value() != "" {
+		t.Error("esc should close the search and stay on the apps")
+	}
+	m = press(t, m, enter)
+	if !slices.Contains(m.a.Apps, "nmap") {
+		t.Errorf("the app ticked in the search should be picked: %v", m.a.Apps)
+	}
+}
