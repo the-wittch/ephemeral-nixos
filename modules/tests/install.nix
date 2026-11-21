@@ -1,4 +1,3 @@
-# nix build path:.#checks.x86_64-linux.install -L
 {
   config,
   inputs,

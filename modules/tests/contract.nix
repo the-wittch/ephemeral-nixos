@@ -1,4 +1,3 @@
-# nix build path:.#checks.x86_64-linux.contract
 # What the installer still repeats from the config, held against the config release it pins.
 # Everything else comes from that release directly: the settings rules and menus from its
 # settings-contract package and settings output, the apps from app-catalog, the wallpaper and
