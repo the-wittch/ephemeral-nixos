@@ -92,6 +92,8 @@ func toReviewFromMachine(t *testing.T, m model) model {
 	t.Helper()
 	wantStep(t, m, stMachine)
 	m = press(t, m, enter, enter, enter)
+	wantStep(t, m, stServer)
+	m = press(t, m, enter)
 	wantStep(t, m, stSecrets)
 	m = press(t, m, typed("correct horse"), tab, typed("correct horse"), tab, typed("pw"), tab, typed("pw"), enter)
 	wantStep(t, m, stReview)
@@ -114,8 +116,8 @@ func pickReviewLine(t *testing.T, m model, s stepID) model {
 
 func TestFullInstallFlow(t *testing.T) {
 	m := newTestModel(t)
-	if n := len(m.visible()); n != 9 {
-		t.Errorf("without a GPU there should be 9 steps, got %d", n)
+	if n := len(m.visible()); n != 10 {
+		t.Errorf("without a GPU there should be 10 steps, got %d", n)
 	}
 	m = toInstallType(t, m)
 	m = press(t, m, enter)
@@ -159,7 +161,7 @@ func TestBackKeepsAnswers(t *testing.T) {
 func TestSmallSkipsOptionsAndApps(t *testing.T) {
 	m := toInstallType(t, newTestModel(t))
 	m = press(t, m, down, enter)
-	if m.a.Profile != "minimal" || len(m.visible()) != 7 {
+	if m.a.Profile != "minimal" || len(m.visible()) != 8 {
 		t.Errorf("profile %q, %d steps", m.a.Profile, len(m.visible()))
 	}
 	m = toReviewFromMachine(t, m)
@@ -216,7 +218,7 @@ func TestInvalidInputStaysPut(t *testing.T) {
 	if m.machineFocus != 1 {
 		t.Errorf("enter should move to the next field, got %d", m.machineFocus)
 	}
-	m = press(t, m, enter, enter)
+	m = press(t, m, enter, enter, enter)
 	wantStep(t, m, stSecrets)
 
 	m = press(t, m, typed("short"), tab, typed("short"), tab, typed("pw"), tab, typed("pw"), enter)
@@ -351,7 +353,7 @@ func TestWelcomeOfflineOffersWiFi(t *testing.T) {
 
 func TestSecondCopyIsQuietWhileTyping(t *testing.T) {
 	m := toInstallType(t, newTestModel(t))
-	m = press(t, m, down, enter, enter, enter, enter)
+	m = press(t, m, down, enter, enter, enter, enter, enter)
 	wantStep(t, m, stSecrets)
 	m = press(t, m, typed("correct horse"), enter, typed("correct"))
 	if v := m.View(); strings.Contains(v, "matches") || strings.Contains(v, "don't match") {

@@ -37,7 +37,7 @@ func (m model) reviewLines() []reviewLine {
 		if m.a.Extras {
 			opts = append(opts, "extras")
 		}
-		if m.a.OpenSnitch {
+		if m.a.OpenSnitch && m.a.Desktop != "none" {
 			opts = append(opts, "OpenSnitch")
 		}
 		if m.a.PassAgent {
@@ -69,7 +69,7 @@ func (m model) reviewLines() []reviewLine {
 		}
 		if len(names) > 0 {
 			apps = strings.Join(names, ", ")
-		} else if len(m.catalog) == 0 {
+		} else if len(m.catalog) == 0 && m.a.Desktop != "none" {
 			apps = "the defaults, such as Firefox"
 		}
 		lines = append(lines, reviewLine{"APPS", apps, stApps, false})
@@ -78,6 +78,17 @@ func (m model) reviewLines() []reviewLine {
 	}
 	lines = append(lines,
 		reviewLine{"MACHINE", m.a.Hostname + " · " + m.a.Username + " · " + m.a.Swap + " swap", stMachine, false},
+	)
+	server := "no"
+	if m.a.Server {
+		keys := itoa(len(m.a.SSHKeys)) + " key"
+		if len(m.a.SSHKeys) != 1 {
+			keys += "s"
+		}
+		server = "SSH with " + keys + ", unlocked over SSH after a reboot"
+	}
+	lines = append(lines,
+		reviewLine{"SERVER", server, stServer, false},
 		reviewLine{"SECRETS", "disk passphrase and login password set", stSecrets, false},
 	)
 	return lines

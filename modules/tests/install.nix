@@ -58,6 +58,8 @@ in
       answersBroken = answersWith {
         hardwareConfig = pkgs.writeText "broken-hardware-configuration.nix" "{ this is not nix";
       };
+      answersNoKeys = answersWith { sshKeys = [ ]; };
+      initrd = "/mnt/persist/etc/ssh/initrd";
 
       # a network joined with nmtui on the live system
       wifi = pkgs.writeText "home.nmconnection" ''
@@ -101,6 +103,8 @@ in
               nixos-install-tools
               btrfs-progs
               cryptsetup
+              # bsdtar, to read the secrets the boot loader puts in the initrd
+              libarchive
             ];
             nix.settings = {
               experimental-features = [
@@ -161,6 +165,12 @@ in
               installer.fail("findmnt /mnt")
               installer.fail("test -e /run/ephemeral-install.state")
 
+          with subtest("a server without SSH keys is refused before anything starts"):
+              before = installer.succeed("cat /run/ephemeral-install/pid")
+              out = installer.fail("ephemeral-install --answers ${answersNoKeys} 2>&1")
+              assert "sshKeys: a server needs at least one" in out, out
+              assert installer.succeed("cat /run/ephemeral-install/pid") == before, "install.sh was started"
+
           with subtest("an install that fails after partitioning leaves the disk open, and the next one closes it"):
               installer.fail("ephemeral-install --answers ${answersFailing} >&2")
               installer.succeed("findmnt /mnt && test -e /dev/mapper/cryptroot && test -s /run/ephemeral-install.state")
@@ -200,6 +210,24 @@ in
                   )[1].strip()
                   assert found == "", f"{secret!r} was written to:\n{found}"
 
+          with subtest("a server's key for unlocking over SSH is made root-only, and the boot loader puts it in the initrd"):
+              installer.succeed("cmp ${initrd}/ssh_host_ed25519_key ${initrd}/boot-key")
+              modes = installer.succeed("stat -c '%a %U' ${initrd} ${initrd}/ssh_host_ed25519_key ${initrd}/boot-key").split()
+              assert modes == ["700", "root", "600", "root", "600", "root"], modes
+              listed = installer.succeed("for f in /mnt/boot/limine/kernels/*-secrets; do bsdtar -tf \"$f\"; done")
+              assert "etc/ssh/boot-key" in listed, listed
+              # the install's output says how to check the key the first time
+              fingerprint = installer.succeed("ssh-keygen -lf ${initrd}/ssh_host_ed25519_key.pub").split()[1]
+              installer.succeed(f"grep -qF -- '{fingerprint}' /tmp/ephemeral-install.log")
+              # the second line is mostly the format's header, the same in every key; the third is this one's,
+              # which only /persist and the boot partition may hold
+              line = installer.succeed("sed -n 3p ${initrd}/ssh_host_ed25519_key").strip()
+              found = installer.execute(
+                  f"grep -rIlF -- '{line}' /tmp/ephemeral-install.log* /run/ephemeral-install /mnt/var/log"
+                  " /mnt/persist/etc/nixos /mnt/nix/store 2>/dev/null"
+              )[1].strip()
+              assert found == "", f"the private key was written to:\n{found}"
+
           with subtest("reinstall with the test backdoor, through the machine's own modules/"):
               installer.succeed(
                   "install -D -m 0644 ${fixture}/hosts.nix /mnt/persist/etc/nixos/modules/hosts.nix",
@@ -225,6 +253,8 @@ in
               # the fixture is only in the installer's store, so check what's in the file
               target.succeed("grep -qx ssid=home /etc/NetworkManager/system-connections/home.nmconnection")
               target.succeed("systemctl is-active --quiet root-reset-check.service")
+              target.succeed("systemctl is-active --quiet sshd.service")
+              target.succeed("grep -qxF -- '${builtins.head answers.sshKeys}' /etc/ssh/authorized_keys.d/${answers.username}")
 
           with subtest("root is wiped on reboot, /persist is kept"):
               target.succeed("touch /root-was-here /persist/persist-was-here")

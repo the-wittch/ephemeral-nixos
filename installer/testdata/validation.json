@@ -12,5 +12,26 @@
   "desktop": ["plasma", "gnome", "niri", "umbriel", "kde", "Plasma", ""],
   "nvidia": ["none", "open", "legacy", "nouveau", ""],
   "profile": ["full", "minimal", "small", ""],
-  "encryptedDns": ["none", "cloudflare", "quad9", "adguard", "custom", "controld", "google", ""]
+  "encryptedDns": ["none", "cloudflare", "quad9", "adguard", "custom", "controld", "google", ""],
+  "sshKeys": [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMSJH062QE//0aztsSAqLUYZjcQNSxw66LXQo8vT+ecu alice@laptop",
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMSJH062QE//0aztsSAqLUYZjcQNSxw66LXQo8vT+ecu",
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMSJH062QE//0aztsSAqLUYZjcQNSxw66LXQo8vT+ecu alice@laptöp",
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMSJH062QE//0aztsSAqLUYZjcQNSxw66LXQo8vT+ecu github:alice",
+    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCY7Yiyn== a b c",
+    "ecdsa-sha2-nistp256 AAAAE2VjZHNh",
+    "sk-ssh-ed25519@openssh.com AAAAGnNr yubikey",
+    "ssh-dss AAAAB3NzaC1kc3M",
+    "AAAAC3NzaC1lZDI1NTE5AAAAIMSJH062QE//0aztsSAqLUYZjcQNSxw66LXQo8vT+ecu",
+    "ssh-ed25519",
+    "ssh-ed25519  AAAAC3NzaC1lZDI1NTE5",
+    "ssh-ed25519 ab=c",
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 a\"b",
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 $(reboot)",
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 a`b`",
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 a\\b",
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 a\tb",
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 a\nb",
+    ""
+  ]
 }

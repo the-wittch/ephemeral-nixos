@@ -16,5 +16,9 @@
   "secureBoot": true,
   "useOpenSnitch": true,
   "useControlD": false,
-  "usePassSshAgent": false
+  "usePassSshAgent": false,
+  "server": true,
+  "sshKeys": [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMSJH062QE//0aztsSAqLUYZjcQNSxw66LXQo8vT+ecu alice@install-test"
+  ]
 }

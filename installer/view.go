@@ -38,6 +38,8 @@ func (m model) View() string {
 		body, hints = m.viewApps(w)
 	case stMachine:
 		body, hints = m.viewMachine(w)
+	case stServer:
+		body, hints = m.viewServer(w)
 	case stSecrets:
 		body, hints = m.viewSecrets(w)
 	case stReview:
