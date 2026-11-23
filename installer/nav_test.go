@@ -485,7 +485,7 @@ func TestSecureBootIsOfferedLast(t *testing.T) {
 	if !m.a.SecureBoot {
 		t.Fatal("space didn't tick Secure Boot")
 	}
-	if !slices.Contains(m.a.env("$y$hash"), "SECURE_BOOT=true") {
+	if !slices.Contains(m.a.env(), "SECURE_BOOT=true") {
 		t.Error("install.sh isn't told about Secure Boot")
 	}
 	for mode, want := range map[bool]string{false: "isn't in Setup Mode", true: "put in the firmware now"} {

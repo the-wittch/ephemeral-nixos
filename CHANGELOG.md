@@ -2,6 +2,16 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.11.1
+
+### Changed
+
+- New installs get config [v4.20.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+- The screens send the login password's hash to `install.sh` on file descriptor 4, as they send the passphrase on 3, instead of in its environment. `PASSWORD_HASH` still works for `install.sh` and `bootstrap.sh` on their own.
+- `bootstrap.sh` and `bootstrap-tui.sh` warn whenever the clone isn't checked against a commit, `main` included. They only warned for other branches and tags before.
+- The plain prompts don't ask about OpenSnitch on a machine without a desktop, where it's never turned on. The screens already left it out.
+- The weekly release follows the CI run it started on the config PR, rather than the PR's list of checks, and merges only the commit that run tested.
+
 ## 3.11.0
 
 ### Added

@@ -71,9 +71,13 @@ jobs:
             echo "::error::$newest came out after this PR was opened from $base. Close it; follow config opens a new one."
             exit 1
           fi
-          # follow-config starts ci.yml beside this test, and main won't take the PR until it passes
-          gh pr checks "$pr" --required --watch --fail-fast --interval 30
-          gh pr merge "$pr" --squash --delete-branch
+          # follow-config starts ci.yml beside this test, and main won't take the PR until it passes.
+          # That run is followed by itself: the PR's list of checks can show a stale or skipped copy.
+          head=$(gh pr view "$pr" --json headRefOid -q .headRefOid)
+          run=$(gh run list --workflow ci.yml --branch "$BRANCH" --commit "$head" --json databaseId -q '.[0].databaseId // empty')
+          [[ -n $run ]] || { echo "no CI run for $head on $BRANCH"; exit 1; }
+          gh run watch "$run" --exit-status --interval 30
+          gh pr merge "$pr" --squash --delete-branch --match-head-commit "$head"
           sha=$(gh pr view "$pr" --json mergeCommit -q .mergeCommit.oid)
           git fetch -q origin main
           git switch -q -c pin "$sha"

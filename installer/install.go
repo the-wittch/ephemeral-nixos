@@ -199,7 +199,7 @@ func (a answers) check() error {
 
 // install.sh honours these from its environment; the screens and --answers never show them, so
 // they don't pass them on from the environment the installer was started in
-var overrides = []string{"FORCE_DISK", "ALLOW_SAME_PARTLABELS", "HARDWARE_CONFIG", "DISK_ID", "PASSPHRASE_FD"}
+var overrides = []string{"FORCE_DISK", "ALLOW_SAME_PARTLABELS", "HARDWARE_CONFIG", "DISK_ID", "PASSPHRASE_FD", "PASSWORD_HASH", "PASSWORD_HASH_FD"}
 
 func inheritedEnv() []string {
 	var out []string
@@ -212,7 +212,7 @@ func inheritedEnv() []string {
 	return out
 }
 
-func (a answers) env(hash string) []string {
+func (a answers) env() []string {
 	vault := a.Vault
 	if !a.PassAgent {
 		vault = "Personal"
@@ -251,7 +251,6 @@ func (a answers) env(hash string) []string {
 		// a key's comment can have spaces in it
 		"SSH_KEYS="+strings.Join(keys, "\n"),
 		"SWAP_SIZE="+a.Swap,
-		"PASSWORD_HASH="+hash,
 		"FLAKE_ATTR=nixos",
 	)
 	if a.Hardware != "" {
@@ -327,10 +326,11 @@ func (r runDir) finished() (code int, done bool) {
 	return code, true
 }
 
-// Starts install.sh. The passphrase goes on file descriptor 3, through a pipe filled and closed
-// before the start: never in the environment or on a command line. install.sh reads it at once
-// and closes it, and its standard input is empty, so nothing it runs can read the passphrase,
-// and a question it asks by mistake ends the install instead of taking the passphrase as the answer.
+// Starts install.sh. The passphrase goes on file descriptor 3 and the login password's hash on
+// 4, each through a pipe filled and closed before the start: never in the environment or on a
+// command line. install.sh reads both at once and closes them, and its standard input is empty,
+// so nothing it runs can read them, and a question it asks by mistake ends the install instead of
+// taking the passphrase as the answer.
 func launch(cfg config, r runDir, a answers) error {
 	if err := os.RemoveAll(r.dir); err != nil {
 		return err
@@ -354,26 +354,25 @@ func launch(cfg config, r runDir, a answers) error {
 	} else if hash, err = hashPassword(a.Password); err != nil {
 		return err
 	}
-	pr, pw, err := os.Pipe()
+	passphrase, err := filledPipe(a.Passphrase)
 	if err != nil {
 		return err
 	}
-	_, err = io.WriteString(pw, a.Passphrase+"\n")
-	pw.Close()
+	defer passphrase.Close()
+	hashed, err := filledPipe(hash)
 	if err != nil {
-		pr.Close()
 		return err
 	}
-	defer pr.Close()
+	defer hashed.Close()
 
 	cmd := exec.Command("sh", "-c", `"$0"; echo "$?" > "$1"`, script, r.status)
 	cmd.Dir = "/"
-	cmd.Env = a.env(hash)
+	cmd.Env = a.env()
 	if cfg.dryRun {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("DRY_RUN_PAUSE=%.3f", dryRunPause.Seconds()))
 	}
-	cmd.Env = append(cmd.Env, "PASSPHRASE_FD=3")
-	cmd.ExtraFiles = []*os.File{pr}
+	cmd.Env = append(cmd.Env, "PASSPHRASE_FD=3", "PASSWORD_HASH_FD=4")
+	cmd.ExtraFiles = []*os.File{passphrase, hashed}
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, out, out
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
@@ -457,7 +456,8 @@ func runHeadless(cfg config, a answers) int {
 var dryRunPause = 700 * time.Millisecond
 
 // --dry-run runs this in place of install.sh, the same way: detached, with the passphrase on
-// file descriptor 3 and nothing on stdin. It prints what install.sh would and touches nothing.
+// file descriptor 3, the hash on 4 and nothing on stdin. It prints what install.sh would and
+// touches nothing.
 const pretendInstall = `#!/bin/sh
 if read -r anything; then
   echo "error: something arrived on stdin, which has to be empty"
@@ -467,6 +467,12 @@ read -r one <&3
 exec 3<&-
 if [ -z "$one" ] || [ "$PASSPHRASE_FD" != 3 ]; then
   echo "error: the passphrase didn't arrive on file descriptor 3"
+  exit 3
+fi
+read -r hash <&4
+exec 4<&-
+if [ -z "$hash" ] || [ "$PASSWORD_HASH_FD" != 4 ] || [ -n "$PASSWORD_HASH" ]; then
+  echo "error: the password hash didn't arrive on file descriptor 4 alone"
   exit 3
 fi
 for line in \
@@ -496,3 +502,18 @@ if [ "$SERVER" = true ]; then
 fi
 echo "done. detach ISO, reboot, unlock LUKS, log in."
 `
+
+// the read end of a pipe holding s and a newline, its write end already closed
+func filledPipe(s string) (*os.File, error) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.WriteString(w, s+"\n")
+	w.Close()
+	if err != nil {
+		r.Close()
+		return nil, err
+	}
+	return r, nil
+}
