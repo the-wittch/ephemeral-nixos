@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -22,7 +23,11 @@ func (m model) reviewLines() []reviewLine {
 		}
 	}
 	diskVal := strings.TrimSpace(m.a.Disk + "  " + d.Model + "  " + humanSize(d.Size))
-	lines := []reviewLine{{"DISK", diskVal + "  erased", stDisk, true}}
+	// the serial tells apart two disks of the same model and size, right where the name is typed
+	if d.Serial != "" {
+		diskVal += "  serial " + d.Serial
+	}
+	lines := []reviewLine{{"DISK", diskVal + "  erased", stDisk, true}, {"ON IT", onDisk(d), stDisk, true}}
 	lines = append(lines, reviewLine{"DESKTOP", m.labelFor(stDesktop), stDesktop, false})
 	if m.hasGPU {
 		gfx := "NVIDIA's " + m.a.Nvidia + " driver"
@@ -185,4 +190,27 @@ func (m model) viewReview(w int) ([]string, string) {
 		out = append(out, sYellow.Render("Dry run: install.sh won't run."))
 	}
 	return out, hint("↑↓", "pick a line", "enter", "change it / install", "tab", "switch", "esc", "back")
+}
+
+// onDisk says what's on the disk now, all of which the install erases
+func onDisk(d disk) string {
+	if len(d.Partitions) == 0 {
+		return "no partitions"
+	}
+	var parts []string
+	for _, p := range d.Partitions {
+		s := humanSize(p.Size)
+		if p.Label != "" {
+			s = p.Label + " " + s
+		}
+		if p.FSType != "" {
+			s += " " + p.FSType
+		}
+		parts = append(parts, s)
+	}
+	n := "1 partition"
+	if len(parts) > 1 {
+		n = fmt.Sprintf("%d partitions", len(parts))
+	}
+	return n + ", all erased: " + strings.Join(parts, ", ")
 }

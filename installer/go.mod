@@ -1,4 +1,4 @@
-module github.com/the-wittch/ephemeral-nixos/installer
+module ephemeral-install
 
 go 1.25.0
 

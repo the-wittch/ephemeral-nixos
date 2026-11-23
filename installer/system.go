@@ -21,9 +21,9 @@ type partition struct {
 }
 
 type disk struct {
-	Path, Name, Tran, Model string
-	Size                    uint64
-	InUse                   bool
+	Path, Name, Tran, Model, Serial string
+	Size                            uint64
+	InUse                           bool
 	// an ISO written to it, like the stick this runs from; refused even when it isn't mounted
 	Installer bool
 	// "LVM", "ZFS", "RAID" or empty
@@ -38,6 +38,7 @@ type lsblkDev struct {
 	Size        uint64     `json:"size"`
 	Tran        *string    `json:"tran"`
 	Model       *string    `json:"model"`
+	Serial      *string    `json:"serial"`
 	FSType      *string    `json:"fstype"`
 	Label       *string    `json:"label"`
 	PartLabel   *string    `json:"partlabel"`
@@ -125,7 +126,7 @@ func parseDisks(data []byte) ([]disk, error) {
 		if d.Type != "disk" || strings.HasPrefix(d.Name, "zram") {
 			continue
 		}
-		dk := disk{Path: d.Path, Name: d.Name, Tran: str(d.Tran), Model: str(d.Model), Size: d.Size, InUse: inUse(d), Installer: hasISO(d), Member: storageMember(d)}
+		dk := disk{Path: d.Path, Name: d.Name, Tran: str(d.Tran), Model: str(d.Model), Serial: str(d.Serial), Size: d.Size, InUse: inUse(d), Installer: hasISO(d), Member: storageMember(d)}
 		for _, p := range d.Children {
 			if p.Type != "part" {
 				continue
@@ -149,7 +150,7 @@ func listDisks() ([]disk, error) {
 		}
 		return parseDisks(b)
 	}
-	out, err := exec.Command("lsblk", "-J", "-b", "-o", "NAME,PATH,TYPE,SIZE,TRAN,MODEL,MOUNTPOINTS,FSTYPE,LABEL,PARTLABEL").Output()
+	out, err := exec.Command("lsblk", "-J", "-b", "-o", "NAME,PATH,TYPE,SIZE,TRAN,MODEL,SERIAL,MOUNTPOINTS,FSTYPE,LABEL,PARTLABEL").Output()
 	if err != nil {
 		return nil, fmt.Errorf("lsblk: %w", err)
 	}

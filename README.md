@@ -101,9 +101,9 @@ The screens come in this order:
 1. **Disk** and **desktop**, or none for a server you only reach over SSH.
 2. **Graphics**, only when it finds an NVIDIA card: it shows the card and asks for `open` (RTX 20 / GTX 16 series and newer), `legacy` (GTX 900 / 10 series) or `none`. The driver is compiled during the install, which adds a few minutes.
 3. **Region:** keyboard layout, language and timezone; type to search the lists.
-4. **Install type:** the full system, or a small install, a plain desktop finished later with `ephemeral-setup`.
+4. **Install type:** the full system, or a small install, a plain desktop finished later with `ephemeral setup`.
 5. **Options**, full system only: the extra shell tools (atuin, fzf, bat, fastfetch and more), OpenSnitch (with a desktop), the Proton Pass SSH agent, and where DNS goes: the network's own, or encrypted to Cloudflare, Quad9, AdGuard, Control D or servers you name. Fingerprint login when it finds a reader, and last, Secure Boot with keys made on the machine; with the firmware in Setup Mode, they go into it during the install. A battery turns on the laptop extras without asking.
-6. **Apps**, full system only: the same list as `ephemeral-apps`, with Firefox, VLC and a few tools ticked to start with, and Steam, VS Code, Brave and Nerd Fonts among those to pick. `/` searches all of them. Without a desktop, only the terminal apps.
+6. **Apps**, full system only: the same list as `ephemeral apps`, with Firefox, VLC and a few tools ticked to start with, and Steam, VS Code, Brave and Nerd Fonts among those to pick. `/` searches all of them. Without a desktop, only the terminal apps.
 7. **Machine:** hostname, user and swap size.
 8. **Server:** whether it stays on and takes SSH logins with keys only, and the public keys that may log in. Paste them, or type `github:yourname` to fetch the ones on your GitHub account. A server's disk can be unlocked over SSH after a reboot, so the install makes a host key for that, and prints its fingerprint at the end to check the first time you connect. The config's [servers page](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/servers.md) has the rest.
 9. **Secrets:** the LUKS passphrase and the login password. With a non-US layout it switches the console to that layout first, so you type the passphrase the way you will at boot; where it can't, it says so.
@@ -119,22 +119,22 @@ Use UEFI with Secure Boot off and a VirtIO disk (`/dev/vda`). 64 GB of disk and 
 The config is at `/persist/etc/nixos`. After changing it, rebuild with:
 
 ```bash
-ephemeral-update
+ephemeral update
 ```
 
-`ephemeral-doctor` checks that everything is as it should be, and says how to fix what isn't.
+`ephemeral doctor` checks that everything is as it should be, and says how to fix what isn't. `ephemeral --help` lists the other commands, and `ephemeral tui` is a menu of them; the [config's README](https://github.com/the-wittch/ephemeral-nixos-config#commands) has the table.
 
 To see the wipe working: `sudo touch /ephemeral-test`, put a file in `~`, and reboot. The first is gone, the second is still there.
 
 A read-only copy of the config as installed is kept in `/persist/etc/nixos-install`. However far `/persist/etc/nixos` moves on, this gets the fresh-install system back, and your files stay:
 
 ```bash
-ephemeral-update --as-installed
+ephemeral update --as-installed
 ```
 
 ### Changing it later
 
-`ephemeral-setup` changes what's installed: the profile, OpenSnitch, the Proton Pass SSH agent and where DNS goes. After a small install, run it to get the full system. The [config's README](https://github.com/the-wittch/ephemeral-nixos-config#setup) covers the rest, including `ephemeral-apps` for apps.
+`ephemeral setup` changes what's installed: the profile, OpenSnitch, the Proton Pass SSH agent and where DNS goes. After a small install, run it to get the full system. The [config's README](https://github.com/the-wittch/ephemeral-nixos-config#setup) covers the rest, including `ephemeral apps` for apps.
 
 ## How it works
 

@@ -48,6 +48,8 @@ buildGoModule {
     ];
   };
   vendorHash = "sha256-SrgBd+Kqtd16g9enhR+Dj53iOpqS8roofuzkX+zY/AE=";
+  # the module is ephemeral-install, so the binary is named that; internal/early is a library
+  subPackages = [ "." ];
 
   env.CGO_ENABLED = "0";
   ldflags = [ "-X main.version=v${version}" ];
@@ -57,7 +59,6 @@ buildGoModule {
   nativeBuildInputs = [ makeWrapper ];
 
   postInstall = ''
-    mv $out/bin/installer $out/bin/ephemeral-install
     mkdir -p $out/share
     cp -r ${source} $out/share/ephemeral-nixos
     ln -s ${lists} $out/share/ephemeral-nixos-lists

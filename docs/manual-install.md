@@ -43,4 +43,4 @@ sudo chmod -R a-w /mnt/persist/etc/nixos-install
 sudo nixos-install --no-root-passwd --flake path:/mnt/persist/etc/nixos#nixos
 ```
 
-If the ISO has no `mkpasswd`, run `nix shell nixpkgs#mkpasswd` first. The home folder can belong to root for now; the first boot hands it to you. `/persist/etc/nixos-install` is the copy `ephemeral-update --as-installed` goes back to.
+If the ISO has no `mkpasswd`, run `nix shell nixpkgs#mkpasswd` first. The home folder can belong to root for now; the first boot hands it to you. `/persist/etc/nixos-install` is the copy `ephemeral update --as-installed` goes back to.

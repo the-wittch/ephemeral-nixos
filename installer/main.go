@@ -11,6 +11,9 @@ import (
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	// before Bubble Tea's init, so it doesn't wait on the terminal
+	_ "ephemeral-install/internal/early"
 )
 
 var version = ""
