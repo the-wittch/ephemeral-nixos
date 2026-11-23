@@ -6,6 +6,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Changed
 
+- New installs get config [v5.1.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
 - The review screen gives the disk's serial next to its model and size, so two disks of the same model tell apart where you type the name, and a line under it lists the partitions on it now, all of which are erased.
 - The screens come up straight away on the Linux console. Before, they waited five seconds for the console to say its background colour, which it never does.
 
