@@ -112,7 +112,7 @@ func TestInheritedOverridesArentPassedOn(t *testing.T) {
 	t.Setenv("EPHEMERAL_KEEP_ME", "yes")
 	a := defaultAnswers()
 	a.Disk = "/dev/vda"
-	env := a.env("hash")
+	env := a.env()
 	for _, kv := range env {
 		for _, key := range []string{"FORCE_DISK=", "ALLOW_SAME_PARTLABELS=", "HARDWARE_CONFIG="} {
 			if strings.HasPrefix(kv, key) {
@@ -124,7 +124,7 @@ func TestInheritedOverridesArentPassedOn(t *testing.T) {
 		t.Error("an ordinary variable from the environment was dropped")
 	}
 	a.Hardware = "/etc/hardware.nix"
-	if !slices.Contains(a.env("hash"), "HARDWARE_CONFIG=/etc/hardware.nix") {
+	if !slices.Contains(a.env(), "HARDWARE_CONFIG=/etc/hardware.nix") {
 		t.Error("hardwareConfig from the answers didn't reach install.sh")
 	}
 }

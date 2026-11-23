@@ -78,8 +78,8 @@ if [[ -n $EXPECTED_REV ]]; then
   [[ $got == "${EXPECTED_REV,,}" ]] \
     || die "git rev mismatch: got $got, expected $EXPECTED_REV. Refusing to install."
   info "verified git rev $got"
-elif [[ $BRANCH != main ]]; then
-  info "warning: $BRANCH is not verified (set EXPECTED_REV)"
+else
+  info "warning: $BRANCH isn't checked against a commit; for that, set TAG and EXPECTED_REV as in the README"
 fi
 
 info "about to erase $DISK; install.sh asks you to type its name first"

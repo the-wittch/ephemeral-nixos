@@ -105,9 +105,10 @@ func TestStepOf(t *testing.T) {
 }
 
 func TestEnvHasNoSecrets(t *testing.T) {
+	t.Setenv("PASSWORD_HASH", "$y$inherited")
 	a := answers{Disk: "/dev/vda", Passphrase: "disk secret", Password: "login secret", Profile: "full"}
-	for _, kv := range a.env("$y$hash") {
-		if strings.Contains(kv, "disk secret") || strings.Contains(kv, "login secret") {
+	for _, kv := range a.env() {
+		if strings.Contains(kv, "disk secret") || strings.Contains(kv, "login secret") || strings.HasPrefix(kv, "PASSWORD_HASH") {
 			t.Errorf("a secret is in the environment: %s", kv)
 		}
 	}

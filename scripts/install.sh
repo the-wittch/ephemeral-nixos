@@ -28,8 +28,9 @@ if [[ ${1:-} == --teardown ]]; then
   exit 0
 fi
 
-# The screens send the passphrase on its own descriptor. It's read before anything else runs
-# and closed, so nothing this starts inherits it; it only goes to disko, when disko asks.
+# The screens send the passphrase and the password's hash on descriptors of their own. They're
+# read before anything else runs and closed, so nothing this starts inherits them; the
+# passphrase only goes to disko, when disko asks.
 passphrase=
 if [[ -n ${PASSPHRASE_FD:-} ]]; then
   [[ $PASSPHRASE_FD == 3 ]] || die "PASSPHRASE_FD has to be 3"
@@ -37,6 +38,12 @@ if [[ -n ${PASSPHRASE_FD:-} ]]; then
   exec 3<&-
   unset PASSPHRASE_FD
   [[ -n $passphrase ]] || die "the passphrase that arrived is empty"
+fi
+if [[ -n ${PASSWORD_HASH_FD:-} ]]; then
+  [[ $PASSWORD_HASH_FD == 4 ]] || die "PASSWORD_HASH_FD has to be 4"
+  IFS= read -r PASSWORD_HASH <&4 || die "no password hash arrived on file descriptor 4"
+  exec 4<&-
+  unset PASSWORD_HASH_FD
 fi
 
 LOG=/tmp/ephemeral-install.log
@@ -122,7 +129,6 @@ if [[ -z ${INSTALL_DESKTOP:-} ]]; then
   INSTALL_DESKTOP=$REPLY
 fi
 
-
 if [[ -z ${NVIDIA_DRIVER:-} ]]; then
   if gpu=$(nvidia_gpu); then
     echo
@@ -159,7 +165,8 @@ if [[ $PROFILE == full ]]; then
     EXTRAS=false
     [[ ${ex:-n} =~ ^[Yy] ]] && EXTRAS=true
   fi
-  if [[ -z ${OPENSNITCH:-} ]]; then
+  # its questions pop up on the desktop, so without one the config leaves it off
+  if [[ -z ${OPENSNITCH:-} && $INSTALL_DESKTOP != none ]]; then
     read -r -p "OpenSnitch: ask before programs connect out? [Y/n]: " os
     OPENSNITCH=true
     [[ ${os:-y} =~ ^[Nn] ]] && OPENSNITCH=false
@@ -217,7 +224,7 @@ if [[ -z ${FINGERPRINT:-} ]]; then
     [[ ${fp:-y} =~ ^[Yy] ]] && FINGERPRINT=true
   fi
 fi
-[[ $FINGERPRINT == true || $FINGERPRINT == false ]] || die "FINGERPRINT must be true or false"
+validate_bool FINGERPRINT "$FINGERPRINT"
 if [[ -z ${SECURE_BOOT:-} ]]; then
   read -r -p "Secure Boot with keys made on this machine? [y/N]: " sb
   SECURE_BOOT=false

@@ -74,7 +74,7 @@ func TestServerNeedsAKey(t *testing.T) {
 	wantStep(t, m, stSecrets)
 
 	m.a.Disk = "/dev/vda"
-	env := strings.Join(m.a.env("hash"), "\n")
+	env := strings.Join(m.a.env(), "\n")
 	if !strings.Contains(env, "SERVER=true\n") || !strings.Contains(env, "SSH_KEYS="+otherKey+"\n") {
 		t.Errorf("install.sh doesn't get the server answers:\n%s", env)
 	}
@@ -236,7 +236,7 @@ func TestServerAnswers(t *testing.T) {
 	}
 
 	a.Server = false
-	for _, kv := range a.env("hash") {
+	for _, kv := range a.env() {
 		if kv == "SSH_KEYS="+testKey {
 			t.Error("keys went to install.sh for a machine that isn't a server")
 		}
