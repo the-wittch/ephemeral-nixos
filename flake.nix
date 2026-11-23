@@ -2,7 +2,7 @@
   description = "An Ephemeral Nix machine";
 
   inputs = {
-    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v4.20.0";
+    ephemeral.url = "github:the-wittch/ephemeral-nixos-config/v5.0.0";
     # the installer runs nixpkgs tools by name
     nixpkgs.follows = "ephemeral/nixpkgs";
   };

@@ -94,25 +94,25 @@
         "disko": "disko",
         "flake-parts": "flake-parts",
         "home-manager": "home-manager",
-        "impermanence": "impermanence",
         "import-tree": "import-tree",
         "nix-index-database": "nix-index-database",
         "nixpkgs": "nixpkgs",
         "plasma-manager": "plasma-manager",
+        "preservation": "preservation",
         "stylix": "stylix",
         "zork-nix": "zork-nix"
       },
       "locked": {
-        "lastModified": 1795405053,
-        "narHash": "sha256-8kJO1hUStxpBTMMcWYMl2tios0k4zz/tYYl7x1faUWE=",
+        "lastModified": 1795443771,
+        "narHash": "sha256-3XL1GEeQtpHccqBmfUCeGsRFa6on0x1jcDNbzI84ed8=",
         "owner": "the-wittch",
         "repo": "ephemeral-nixos-config",
-        "rev": "f4aa86d3b4c1acac3be5b129a51624b63c125973",
+        "rev": "36ca02685f786d1f6f011b81da0598199e741b5a",
         "type": "github"
       },
       "original": {
         "owner": "the-wittch",
-        "ref": "v4.20.0",
+        "ref": "v5.0.0",
         "repo": "ephemeral-nixos-config",
         "type": "github"
       }
@@ -205,31 +205,6 @@
       "original": {
         "owner": "nix-community",
         "repo": "home-manager",
-        "type": "github"
-      }
-    },
-    "impermanence": {
-      "inputs": {
-        "home-manager": [
-          "ephemeral",
-          "home-manager"
-        ],
-        "nixpkgs": [
-          "ephemeral",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1792739756,
-        "narHash": "sha256-s0TeXWG5Ci75Y/Hzon0Z7NrN/fG773Rc54/z6oPFszQ=",
-        "owner": "nix-community",
-        "repo": "impermanence",
-        "rev": "fa627f4c8b8e92f58f58a73d99ee4e1304e64eb2",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-community",
-        "repo": "impermanence",
         "type": "github"
       }
     },
@@ -334,6 +309,21 @@
       "original": {
         "owner": "nix-community",
         "repo": "plasma-manager",
+        "type": "github"
+      }
+    },
+    "preservation": {
+      "locked": {
+        "lastModified": 1792953443,
+        "narHash": "sha256-s/A2rSO2Ndf8Y5yiouesnI/3Zkn9pmVGF2NxFxOUvx8=",
+        "owner": "nix-community",
+        "repo": "preservation",
+        "rev": "00be7f7dd1a11ae0605386f2272288de7cf33abe",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "preservation",
         "type": "github"
       }
     },
