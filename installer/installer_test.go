@@ -19,7 +19,7 @@ func TestPassphraseChecks(t *testing.T) {
 }
 
 const lsblkSample = `{"blockdevices": [
- {"name":"nvme0n1","path":"/dev/nvme0n1","type":"disk","size":1000204886016,"tran":"nvme","model":"Samsung SSD 990 PRO 1TB","mountpoints":[null],"fstype":null,"label":null,"partlabel":null,
+ {"name":"nvme0n1","path":"/dev/nvme0n1","type":"disk","size":1000204886016,"tran":"nvme","model":"Samsung SSD 990 PRO 1TB","serial":"S6Z1NX0W123456","mountpoints":[null],"fstype":null,"label":null,"partlabel":null,
   "children":[
    {"name":"nvme0n1p1","path":"/dev/nvme0n1p1","type":"part","size":536870912,"tran":null,"model":null,"mountpoints":[null],"fstype":"vfat","label":null,"partlabel":"EFI"},
    {"name":"nvme0n1p2","path":"/dev/nvme0n1p2","type":"part","size":322122547200,"tran":null,"model":null,"mountpoints":[null],"fstype":"ntfs","label":"Windows","partlabel":null}]},
@@ -265,5 +265,30 @@ func TestDied(t *testing.T) {
 	os.WriteFile(r.status, []byte("1\n"), 0o600)
 	if r.died() {
 		t.Error("an install that wrote its status counted as died")
+	}
+}
+
+func TestTheReviewNamesTheDiskBySerialAndSaysWhatsOnIt(t *testing.T) {
+	disks, err := parseDisks([]byte(lsblkSample))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := newTestModel(t)
+	m.disks = disks
+	m.a.Disk = "/dev/nvme0n1"
+	lines := m.reviewLines()
+	if lines[0].label != "DISK" || !strings.Contains(lines[0].value, "serial S6Z1NX0W123456") || !lines[0].danger {
+		t.Fatalf("DISK line %+v", lines[0])
+	}
+	if lines[1].label != "ON IT" || lines[1].value != "2 partitions, all erased: EFI 512M vfat, Windows 300G ntfs" ||
+		!lines[1].danger || lines[1].step != stDisk {
+		t.Fatalf("ON IT line %+v", lines[1])
+	}
+	// a disk without a serial doesn't get an empty one, and one with nothing on it says so
+	m.disks = []disk{{Path: "/dev/vda", Model: "QEMU disk", Size: 32 << 30}}
+	m.a.Disk = "/dev/vda"
+	lines = m.reviewLines()
+	if strings.Contains(lines[0].value, "serial") || lines[1].value != "no partitions" {
+		t.Fatalf("an empty disk: %+v %+v", lines[0], lines[1])
 	}
 }

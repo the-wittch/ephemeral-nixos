@@ -7,7 +7,7 @@
 | problem | fix |
 |---------|-----|
 | black screen at the LUKS prompt | add `boot.kernelParams = [ "plymouth.use-simpledrm" ];`, or load your GPU driver early in `boot.initrd.kernelModules` |
-| settings are ignored, or `settings.json is not in this flake` | rebuild with `ephemeral-update`. Running `nix` or `nixos-rebuild` yourself, use `path:/persist/etc/nixos#nixos`: without `path:`, Nix only sees files tracked by git |
+| settings are ignored, or `settings.json is not in this flake` | rebuild with `ephemeral update`. Running `nix` or `nixos-rebuild` yourself, use `path:/persist/etc/nixos#nixos`: without `path:`, Nix only sees files tracked by git |
 | can't log in with the right password | `/persist/passwords/<user>` is missing or broken; the [config's troubleshooting](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/troubleshooting.md) has how to write it again from the ISO |
 | no home directory | `sudo install -d -m 0700 -o $USER -g users /persist/home/$USER`, then log in again |
 | VM sits at "Booting from Hard Disk" | use UEFI with Secure Boot off, and detach the ISO |
