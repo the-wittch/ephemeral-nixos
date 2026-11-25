@@ -22,9 +22,7 @@ func toServer(t *testing.T, m model, headless bool) model {
 	m = press(t, m, enter, enter)
 	wantStep(t, m, stDesktop)
 	if headless {
-		for range m.choices(stDesktop) {
-			m = press(t, m, down)
-		}
+		m = pickNone(t, m)
 		if m.a.Desktop != "none" {
 			t.Fatalf("the last desktop should be none, got %q", m.a.Desktop)
 		}
@@ -88,9 +86,7 @@ func TestNoDesktopIsAServer(t *testing.T) {
 		{ID: "tmux", Label: "tmux", Category: "Terminal"},
 	}})
 	m = press(t, m, enter, enter)
-	for range m.choices(stDesktop) {
-		m = press(t, m, down)
-	}
+	m = pickNone(t, m)
 	m = press(t, m, enter, enter, enter, enter, enter, enter)
 	wantStep(t, m, stOptions)
 	for _, r := range m.optRows() {
@@ -137,9 +133,7 @@ func TestNoDesktopFromReviewAsksForKeys(t *testing.T) {
 	m = toReviewFromSecrets(t, press(t, m, enter))
 	m = pickReviewLine(t, m, stDesktop)
 	m = press(t, m, enter)
-	for range m.choices(stDesktop) {
-		m = press(t, m, down)
-	}
+	m = pickNone(t, m)
 	m = press(t, m, enter)
 	wantStep(t, m, stServer)
 	m = press(t, m, typed(testKey), enter, enter)
@@ -257,4 +251,20 @@ func TestShortKey(t *testing.T) {
 	if got := shortKey(testKey); got != "ssh-ed25519 …6LXQo8vT+ecu alice@laptop" {
 		t.Errorf("got %q", got)
 	}
+}
+
+// None isn't always last: Handheld comes after it
+func pickNone(t *testing.T, m model) model {
+	t.Helper()
+	for range m.choices(stDesktop) {
+		m = press(t, m, up)
+	}
+	i := slices.IndexFunc(m.choices(stDesktop), func(c choice) bool { return c.value == "none" })
+	if i < 0 {
+		t.Fatal("no None among the desktops")
+	}
+	for range i {
+		m = press(t, m, down)
+	}
+	return m
 }

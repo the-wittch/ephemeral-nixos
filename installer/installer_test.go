@@ -292,3 +292,20 @@ func TestTheReviewNamesTheDiskBySerialAndSaysWhatsOnIt(t *testing.T) {
 		t.Fatalf("an empty disk: %+v %+v", lines[0], lines[1])
 	}
 }
+
+func TestHandheldPassphrase(t *testing.T) {
+	buttons := []handheldButton{{Button: "A", Character: "a"}, {Button: "B", Character: "b"}, {Button: "L4", Character: "1", Only: "Steam Deck"}}
+	if checkHandheldPassphrase("abab1aba", buttons) != nil {
+		t.Error("refused a passphrase made of button characters")
+	}
+	if checkHandheldPassphrase("ababXaba", buttons) == nil {
+		t.Error("took a character no button types")
+	}
+	if checkHandheldPassphrase("abababab", nil) == nil {
+		t.Error("took a handheld passphrase with no button table to check it against")
+	}
+	// the config's own table, when the contract has it
+	if len(rules.handheld) > 0 && checkHandheldPassphrase("ayuuqdcb", rules.handheld) != nil {
+		t.Error("the contract's table refused the docs' example, ayuuqdcb")
+	}
+}

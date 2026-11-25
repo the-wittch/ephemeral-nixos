@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 var secretLabels = []string{"Passphrase", "Again", "Password", "Again"}
@@ -14,12 +15,18 @@ func (m model) secretErr(i int) error {
 	v := func(i int) string { return m.secretIn[i].Value() }
 	switch i {
 	case 0:
-		return checkPassphrase(v(0), "")
+		if err := checkPassphrase(v(0), ""); err != nil {
+			return err
+		}
+		return m.handheldErr(v(0))
 	case 1:
 		if v(1) == "" {
 			return errors.New("type the passphrase again")
 		}
-		return checkPassphrase(v(0), v(1))
+		if err := checkPassphrase(v(0), v(1)); err != nil {
+			return err
+		}
+		return m.handheldErr(v(0))
 	case 2:
 		return checkPassword(v(2), "")
 	default:
@@ -116,7 +123,12 @@ func (m model) viewSecrets(w int) ([]string, string) {
 		out = append(out, "   "+sYellow.Render(g.warn+" ")+sSub.Render("This screen can't switch to "+m.a.Layout+", but you'll type it with "+m.a.Layout+" at boot."),
 			"     "+sSub.Render("Use characters that are in the same place on both keyboards."))
 	}
-	out = append(out, "   "+sSub.Render("A few random words are easy to type and hard to guess."))
+	if m.a.Desktop == "handheld" {
+		out = append(out, "   "+sSub.Render("You'll press it on the controller at boot, so use only these; ten or more:"))
+		out = append(out, buttonLines(rules.handheld, w-5)...)
+	} else {
+		out = append(out, "   "+sSub.Render("A few random words are easy to type and hard to guess."))
+	}
 	out = append(out, "   "+sYellow.Render(g.warn+" ")+sSub.Render("It can't be recovered. Keep it somewhere other than this computer."), "")
 	out = append(out, m.gap()...)
 	out = append(out, sBold.Render("Login password")+"  "+sSub.Render("for "+m.a.Username))
@@ -124,4 +136,35 @@ func (m model) viewSecrets(w int) ([]string, string) {
 	out = append(out, field(2)...)
 	out = append(out, field(3)...)
 	return out, fieldHints(m.secretFocus == len(m.secretIn)-1)
+}
+
+func (m model) handheldErr(s string) error {
+	if m.a.Desktop != "handheld" {
+		return nil
+	}
+	return checkHandheldPassphrase(s, rules.handheld)
+}
+
+// the button table, as many to a line as fit
+func buttonLines(buttons []handheldButton, w int) []string {
+	var out []string
+	line := ""
+	for _, b := range buttons {
+		item := b.Button + " " + sBold.Render(b.Character)
+		if b.Only != "" {
+			item += sSub.Render(" (" + b.Only + ")")
+		}
+		if line != "" && lipgloss.Width(line)+3+lipgloss.Width(item) > w {
+			out = append(out, "     "+line)
+			line = ""
+		}
+		if line != "" {
+			line += sSub.Render(" · ")
+		}
+		line += item
+	}
+	if line != "" {
+		out = append(out, "     "+line)
+	}
+	return out
 }
