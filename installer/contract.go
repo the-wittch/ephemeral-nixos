@@ -19,6 +19,8 @@ type contract struct {
 	settings map[string]bool
 	// the app categories, in the order to show them
 	categories []string
+	// what each controller button types for a handheld's disk passphrase
+	handheld []handheldButton
 }
 
 // the settings the screens ask for from a menu
@@ -41,7 +43,8 @@ func loadContract() (contract, error) {
 		Choices  map[string][]struct {
 			Value, Label, Description, Tag string
 		} `json:"choices"`
-		AppCategories []string `json:"appCategories"`
+		AppCategories   []string         `json:"appCategories"`
+		HandheldButtons []handheldButton `json:"handheldButtons"`
 	}
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return contract{}, fmt.Errorf("%s: %w", path, err)
@@ -72,6 +75,8 @@ func loadContract() (contract, error) {
 		return contract{}, fmt.Errorf("%s has no order for the app categories; the config release is older than this installer", path)
 	}
 	c.categories = raw.AppCategories
+	// older config releases have no handheld, so none of this either
+	c.handheld = raw.HandheldButtons
 	for _, key := range menuSettings {
 		if len(raw.Choices[key]) == 0 {
 			return contract{}, fmt.Errorf("%s has no menu for %s; the config release is older than this installer", path, key)
@@ -89,4 +94,10 @@ func (c contract) allows(key, value string) bool {
 		return re.MatchString(value)
 	}
 	return slices.Contains(c.values[key], value)
+}
+
+type handheldButton struct {
+	Button, Character string
+	// a button only some handhelds have, such as the Deck's back buttons
+	Only string
 }

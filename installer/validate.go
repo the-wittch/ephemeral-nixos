@@ -123,6 +123,24 @@ func checkPassphrase(s, again string) error {
 	return nil
 }
 
+// On a handheld the passphrase is pressed on the controller at boot, so it can only be made of
+// what the buttons type.
+func checkHandheldPassphrase(s string, buttons []handheldButton) error {
+	if len(buttons) == 0 {
+		return fmt.Errorf("the config release this installer uses has no handheld button table")
+	}
+	var chars strings.Builder
+	for _, b := range buttons {
+		chars.WriteString(b.Character)
+	}
+	for _, r := range s {
+		if !strings.ContainsRune(chars.String(), r) {
+			return fmt.Errorf("%q isn't on a button; use only %s", r, chars.String())
+		}
+	}
+	return nil
+}
+
 func checkPassword(s, again string) error {
 	switch {
 	case s == "":

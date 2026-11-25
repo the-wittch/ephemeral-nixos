@@ -171,6 +171,9 @@ func (a answers) check() error {
 	add("keyboardVariant", checkVariant(a.Variant))
 	add("locale", checkLocale(a.Locale))
 	add("passphrase", checkPassphrase(a.Passphrase, ""))
+	if a.Desktop == "handheld" {
+		add("passphrase", checkHandheldPassphrase(a.Passphrase, rules.handheld))
+	}
 	add("password", checkPassword(a.Password, ""))
 	if a.PassAgent {
 		add("passSshVault", checkVault(a.Vault))

@@ -2,6 +2,16 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.13.0
+
+### Added
+
+- Handheld (beta), on the Desktop screen with config 5.3.0: a Steam Deck or ROG Ally in Steam's Game Mode. Its disk passphrase is pressed on the controller at boot, so the passphrase screen shows what each button types and only takes those characters. The installer itself still needs a keyboard.
+
+### Changed
+
+- New installs get config [v5.3.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.12.1
 
 ### Changed
