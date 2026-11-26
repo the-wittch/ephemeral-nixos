@@ -59,6 +59,49 @@ let
         pkgs.git
       ];
 
+      # A Steam Deck's or an Ally's controller moves around the screens and, on a handheld's
+      # passphrase fields, types the passphrase. A pad that isn't a known one is left alone.
+      boot.kernelModules = [ "uinput" ];
+      # otherwise the Deck's controller sends no button presses until its menu button is held
+      boot.kernelParams = [ "hid_steam.lizard_mode=0" ];
+      systemd.services.handheld-input = {
+        description = "Controller buttons as keys for the installer";
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          ExecStart = "${
+            lib.getExe inputs.ephemeral.packages.${pkgs.stdenv.hostPlatform.system}.handheld-input
+          } menu";
+          Restart = "on-failure";
+          DevicePolicy = "closed";
+          DeviceAllow = [
+            "/dev/uinput rw"
+            "/dev/tty0 r"
+            "char-input r"
+          ];
+          CapabilityBoundingSet = [ "" ];
+          NoNewPrivileges = true;
+          ProtectSystem = "strict";
+          ProtectHome = true;
+          PrivateTmp = true;
+          PrivateNetwork = true;
+          RestrictAddressFamilies = [ "none" ];
+          ProtectKernelTunables = true;
+          ProtectKernelModules = true;
+          ProtectKernelLogs = true;
+          ProtectControlGroups = true;
+          ProtectClock = true;
+          ProtectHostname = true;
+          RestrictNamespaces = true;
+          RestrictRealtime = true;
+          RestrictSUIDSGID = true;
+          LockPersonality = true;
+          MemoryDenyWriteExecute = true;
+          SystemCallArchitectures = "native";
+          SystemCallFilter = [ "@system-service" ];
+          SystemCallErrorNumber = "EPERM";
+        };
+      };
+
       services.getty.helpLine = lib.mkForce ''
 
         Run `ephemeral-install` to install Ephemeral Nix. `nmtui` sets up Wi-Fi.

@@ -27,6 +27,8 @@ func newTestModel(t *testing.T) model {
 
 	m := newModel(config{dryRun: true, listsDir: dir, scriptsDir: dir, flakeRoot: dir})
 	m.uefi, m.hasGPU, m.hasReader = true, false, false
+	// the same answers on any machine the tests run on, a handheld included
+	m.a.Desktop, m.padUsed = defaultAnswers().Desktop, false
 	m.a.Nvidia, m.a.Fingerprint = "none", false
 	online := true
 	m.isOnline = &online
@@ -372,9 +374,9 @@ func TestSecondCopyIsQuietWhileTyping(t *testing.T) {
 func TestOnlyTheNewestConnectionCheckCarriesOn(t *testing.T) {
 	m := newTestModel(t)
 	m = update(t, m, onlineMsg{ok: false})
-	m = update(t, m, execDoneMsg{})
+	m = update(t, m, wifiDoneMsg{})
 	if _, cmd := m.Update(onlineMsg{ok: false, round: 0}); cmd != nil {
-		t.Error("a check from before nmtui should stop, not start another")
+		t.Error("a check from before Wi-Fi connected should stop, not start another")
 	}
 	if _, cmd := m.Update(onlineMsg{ok: false, round: 1}); cmd == nil {
 		t.Error("the newest check should keep going while offline")

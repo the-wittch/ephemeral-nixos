@@ -44,10 +44,20 @@ func (m model) View() string {
 		body, hints = m.viewSecrets(w)
 	case stReview:
 		body, hints = m.viewReview(w)
+	case stWifi:
+		body, hints = m.viewWifi(w)
 	case stInstalling:
 		body, hints = m.viewInstalling(w)
 	case stDone, stFailed:
 		body, hints = m.viewEnd(w)
+	}
+	var keys []string
+	switch {
+	case m.osk.open:
+		keys = m.viewOSK(w)
+		hints = hint("arrows / d-pad", "move", "enter / A", "type", "esc / B", "close")
+	case m.focusedInput() != nil && !(m.step == stSecrets && m.padPassphrase):
+		hints += "   " + hint("f2 / Y", "on-screen keyboard")
 	}
 	problem := ""
 	if p := m.problem(); p != "" {
@@ -57,14 +67,24 @@ func (m model) View() string {
 	if m.roomy() {
 		foot = []string{"", problem, "", hints}
 	}
-	h := m.bodyRows()
+	h := m.bodyRows() - len(keys)
 	if len(body) > h {
-		body = body[:h]
+		start := 0
+		// with the keyboard up, the field it types into stays in sight
+		if fi := m.focusedInput(); m.osk.open && fi != nil {
+			for i, line := range body {
+				if strings.Contains(line, fi.View()) {
+					start = min(max(i-h/2, 0), len(body)-h)
+					break
+				}
+			}
+		}
+		body = body[start : start+h]
 	}
 	for len(body) < h {
 		body = append(body, "")
 	}
-	body = append(body, foot...)
+	body = append(append(body, keys...), foot...)
 	content := lipgloss.NewStyle().Width(w).Render(strings.Join(body, "\n"))
 	if m.framed {
 		content = m.frame(w, content)
@@ -127,6 +147,8 @@ func (m model) crumbs() (left, right string) {
 	switch m.step {
 	case stWelcome:
 		return "", ""
+	case stWifi:
+		return "Ephemeral Nix", "Wi-Fi"
 	case stInstalling:
 		return "Ephemeral Nix", "installing · " + formatDuration(m.elapsed())
 	case stDone, stFailed:

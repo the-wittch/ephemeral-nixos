@@ -11,13 +11,14 @@
 
 - **Every release:** CI installs from the ISO's live system onto a QEMU/KVM virtual machine with UEFI, then unlocks and boots the installed disk. The ISO itself is booted to the installer's first screen before it's published. The config's boot tests also boot both profiles in a VM.
 - **By hand:** the maintainer has installed from the ISO on two laptops, and run Secure Boot with unlocking by TPM and PIN on a Framework laptop.
-- **Not tested:** NVIDIA drivers, laptops with two GPUs, and Wi-Fi in a VM (CI checks only that the ISO has what Wi-Fi needs).
+- **Not tested:** NVIDIA drivers, laptops with two GPUs, and Wi-Fi in a VM (CI checks only that the ISO has what Wi-Fi needs), or installing with a handheld's controller on a real Steam Deck or Ally.
 
 If yours works or doesn't, an [issue](https://github.com/the-wittch/ephemeral-nixos/issues/new/choose) with the output of `lspci -nn` helps the next person.
 
 ## Detected during the install
 
 - **Laptops:** a battery turns on the laptop extras (battery reporting, sensors, and thermald on Intel).
+- **Handhelds:** on a Steam Deck or a ROG Ally the Desktop screen starts on Handheld, and the controller works through the whole install, with an on-screen keyboard on Y. See [Handheld](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/docs/handheld.md#installing).
 - **Fingerprint readers:** a USB reader from one of the makers in [`scripts/fingerprint-vendors`](../scripts/fingerprint-vendors), such as Goodix, Synaptics or Elan, is offered for login and sudo.
 - **NVIDIA cards:** the installer shows the card and asks which driver to use. Laptops with an Intel or AMD GPU as well also need [PRIME](https://wiki.nixos.org/wiki/NVIDIA) set up in a module of your own.
 - **Everything else** (disk controllers, Wi-Fi chips, CPU microcode) comes from `nixos-generate-config` and the redistributable firmware NixOS ships.

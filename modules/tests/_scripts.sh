@@ -109,6 +109,13 @@ for s in prepare:'before changing anything' partition:'half formatted' install:'
   }
 done
 
+buttons=abxyudlrqezcst
+expect "a handheld passphrase of button characters is taken" "printf '%s\n' ayuuqdcbxyrl | handheld_passphrase_ok $buttons" succeeds
+expect "a handheld passphrase with a character no button types is refused" "printf '%s\n' ayuuqdcbxyrB | handheld_passphrase_ok $buttons" fails
+expect "a handheld passphrase under 12 presses is refused" "printf '%s\n' ayuuqdcbxyr | handheld_passphrase_ok $buttons" fails
+expect "a Deck back button is refused where the table hasn't got it" "printf '%s\n' ayuuqdcbxyr1 | handheld_passphrase_ok $buttons" fails
+expect "a button table that isn't plain characters is refused" "printf '%s\n' ayuuqdcbxyrl | handheld_passphrase_ok 'a-z]|.*'" fails
+
 if ((failures)); then
   echo "$failures failed" >&2
   exit 1

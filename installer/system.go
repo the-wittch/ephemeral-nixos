@@ -184,6 +184,11 @@ func nvidiaGPU(scriptsDir string) (string, bool) {
 	return name, err == nil && name != ""
 }
 
+func dmiVendor() string {
+	b, _ := os.ReadFile("/sys/class/dmi/id/sys_vendor")
+	return strings.TrimSpace(string(b))
+}
+
 func hasBattery() bool {
 	m, _ := filepath.Glob("/sys/class/power_supply/BAT*")
 	return len(m) > 0
@@ -281,3 +286,34 @@ func switchConsoleLayout(layout, variant string, dryRun bool) string {
 
 // below this a full install fills up fast, since old generations stay until they're cleaned up
 const minDiskSize = 32 << 30
+
+// A Steam Deck or a ROG Ally, from what the firmware calls itself, so the Desktop screen can
+// start on Handheld.
+func isHandheld() bool {
+	b, _ := os.ReadFile("/sys/class/dmi/id/product_name")
+	return handheldProduct(dmiVendor(), strings.TrimSpace(string(b)))
+}
+
+func handheldProduct(vendor, product string) bool {
+	switch {
+	case vendor == "Valve":
+		return product == "Jupiter" || product == "Galileo"
+	case strings.HasPrefix(vendor, "ASUS"):
+		return strings.HasPrefix(product, "ROG Ally") || strings.HasPrefix(product, "ROG Xbox Ally")
+	}
+	return false
+}
+
+// The live system runs handheld-input, so a controller can drive these screens.
+func padRunning() bool {
+	return exec.Command("systemctl", "is-active", "--quiet", "handheld-input.service").Run() == nil
+}
+
+// SIGUSR1 has it type the passphrase's characters, and SIGUSR2 brings back the screens' keys.
+var setPadMode = func(passphrase bool) {
+	sig := "SIGUSR2"
+	if passphrase {
+		sig = "SIGUSR1"
+	}
+	_ = exec.Command("systemctl", "kill", "--kill-whom=main", "--signal="+sig, "handheld-input.service").Run()
+}

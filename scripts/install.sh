@@ -165,8 +165,9 @@ if [[ $PROFILE == full ]]; then
     EXTRAS=false
     [[ ${ex:-n} =~ ^[Yy] ]] && EXTRAS=true
   fi
-  # its questions pop up on the desktop, so without one the config leaves it off
-  if [[ -z ${OPENSNITCH:-} && $INSTALL_DESKTOP != none ]]; then
+  # its questions pop up on the desktop, so without one, or on a handheld in Game Mode, the config
+  # leaves it off
+  if [[ -z ${OPENSNITCH:-} && $INSTALL_DESKTOP != none && $INSTALL_DESKTOP != handheld ]]; then
     read -r -p "OpenSnitch: ask before programs connect out? [Y/n]: " os
     OPENSNITCH=true
     [[ ${os:-y} =~ ^[Nn] ]] && OPENSNITCH=false
@@ -356,6 +357,32 @@ if [[ -n $CONTROLD_RESOLVER ]]; then
     in if builtins.match rule (builtins.getEnv "S_ID") != null then "ok" else "no"
   ')
   [[ $verdict == ok ]] || die "the Control D resolver id is only letters, digits, - and _, as in your Control D dashboard; the one given has something else in it"
+fi
+
+# On a handheld the passphrase is pressed on the controller at boot, so it can only be made of
+# what this machine's buttons type. Without the screens nothing else has checked it, and disko
+# would take anything.
+if [[ $INSTALL_DESKTOP == handheld ]]; then
+  contract=$(nix build --no-link --print-out-paths "path:${STAGE}#settings-contract")
+  buttons=$(S_CONTRACT=$contract S_VENDOR=$(dmi_vendor) nix eval --impure --raw --expr '
+    let
+      vendor = builtins.getEnv "S_VENDOR";
+      table = (builtins.fromJSON (builtins.readFile (builtins.getEnv "S_CONTRACT"))).handheldButtons or [ ];
+    in
+    builtins.concatStringsSep "" (map (b: b.character) (builtins.filter (b: (b.dmiVendor or vendor) == vendor) table))
+  ')
+  [[ -n $buttons ]] || die "the config release this installer uses has no handheld button table"
+  if [[ -z $passphrase ]]; then
+    info "the disk passphrase is pressed on the controller at boot, so use only $buttons, 12 or more of them"
+    read -rs -p "disk passphrase: " passphrase || die "no passphrase was typed; nothing was changed"
+    echo
+    read -rs -p "again: " again || die "no passphrase was typed; nothing was changed"
+    echo
+    [[ $passphrase == "$again" ]] || die "the two passphrases don't match; nothing was changed"
+    again=
+  fi
+  printf '%s\n' "$passphrase" | handheld_passphrase_ok "$buttons" ||
+    die "a handheld's passphrase has to be 12 or more of $buttons, which the controller types at boot; nothing was changed"
 fi
 
 # a mistake in the config would otherwise only show once the disk is erased

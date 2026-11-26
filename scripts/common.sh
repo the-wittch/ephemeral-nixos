@@ -49,6 +49,17 @@ warn_luks_layout() {
   echo
 }
 
+# Whether the passphrase on stdin is 12 or more of the characters in $1, the ones the controller's
+# buttons type at boot. It comes on stdin so it's never in an argument.
+handheld_passphrase_ok() {
+  local chars=$1 p=
+  [[ $chars =~ ^[a-z0-9]+$ ]] || return 1
+  IFS= read -r p || [[ -n $p ]] || return 1
+  [[ ${#p} -ge 12 && $p =~ ^[$chars]+$ ]]
+}
+
+dmi_vendor() { cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true; }
+
 has_battery() {
   local b
   for b in /sys/class/power_supply/BAT*; do

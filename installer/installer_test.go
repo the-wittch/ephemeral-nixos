@@ -295,17 +295,76 @@ func TestTheReviewNamesTheDiskBySerialAndSaysWhatsOnIt(t *testing.T) {
 
 func TestHandheldPassphrase(t *testing.T) {
 	buttons := []handheldButton{{Button: "A", Character: "a"}, {Button: "B", Character: "b"}, {Button: "L4", Character: "1", Only: "Steam Deck"}}
-	if checkHandheldPassphrase("abab1aba", buttons) != nil {
+	if checkHandheldPassphrase("abab1abaabab", buttons) != nil {
 		t.Error("refused a passphrase made of button characters")
 	}
-	if checkHandheldPassphrase("ababXaba", buttons) == nil {
+	if checkHandheldPassphrase("ababXabaabab", buttons) == nil {
 		t.Error("took a character no button types")
 	}
-	if checkHandheldPassphrase("abababab", nil) == nil {
+	if checkHandheldPassphrase("abababababab", nil) == nil {
 		t.Error("took a handheld passphrase with no button table to check it against")
 	}
+	deck := []handheldButton{{Button: "A", Character: "a"}, {Button: "L4", Character: "1", Only: "Steam Deck", DMIVendor: "Valve"}}
+	if checkHandheldPassphrase("aaaa1aaaaaaa", usableButtons(deck, "Valve")) != nil {
+		t.Error("refused a back button on a Steam Deck")
+	}
+	if checkHandheldPassphrase("aaaa1aaaaaaa", usableButtons(deck, "ASUSTeK COMPUTER INC.")) == nil {
+		t.Error("took a Steam Deck back button on an Ally, which hasn't got one at boot")
+	}
+	if checkHandheldPassphrase("abababababa", buttons) == nil {
+		t.Error("took eleven presses")
+	}
 	// the config's own table, when the contract has it
-	if len(rules.handheld) > 0 && checkHandheldPassphrase("ayuuqdcb", rules.handheld) != nil {
-		t.Error("the contract's table refused the docs' example, ayuuqdcb")
+	if len(rules.handheld) > 0 && checkHandheldPassphrase("ayuuqdcbxyrl", rules.handheld) != nil {
+		t.Error("the contract's table refused the docs' example, ayuuqdcbxyrl")
+	}
+}
+
+func TestOpenSnitchOnlyWhereItCanAsk(t *testing.T) {
+	for desktop, want := range map[string]bool{"plasma": true, "gnome": true, "none": false, "handheld": false} {
+		if got := (answers{Desktop: desktop}).opensnitchAsks(); got != want {
+			t.Errorf("%s: OpenSnitch offered %v, want %v", desktop, got, want)
+		}
+	}
+}
+
+func TestHandheldProducts(t *testing.T) {
+	for _, c := range []struct {
+		vendor, product string
+		want            bool
+	}{
+		{"Valve", "Jupiter", true},
+		{"Valve", "Galileo", true},
+		{"ASUSTeK COMPUTER INC.", "ROG Ally X RC72LA_RC72LA", true},
+		{"ASUSTeK COMPUTER INC.", "ROG Xbox Ally X RC73XA_RC73XA", true},
+		{"ASUSTeK COMPUTER INC.", "ROG Zephyrus G14", false},
+		{"LENOVO", "Jupiter", false},
+	} {
+		if got := handheldProduct(c.vendor, c.product); got != c.want {
+			t.Errorf("%s %s: handheld %v, want %v", c.vendor, c.product, got, c.want)
+		}
+	}
+}
+
+func TestDefaultsForOneDesktopFollowIt(t *testing.T) {
+	m := newTestModel(t)
+	m = update(t, m, catalogMsg{apps: []app{{ID: "heroic", Label: "Heroic", Category: "Gaming", DefaultOn: []string{"handheld"}}}})
+	m.a.Desktop = "plasma"
+	m.step = stApps
+	m.enter()
+	if m.picked["heroic"] {
+		t.Error("Heroic is ticked on Plasma")
+	}
+	m.a.Desktop = "handheld"
+	m.enter()
+	if !m.picked["heroic"] || len(m.appChoices()) != 1 {
+		t.Errorf("on a handheld Heroic should be ticked; choices %v", m.appChoices())
+	}
+	// unticked by hand, it stays unticked, and apps.json says so
+	m.appPane, m.appIdx = 1, 0
+	m = press(t, m, space)
+	m.enter()
+	if m.picked["heroic"] || m.appChoices()[0] != "-heroic" {
+		t.Errorf("unticked by hand: picked %v, choices %v", m.picked["heroic"], m.appChoices())
 	}
 }

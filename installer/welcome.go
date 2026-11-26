@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os/exec"
 	"strconv"
 	"strings"
 
@@ -42,7 +41,7 @@ func (m model) keyWelcome(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// the list builds the config, so only once an install is under way
 			return m, tea.Batch(m.goTo(stDisk), loadCatalogCmd(m.cfg))
 		case 1:
-			return m, tea.ExecProcess(exec.Command("nmtui"), func(error) tea.Msg { return execDoneMsg{} })
+			return m, m.goTo(stWifi)
 		case 2:
 			m.quitTo = "shell"
 			return m, tea.Quit
