@@ -132,6 +132,8 @@ type model struct {
 	padUsed bool
 	// whether the controller types the passphrase now, as at boot
 	padPassphrase bool
+	// typing the passphrase with the controller, started with Y and ended with Menu
+	padTyping bool
 
 	wifiNets     []network
 	wifiSel      int
@@ -457,10 +459,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// On a handheld's passphrase fields the controller types the passphrase as it will at boot, and
-// everywhere else it moves around the screens.
+// The controller moves around the screens. It types the passphrase as it will at boot only once
+// Y has started typing on a handheld's passphrase field, and Menu, which is Enter, stops it, so
+// B and the d-pad never leave someone stuck in a field.
 func (m *model) syncPad() tea.Cmd {
-	want := m.step == stSecrets && m.a.Desktop == "handheld" && m.secretFocus <= 1
+	if !m.onPassphrase() {
+		m.padTyping = false
+	}
+	want := m.padTyping
 	if !m.padUsed || want == m.padPassphrase {
 		return nil
 	}
@@ -471,6 +477,11 @@ func (m *model) syncPad() tea.Cmd {
 	}
 }
 
+// a handheld's passphrase fields, which the controller can type into as at boot
+func (m model) onPassphrase() bool {
+	return m.step == stSecrets && m.a.Desktop == "handheld" && m.secretFocus <= 1
+}
+
 func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if k.String() == "ctrl+c" || (k.String() == "q" && m.step == stInstalling) {
 		// the install carries on without the screens
@@ -479,6 +490,20 @@ func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	// an error stays up until the next key, which either fixes it or says it again
 	m.note = ""
+	if m.onPassphrase() && m.padUsed {
+		switch s := k.String(); {
+		case m.padTyping && s == "esc":
+			m.padTyping = false
+			return m, nil
+		case m.padTyping && s == "enter":
+			// done typing, whether or not the passphrase is right yet
+			m.padTyping = false
+			return m.screenKey(k)
+		case !m.padTyping && s == "f2":
+			m.padTyping = true
+			return m, nil
+		}
+	}
 	if m.osk.open {
 		if next, cmd, used := m.keyOSK(k); used {
 			return next, cmd

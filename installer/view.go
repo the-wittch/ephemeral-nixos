@@ -56,7 +56,11 @@ func (m model) View() string {
 	case m.osk.open:
 		keys = m.viewOSK(w)
 		hints = hint("arrows / d-pad", "move", "enter / A", "type", "esc / B", "close")
-	case m.focusedInput() != nil && !(m.step == stSecrets && m.padPassphrase):
+	case m.padTyping:
+		hints = hint("your buttons", "type", "View", "delete", "Menu", "done")
+	case m.onPassphrase() && m.padUsed:
+		hints += "   " + hint("Y", "type with the controller")
+	case m.focusedInput() != nil:
 		hints += "   " + hint("f2 / Y", "on-screen keyboard")
 	}
 	problem := ""

@@ -100,3 +100,41 @@ func TestWifiKeyfile(t *testing.T) {
 		t.Errorf("WPA3 alone should be sae:\n%s", sae)
 	}
 }
+
+func TestControllerTypesThePassphraseOnlyWhileTypingIsOn(t *testing.T) {
+	m := newTestModel(t)
+	m.width, m.height = 120, 40
+	m.padUsed = true
+	var modes []bool
+	old := setPadMode
+	t.Cleanup(func() { setPadMode = old })
+	setPadMode = func(passphrase bool) { modes = append(modes, passphrase) }
+	m.a.Desktop = "handheld"
+	m.step = stSecrets
+	m.history = []stepID{stMachine}
+	m.enter()
+	run := func(keys ...tea.KeyMsg) {
+		for _, k := range keys {
+			next, cmd := m.Update(k)
+			m = next.(model)
+			if cmd != nil {
+				cmd()
+			}
+			_ = m.View()
+		}
+	}
+	run(f2, typed("ab"))
+	if !m.padTyping || len(modes) != 1 || !modes[0] {
+		t.Fatalf("Y should start typing and switch the controller; typing %v, modes %v", m.padTyping, modes)
+	}
+	// Menu ends typing even though two presses aren't enough, and leaves the controller moving
+	run(enter)
+	if m.padTyping || m.secretFocus != 0 || m.note == "" || len(modes) != 2 || modes[1] {
+		t.Errorf("after Menu: typing %v, field %d, note %q, modes %v", m.padTyping, m.secretFocus, m.note, modes)
+	}
+	// B goes back once typing is off
+	run(esc)
+	if m.step != stMachine {
+		t.Errorf("B should go back from the passphrase screen, on %q", stepName[m.step])
+	}
+}
