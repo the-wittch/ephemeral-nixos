@@ -2,6 +2,17 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.14.1
+
+### Fixed
+
+- Handheld: on the passphrase screen the controller no longer starts typing as soon as a passphrase field is picked, which left no way out of the field. Press Y to start typing with the controller and Menu to finish; the rest of the time, B and the d-pad work as on every other screen.
+- Handheld: the buttons that type the passphrase are shown as a table in columns, in the normal text colour, rather than one faint line, and the screen says View and Menu, as the Deck and Xbox pads have them, not Select and Start.
+
+### Changed
+
+- New installs get config [v5.5.1](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.14.0
 
 ### Fixed

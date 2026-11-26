@@ -124,11 +124,17 @@ func (m model) viewSecrets(w int) ([]string, string) {
 			"     "+sSub.Render("Use characters that are in the same place on both keyboards."))
 	}
 	if m.a.Desktop == "handheld" {
-		out = append(out, "   "+sSub.Render("You'll press it on the controller at boot, so use only these, twelve or more:"))
-		out = append(out, buttonLines(usableButtons(rules.handheld, m.vendor), w-5)...)
-		if m.padUsed {
-			out = append(out, "   "+sSub.Render("Here the controller types it as it will at boot: press your buttons, then Start. Select deletes."))
+		switch {
+		case m.padTyping:
+			out = append(out, "   "+sCursor.Render(" Typing with the controller ")+"  "+
+				sText.Render("press your buttons, ")+sBold.Render("View")+sText.Render(" deletes, ")+
+				sBold.Render("Menu")+sText.Render(" finishes"))
+		case m.padUsed && m.onPassphrase():
+			out = append(out, "   "+sText.Render("Press ")+sBold.Render("Y")+
+				sText.Render(" to type it with the controller, as you will at boot."))
 		}
+		out = append(out, "   "+sText.Render("Twelve or more presses of these, the only ones the controller has at boot:"))
+		out = append(out, buttonTable(usableButtons(rules.handheld, m.vendor), w-5)...)
 	} else {
 		out = append(out, "   "+sSub.Render("A few random words are easy to type and hard to guess."))
 	}
@@ -148,26 +154,34 @@ func (m model) handheldErr(s string) error {
 	return checkHandheldPassphrase(s, usableButtons(rules.handheld, m.vendor))
 }
 
-// the button table, as many to a line as fit
-func buttonLines(buttons []handheldButton, w int) []string {
-	var out []string
-	line := ""
-	for _, b := range buttons {
-		item := b.Button + " " + sBold.Render(b.Character)
+// The button table in even columns, each button with what it types, as many columns as fit.
+func buttonTable(buttons []handheldButton, w int) []string {
+	name := func(b handheldButton) string {
 		if b.Only != "" {
-			item += sSub.Render(" (" + b.Only + ")")
+			return b.Button + " (" + b.Only + ")"
 		}
-		if line != "" && lipgloss.Width(line)+3+lipgloss.Width(item) > w {
-			out = append(out, "     "+line)
-			line = ""
-		}
-		if line != "" {
-			line += sSub.Render(" · ")
-		}
-		line += item
+		return b.Button
 	}
-	if line != "" {
-		out = append(out, "     "+line)
+	widest := 0
+	for _, b := range buttons {
+		widest = max(widest, lipgloss.Width(name(b)))
+	}
+	cell := widest + 6
+	cols := max(min((w-5)/cell, 4), 1)
+	rows := (len(buttons) + cols - 1) / cols
+	var out []string
+	for r := range rows {
+		line := "     "
+		// down each column first, as the docs' table reads
+		for c := range cols {
+			i := c*rows + r
+			if i >= len(buttons) {
+				break
+			}
+			b := buttons[i]
+			line += sText.Render(padRight(name(b), widest)) + "  " + sMauve.Bold(true).Render(b.Character) + "   "
+		}
+		out = append(out, strings.TrimRight(line, " "))
 	}
 	return out
 }
