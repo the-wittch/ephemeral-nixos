@@ -46,7 +46,7 @@ func (m model) reviewLines() []reviewLine {
 		if m.a.Extras {
 			opts = append(opts, "extras")
 		}
-		if m.a.OpenSnitch && m.a.Desktop != "none" {
+		if m.a.OpenSnitch && m.a.opensnitchAsks() {
 			opts = append(opts, "OpenSnitch")
 		}
 		if m.a.PassAgent {

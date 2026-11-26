@@ -124,8 +124,11 @@ func (m model) viewSecrets(w int) ([]string, string) {
 			"     "+sSub.Render("Use characters that are in the same place on both keyboards."))
 	}
 	if m.a.Desktop == "handheld" {
-		out = append(out, "   "+sSub.Render("You'll press it on the controller at boot, so use only these; ten or more:"))
-		out = append(out, buttonLines(rules.handheld, w-5)...)
+		out = append(out, "   "+sSub.Render("You'll press it on the controller at boot, so use only these, twelve or more:"))
+		out = append(out, buttonLines(usableButtons(rules.handheld, m.vendor), w-5)...)
+		if m.padUsed {
+			out = append(out, "   "+sSub.Render("Here the controller types it as it will at boot: press your buttons, then Start. Select deletes."))
+		}
 	} else {
 		out = append(out, "   "+sSub.Render("A few random words are easy to type and hard to guess."))
 	}
@@ -142,7 +145,7 @@ func (m model) handheldErr(s string) error {
 	if m.a.Desktop != "handheld" {
 		return nil
 	}
-	return checkHandheldPassphrase(s, rules.handheld)
+	return checkHandheldPassphrase(s, usableButtons(rules.handheld, m.vendor))
 }
 
 // the button table, as many to a line as fit

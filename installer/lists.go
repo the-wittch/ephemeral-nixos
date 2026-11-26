@@ -121,7 +121,9 @@ func defaultFirst(items []item, code string) []item {
 type app struct {
 	ID, Label, Category, Description, Warn string
 	Flatpak, Unfree, Default               bool
-	Desktops                               []string
+	// ticked by default on these desktops only
+	DefaultOn []string
+	Desktops  []string
 }
 
 func parseCatalog(data []byte) ([]app, error) {
@@ -133,6 +135,7 @@ func parseCatalog(data []byte) ([]app, error) {
 		Warn        *string  `json:"warn"`
 		Unfree      bool     `json:"unfree"`
 		Default     bool     `json:"default"`
+		DefaultOn   []string `json:"defaultOn"`
 		Desktops    []string `json:"desktops"`
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -143,7 +146,7 @@ func parseCatalog(data []byte) ([]app, error) {
 		apps = append(apps, app{
 			ID: id, Label: a.Label, Category: a.Category, Description: a.Description,
 			Flatpak: a.Flatpak != nil, Unfree: a.Unfree, Warn: str(a.Warn),
-			Default: a.Default, Desktops: a.Desktops,
+			Default: a.Default, DefaultOn: a.DefaultOn, Desktops: a.Desktops,
 		})
 	}
 	sort.Slice(apps, func(i, j int) bool {

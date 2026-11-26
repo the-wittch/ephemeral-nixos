@@ -2,6 +2,25 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.14.0
+
+### Fixed
+
+- Handheld: `install.sh` run on its own, without the screens, asks for the passphrase itself and checks it's made of button characters. Before, disko asked and took anything, so the disk could end up with a passphrase the controller can't type.
+- Handheld: the Steam Deck's back buttons are only offered for the passphrase on a Steam Deck. On an Ally they aren't there to press at boot.
+- Handheld: OpenSnitch isn't offered, as the config leaves it off where Game Mode can't show its questions.
+
+### Added
+
+- A Steam Deck or an Ally can be installed with its controller: the d-pad and A move through the screens, Y brings up an on-screen keyboard in any text field, and on a handheld's passphrase fields the controller types the passphrase as it will at boot. On a Deck or an Ally the Desktop screen starts on Handheld.
+- A Wi-Fi screen in place of nmtui: pick a network and type its password, with the on-screen keyboard if need be. nmtui is still in the shell for hidden networks and work logins.
+- Apps the config ticks by default on one desktop only, such as Heroic, Lutris and Decky Loader on a handheld, are ticked when that desktop is picked, and follow a change of desktop until you tick or untick them yourself.
+
+### Changed
+
+- New installs get config [v5.5.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+- Handheld: the disk passphrase has to be at least twelve presses, up from eight. Eight presses of fourteen buttons are about 30 bits, which an offline attack on a stolen disk can get through. Disks set up with a shorter one keep working.
+
 ## 3.13.0
 
 ### Added

@@ -98,6 +98,21 @@ func (c contract) allows(key, value string) bool {
 
 type handheldButton struct {
 	Button, Character string
-	// a button only some handhelds have, such as the Deck's back buttons
-	Only string
+	// a button only some handhelds have, such as the Deck's back buttons, and the DMI
+	// sys_vendor of the ones that have it
+	Only      string
+	DMIVendor string `json:"dmiVendor"`
+}
+
+// The buttons this machine has: one only some handhelds have counts where the DMI vendor is
+// theirs, or the passphrase could need a button the controller at boot doesn't have. An older
+// config release names no vendor, so its buttons all count.
+func usableButtons(buttons []handheldButton, vendor string) []handheldButton {
+	var out []handheldButton
+	for _, b := range buttons {
+		if b.DMIVendor == "" || b.DMIVendor == vendor {
+			out = append(out, b)
+		}
+	}
+	return out
 }

@@ -150,6 +150,10 @@ func answersFileWarning(path string) string {
 	return fmt.Sprintf("%s holds the passphrase and password, and other users can read it; chmod 600 it, and delete it once the install is done", path)
 }
 
+// The config leaves OpenSnitch off where nobody could answer it: without a desktop, and on a
+// handheld, where Game Mode can't show its questions.
+func (a answers) opensnitchAsks() bool { return a.Desktop != "none" && a.Desktop != "handheld" }
+
 func (a answers) check() error {
 	var errs []error
 	add := func(field string, err error) {
@@ -172,7 +176,7 @@ func (a answers) check() error {
 	add("locale", checkLocale(a.Locale))
 	add("passphrase", checkPassphrase(a.Passphrase, ""))
 	if a.Desktop == "handheld" {
-		add("passphrase", checkHandheldPassphrase(a.Passphrase, rules.handheld))
+		add("passphrase", checkHandheldPassphrase(a.Passphrase, usableButtons(rules.handheld, dmiVendor())))
 	}
 	add("password", checkPassword(a.Password, ""))
 	if a.PassAgent {

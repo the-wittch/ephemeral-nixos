@@ -28,6 +28,8 @@ const (
 	stInstalling
 	stDone
 	stFailed
+	// from the first screen, not one of the questions
+	stWifi
 )
 
 var questions = []stepID{stDisk, stDesktop, stGraphics, stRegion, stType, stOptions, stApps, stMachine, stServer, stSecrets, stReview}
@@ -63,12 +65,14 @@ type model struct {
 	gpu         string
 	hasGPU      bool
 	laptop      bool
-	reader      string
-	hasReader   bool
-	setupMode   bool
-	configVer   string
-	logo        [][]cell
-	spinFrame   int
+	// the DMI sys_vendor, for the buttons only some handhelds have
+	vendor    string
+	reader    string
+	hasReader bool
+	setupMode bool
+	configVer string
+	logo      [][]cell
+	spinFrame int
 	// spinFrame when the current screen appeared, for effects that play once
 	stepShown int
 	// set by View when there's room for the frame
@@ -93,6 +97,8 @@ type model struct {
 	appSearching   bool
 	appQuery       textinput.Model
 	picked         map[string]bool
+	// the apps ticked or unticked by hand
+	touched map[string]bool
 
 	machineIn    []textinput.Model
 	machineFocus int
@@ -121,12 +127,26 @@ type model struct {
 	logView    viewport.Model
 	endSel     int
 
+	osk osk
+	// handheld-input is running, so a controller may be all there is
+	padUsed bool
+	// whether the controller types the passphrase now, as at boot
+	padPassphrase bool
+
+	wifiNets     []network
+	wifiSel      int
+	wifiErr      error
+	wifiScanning bool
+	wifiBusy     bool
+	wifiPass     textinput.Model
+
 	liveLayout string
 
 	quitTo string
 }
 
-// round counts the checks started after nmtui, so an older round stops instead of running alongside
+// round counts the checks started after a Wi-Fi connection, so an older round stops instead of
+// running alongside
 type onlineMsg struct {
 	ok    bool
 	round int
@@ -136,7 +156,6 @@ type catalogMsg struct {
 	err  error
 }
 type tickMsg time.Time
-type execDoneMsg struct{}
 
 func newInput(value, placeholder string) textinput.Model {
 	in := textinput.New()
@@ -162,10 +181,13 @@ func newModel(cfg config) model {
 		uefi:           isUEFI(),
 		memGiB:         memoryGiB(),
 		laptop:         hasBattery(),
+		vendor:         dmiVendor(),
+		padUsed:        padRunning(),
 		configVer:      configVersion(cfg.flakeRoot),
 		logo:           loadLogo(cfg.logoPath),
 		listCursor:     map[stepID]int{},
 		picked:         map[string]bool{},
+		touched:        map[string]bool{},
 		catalogLoading: true,
 		a:              defaultAnswers(),
 		run:            newRunDir(cfg.dryRun),
@@ -178,6 +200,9 @@ func newModel(cfg config) model {
 	m.gpu, m.hasGPU = nvidiaGPU(cfg.scriptsDir)
 	if m.hasGPU {
 		m.a.Nvidia = "open"
+	}
+	if isHandheld() && rules.allows("desktop", "handheld") {
+		m.a.Desktop = "handheld"
 	}
 	m.reader, m.hasReader = fingerprintReader(cfg.scriptsDir)
 	m.a.Fingerprint = m.hasReader
@@ -218,6 +243,8 @@ func newModel(cfg config) model {
 	m.keyIn.CharLimit = 4096
 	m.secretIn = []textinput.Model{newSecret(), newSecret(), newSecret(), newSecret()}
 	m.confirmIn = newInput("", "")
+	m.wifiPass = newSecret()
+	m.wifiPass.CharLimit = 63
 	m.logView = viewport.New(80, 20)
 	return m
 }
@@ -329,6 +356,7 @@ func (m *model) enter() tea.Cmd {
 		m.controldIn.Blur()
 		m.customDNSIn.Blur()
 	case stApps:
+		m.followDesktop()
 		// a change of desktop can leave fewer categories than before
 		if m.appCat >= len(m.appCategories()) {
 			m.appCat, m.appIdx, m.appPane = 0, 0, 0
@@ -348,7 +376,11 @@ func (m *model) enter() tea.Cmd {
 	case stSecrets:
 		m.secretFocus = 0
 		return m.focusSecret()
+	case stWifi:
+		m.wifiSel, m.wifiErr, m.wifiBusy, m.wifiScanning = 0, nil, false, true
+		return scanWifi()
 	case stReview:
+		m.followDesktop()
 		m.reviewFocus = 1
 		m.confirmIn.SetValue("")
 		return m.confirmIn.Focus()
@@ -396,6 +428,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.picked[a.ID] = true
 			}
 		}
+		m.followDesktop()
 		return m, nil
 	case tickMsg:
 		m.spinFrame++
@@ -403,13 +436,39 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.poll()
 		}
 		return m, tick()
-	case execDoneMsg:
+	case wifiListMsg:
+		m.wifiScanning, m.wifiErr = false, msg.err
+		m.wifiNets = msg.nets
+		m.wifiSel = min(m.wifiSel, max(len(m.wifiNets)-1, 0))
+		return m, nil
+	case wifiDoneMsg:
+		m.wifiBusy = false
+		if msg.err != nil {
+			m.note = "Couldn't connect: " + msg.err.Error()
+			return m, nil
+		}
 		m.onlineRound++
-		return m, checkOnline(0, m.onlineRound)
+		return m, tea.Batch(m.back(), checkOnline(0, m.onlineRound))
 	case tea.KeyMsg:
-		return m.key(msg)
+		next, cmd := m.key(msg)
+		nm := next.(model)
+		return nm, tea.Batch(cmd, nm.syncPad())
 	}
 	return m, nil
+}
+
+// On a handheld's passphrase fields the controller types the passphrase as it will at boot, and
+// everywhere else it moves around the screens.
+func (m *model) syncPad() tea.Cmd {
+	want := m.step == stSecrets && m.a.Desktop == "handheld" && m.secretFocus <= 1
+	if !m.padUsed || want == m.padPassphrase {
+		return nil
+	}
+	m.padPassphrase = want
+	return func() tea.Msg {
+		setPadMode(want)
+		return nil
+	}
 }
 
 func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -420,6 +479,28 @@ func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	// an error stays up until the next key, which either fixes it or says it again
 	m.note = ""
+	if m.osk.open {
+		if next, cmd, used := m.keyOSK(k); used {
+			return next, cmd
+		}
+	} else if k.String() == "f2" {
+		// on the app list it opens the search to type in
+		if m.step == stApps && !m.appSearching {
+			next, cmd := m.screenKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+			nm := next.(model)
+			nm.osk = osk{open: true}
+			return nm, cmd
+		}
+		if m.focusedInput() != nil {
+			m.osk = osk{open: true}
+			return m, nil
+		}
+	}
+	return m.screenKey(k)
+}
+
+// screenKey is the key as the screen takes it, typed or from the on-screen keyboard.
+func (m model) screenKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// in the app search it closes the search instead
 	if k.String() == "esc" && m.step > stWelcome && m.step <= stReview && !(m.step == stApps && m.appSearching) {
 		return m, m.back()
@@ -445,6 +526,8 @@ func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.keySecrets(k)
 	case stReview:
 		return m.keyReview(k)
+	case stWifi:
+		return m.keyWifi(k)
 	case stInstalling:
 		if k.String() == "l" {
 			m.showLog = !m.showLog

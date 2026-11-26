@@ -21,6 +21,19 @@ func (m model) offered(a app) bool {
 	return len(a.Desktops) == 0 || slices.Contains(a.Desktops, m.a.Desktop)
 }
 
+// ticked by default on every desktop, or on the one picked
+func (m model) isDefault(a app) bool { return a.Default || slices.Contains(a.DefaultOn, m.a.Desktop) }
+
+// The ones ticked by default on some desktops follow the desktop until they're ticked or
+// unticked by hand.
+func (m *model) followDesktop() {
+	for _, a := range m.catalog {
+		if len(a.DefaultOn) > 0 && !m.touched[a.ID] {
+			m.picked[a.ID] = m.isDefault(a)
+		}
+	}
+}
+
 // what goes to apps.json: the ticked apps, and -<name> for each default that was unticked
 func (m model) appChoices() []string {
 	var out []string
@@ -29,7 +42,7 @@ func (m model) appChoices() []string {
 		case !m.offered(a):
 		case m.picked[a.ID]:
 			out = append(out, a.ID)
-		case a.Default:
+		case m.isDefault(a):
 			out = append(out, "-"+a.ID)
 		}
 	}
@@ -113,6 +126,7 @@ func (m model) keySearch(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.appIdx < len(res) {
 			id := res[m.appIdx].ID
 			m.picked[id] = !m.picked[id]
+			m.touched[id] = true
 		}
 		return m, nil
 	}
@@ -164,6 +178,7 @@ func (m model) keyApps(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.appPane == 1 && m.appIdx < len(apps) {
 			id := apps[m.appIdx].ID
 			m.picked[id] = !m.picked[id]
+			m.touched[id] = true
 		}
 	}
 	return m, nil

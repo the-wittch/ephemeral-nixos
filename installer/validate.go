@@ -124,10 +124,16 @@ func checkPassphrase(s, again string) error {
 }
 
 // On a handheld the passphrase is pressed on the controller at boot, so it can only be made of
-// what the buttons type.
+// what the buttons type. Fourteen buttons give a press under four bits: eight presses are about
+// 30 bits, which guessing on a stolen disk can get through, and twelve about 46.
+const handheldPresses = 12
+
 func checkHandheldPassphrase(s string, buttons []handheldButton) error {
 	if len(buttons) == 0 {
 		return fmt.Errorf("the config release this installer uses has no handheld button table")
+	}
+	if n := len([]rune(s)); n < handheldPresses {
+		return fmt.Errorf("at least %d presses on a handheld; this is %d", handheldPresses, n)
 	}
 	var chars strings.Builder
 	for _, b := range buttons {
