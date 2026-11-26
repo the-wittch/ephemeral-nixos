@@ -1,5 +1,5 @@
 # Pinned install target.
-# Installers: TAG=v3.13.0 EXPECTED_REV=<COMMIT> (see README).
+# Installers: TAG=v3.14.0 EXPECTED_REV=<COMMIT> (see README).
 
-TAG=v3.13.0
-COMMIT=66b7f9476aa98fa567035951b93a33f12ed0ff1c
+TAG=v3.14.0
+COMMIT=c711abe35d6bafa9758763b7c3e9a57462246e15
