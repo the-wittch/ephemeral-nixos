@@ -18,6 +18,7 @@ Breaking changes are listed first in each release, with what to do about them. R
 
 ### Changed
 
+- New installs get config [v5.5.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
 - Handheld: the disk passphrase has to be at least twelve presses, up from eight. Eight presses of fourteen buttons are about 30 bits, which an offline attack on a stolen disk can get through. Disks set up with a shorter one keep working.
 
 ## 3.13.0
