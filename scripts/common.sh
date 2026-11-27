@@ -60,6 +60,20 @@ handheld_passphrase_ok() {
 
 dmi_vendor() { cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true; }
 
+# Which handheld this is, as settings.json's "handheld" names it, from what its firmware calls
+# it; the same names InputPlumber's device files match. Anything else is other.
+handheld_model() {
+  local dmi=${DMI_DIR:-/sys/class/dmi/id} vendor product
+  vendor=$(cat "$dmi/sys_vendor" 2>/dev/null) || vendor=
+  product=$(cat "$dmi/product_name" 2>/dev/null) || product=
+  case $vendor:$product in
+    Valve:Jupiter | Valve:Galileo) echo steamdeck ;;
+    ASUS*:"ROG Ally"* | ASUS*:"ROG Xbox Ally"*) echo rog-ally ;;
+    LENOVO:83E1 | LENOVO:83L3 | LENOVO:83N6 | LENOVO:83Q2 | LENOVO:83Q3 | LENOVO:83N0 | LENOVO:83N1) echo legion-go ;;
+    *) echo other ;;
+  esac
+}
+
 has_battery() {
   local b
   for b in /sys/class/power_supply/BAT*; do
