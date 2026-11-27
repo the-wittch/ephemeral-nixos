@@ -2,6 +2,16 @@
 
 Breaking changes are listed first in each release, with what to do about them. Releases before 3.0.0 are on the [releases page](https://github.com/the-wittch/ephemeral-nixos/releases).
 
+## 3.15.0
+
+### Added
+
+- Handheld: `settings.json` says which handheld it is, `steamdeck`, `rog-ally`, `legion-go` or `other`, from the names the firmware gives, so the config can add what only that device needs. A Legion Go isn't picked as Handheld by itself, since its controller can't type the passphrase at boot; pick Handheld on the Desktop screen and it's still named.
+
+### Changed
+
+- New installs get config [v5.6.0](https://github.com/the-wittch/ephemeral-nixos-config/blob/main/CHANGELOG.md).
+
 ## 3.14.1
 
 ### Fixed

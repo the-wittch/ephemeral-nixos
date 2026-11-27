@@ -116,6 +116,18 @@ expect "a handheld passphrase under 12 presses is refused" "printf '%s\n' ayuuqd
 expect "a Deck back button is refused where the table hasn't got it" "printf '%s\n' ayuuqdcbxyr1 | handheld_passphrase_ok $buttons" fails
 expect "a button table that isn't plain characters is refused" "printf '%s\n' ayuuqdcbxyrl | handheld_passphrase_ok 'a-z]|.*'" fails
 
+dmi() {
+  mkdir -p "$work/dmi/$1" && printf '%s\n' "$2" >"$work/dmi/$1/sys_vendor" && printf '%s\n' "$3" >"$work/dmi/$1/product_name"
+}
+dmi deck-oled Valve Galileo
+dmi ally-x "ASUSTeK COMPUTER INC." "ROG Ally X RC72LA_RC72LA"
+dmi xbox-ally ASUS "ROG Xbox Ally X RC73XA"
+dmi go-s LENOVO 83L3
+dmi laptop LENOVO 21KD
+for m in deck-oled:steamdeck ally-x:rog-ally xbox-ally:rog-ally go-s:legion-go laptop:other none:other; do
+  expect "handheld_model calls ${m%%:*} ${m#*:}" "[[ \$(DMI_DIR=$work/dmi/${m%%:*} handheld_model) == ${m#*:} ]]" succeeds
+done
+
 if ((failures)); then
   echo "$failures failed" >&2
   exit 1
